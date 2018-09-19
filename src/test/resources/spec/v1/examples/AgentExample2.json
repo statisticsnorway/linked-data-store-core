@@ -1,0 +1,22 @@
+{
+  "id": "91712998-84a5-4f6c-8053-4dfaafa7c0e3",
+  "agentType": "ORGANIZATION",
+  "name": [
+    {
+      "languageCode": "nb",
+      "languageText": "Avdeling 700"
+    }
+  ],
+  "description": [
+    {
+      "languageCode": "nb",
+      "languageText": "Avdeling for digitalisering og fellesfunksjoner"
+    }
+  ],
+  "administrativeStatus": "OPEN",
+  "version": "1.0.0",
+  "versionValidFrom": "2015-01-01T15:00:00.000Z",
+  "objectValidFrom": "2015-01-01T15:00:00.000Z",
+  "objectCreatedDate": "2015-01-01T15:00:00.000Z",
+  "objectCreatedBy": "BNJ"
+}

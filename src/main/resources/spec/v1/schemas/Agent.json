@@ -1,0 +1,83 @@
+{
+  "$ref" : "#/definitions/Agent",
+  "definitions" : {
+    "MultilingualText" : {
+      "type" : "object",
+      "properties" : {
+        "languageCode" : {
+          "type" : "string"
+        },
+        "languageText" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "languageCode", "languageText" ]
+    },
+    "Agent" : {
+      "type" : "object",
+      "properties" : {
+        "id" : {
+          "type" : "string"
+        },
+        "name" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/definitions/MultilingualText"
+          }
+        },
+        "description" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/definitions/MultilingualText"
+          }
+        },
+        "administrativeStatus" : {
+          "type" : "string"
+        },
+        "version" : {
+          "type" : "string"
+        },
+        "versionRationale" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/definitions/MultilingualText"
+          }
+        },
+        "versionValidFrom" : {
+          "type" : "string",
+          "format" : "date-time"
+        },
+        "objectValidFrom" : {
+          "type" : "string",
+          "format" : "date-time"
+        },
+        "objectValidUntil" : {
+          "type" : "string",
+          "format" : "date-time"
+        },
+        "objectLastUpdatedDate" : {
+          "type" : "string",
+          "format" : "date-time"
+        },
+        "objectLastUpdatedBy" : {
+          "type" : "string"
+        },
+        "objectCreatedDate" : {
+          "type" : "string",
+          "format" : "date-time"
+        },
+        "objectCreatedBy" : {
+          "type" : "string"
+        },
+        "agentType" : {
+          "type" : "string"
+        },
+        "parentAgent" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "id", "name", "description", "administrativeStatus", "version", "versionValidFrom", "objectValidFrom", "objectCreatedDate", "objectCreatedBy", "agentType" ]
+    }
+  },
+  "$schema" : "http://json-schema.org/draft-04/schema#"
+}

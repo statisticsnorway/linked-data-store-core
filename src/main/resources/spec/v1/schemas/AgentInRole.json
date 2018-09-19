@@ -1,0 +1,58 @@
+{
+  "$ref" : "#/definitions/AgentInRole",
+  "definitions" : {
+    "MultilingualText" : {
+      "type" : "object",
+      "properties" : {
+        "languageCode" : {
+          "type" : "string"
+        },
+        "languageText" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "languageCode", "languageText" ]
+    },
+    "AgentInRole" : {
+      "type" : "object",
+      "properties" : {
+        "id" : {
+          "type" : "string"
+        },
+        "agentInRoleDescription" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/definitions/MultilingualText"
+          }
+        },
+        "role" : {
+          "type" : "string"
+        },
+        "_link_property_role" : {
+          "type" : "object",
+          "properties" : {
+            "Role": {
+              "type" : "null"
+            }
+          }
+        },
+        "agents" : {
+          "type" : "array",
+          "items" : {
+            "type" : "string"
+          }
+        },
+        "_link_property_agents" : {
+          "type" : "object",
+          "properties" : {
+            "Agent": {
+              "type" : "null"
+            }
+          }
+        }
+      },
+      "required" : [ "id", "role", "agents" ]
+    }
+  },
+  "$schema" : "http://json-schema.org/draft-04/schema#"
+}

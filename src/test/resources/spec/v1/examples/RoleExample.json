@@ -1,0 +1,29 @@
+{
+  "id": "4eea64e6-5c87-462d-9fc5-c3fdd3a310fa",
+  "name": [
+    {
+      "languageCode": "nb",
+      "languageText": "EIER"
+    },
+    {
+      "languageCode": "en",
+      "languageText": "OWNER"
+    }
+  ],
+  "description": [
+    {
+      "languageCode": "nb",
+      "languageText": "Eier"
+    },
+    {
+      "languageCode": "en",
+      "languageText": "Owner"
+    }
+  ],
+  "administrativeStatus": "OPEN",
+  "version": "1.0.0",
+  "versionValidFrom": "2010-01-01T15:00:00.000Z",
+  "objectValidFrom": "2010-01-01T15:00:00.000Z",
+  "objectCreatedDate": "2010-01-01T15:00:00.000Z",
+  "objectCreatedBy": "OBV"
+}

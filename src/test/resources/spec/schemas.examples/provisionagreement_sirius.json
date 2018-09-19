@@ -1,0 +1,26 @@
+{
+  "__id": "100",
+  "name": "Sirius",
+  "str/ange=Prop#Name": "Freaky property",
+  "address": {
+    "street": "Pengebingen",
+    "city": "Andeby",
+    "country": "Andeland"
+  },
+  "contacts": [
+    "/contact/101",
+    "/contact/102"
+  ],
+  "friend": "/contact/103",
+  "support": {
+    "technicalSupport": [
+      "/contact/103",
+      "/contact/104"
+    ],
+    "businessSupport": [
+      "/contact/104",
+      "/contact/105"
+    ],
+    "otherSupport": "/contact/105"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "1d6ca477-4d0c-47b1-967d-1bead9c1b56b",
+  "agentType": "ORGANIZATION",
+  "name": [
+    {
+      "languageCode": "nb",
+      "languageText": "Avdeling 300"
+    }
+  ],
+  "description": [
+    {
+      "languageCode": "nb",
+      "languageText": "Avdeling for person- og sosialstatistikk"
+    }
+  ],
+  "administrativeStatus": "OPEN",
+  "version": "1.0.0",
+  "versionValidFrom": "1985-01-01T15:00:00.000Z",
+  "objectValidFrom": "1985-01-01T15:00:00.000Z",
+  "objectCreatedDate": "1985-01-01T15:00:00.000Z",
+  "objectCreatedBy": "BNJ"
+}

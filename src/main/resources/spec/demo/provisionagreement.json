@@ -1,0 +1,44 @@
+{
+  "$ref" : "#/definitions/provisionagreement",
+  "definitions" : {
+    "provisionagreement" : {
+      "type" : "object",
+      "properties" : {
+        "name" : {
+          "anyOf" : [ {
+            "type" : "string"
+          }, {
+            "type" : "null"
+          } ]
+        },
+        "address" : {
+          "type" : "object",
+          "properties" : {
+            "street" : {
+              "type" : "string"
+            },
+            "city" : {
+              "type" : "string"
+            }
+          },
+          "required" : [ "street", "city" ]
+        },
+        "contacts" : {
+          "type" : "array",
+          "items" : {
+            "type" : "string"
+          }
+        },
+        "_link_property_contacts" : {
+          "type" : "object",
+          "properties" : {
+            "contact" : {
+              "type" : "null"
+            }
+          }
+        }
+      }
+    }
+  },
+  "$schema" : "http://json-schema.org/draft-04/schema#"
+}

@@ -1,0 +1,14 @@
+{
+  "id": "d1f8e3b7-0eb3-4a6d-91bb-a7451649f2f6",
+  "agentInRoleDescription": [
+    {
+      "languageCode": "nb",
+      "languageText": "Disse objektene eies av A300 og A700 i fellesskap"
+    }
+  ],
+  "role": "4eea64e6-5c87-462d-9fc5-c3fdd3a310fa",
+  "agents": [
+    "1d6ca477-4d0c-47b1-967d-1bead9c1b56b",
+    "91712998-84a5-4f6c-8053-4dfaafa7c0e3"
+  ]
+}

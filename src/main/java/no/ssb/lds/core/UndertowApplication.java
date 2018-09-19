@@ -1,0 +1,201 @@
+package no.ssb.lds.core;
+
+import com.netflix.hystrix.HystrixThreadPoolProperties;
+import io.undertow.Undertow;
+import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
+import no.ssb.config.DynamicConfiguration;
+import no.ssb.lds.api.persistence.Persistence;
+import no.ssb.lds.core.controller.NamespaceController;
+import no.ssb.lds.core.persistence.PersistenceConfigurator;
+import no.ssb.lds.core.saga.FileSagaLog;
+import no.ssb.lds.core.saga.SagaExecutionCoordinator;
+import no.ssb.lds.core.saga.SagaLogInitializer;
+import no.ssb.lds.core.saga.SagaRepository;
+import no.ssb.lds.core.saga.SagasObserver;
+import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
+import no.ssb.lds.core.specification.Specification;
+import no.ssb.saga.execution.sagalog.SagaLog;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+
+public class UndertowApplication {
+
+    private static final Logger LOG = LoggerFactory.getLogger(UndertowApplication.class);
+
+    public static String getDefaultConfigurationResourcePath() {
+        return "application-defaults.properties";
+    }
+
+    public static UndertowApplication initializeUndertowApplication(DynamicConfiguration configuration) {
+        LOG.info("Initializing Linked Data Store (LDS) server ...");
+        String schemaConfigStr = configuration.evaluateToString("specification.schema");
+        String[] specificationSchema = ("".equals(schemaConfigStr) ? new String[0] : schemaConfigStr.split(","));
+        JsonSchemaBasedSpecification specification = JsonSchemaBasedSpecification.create(specificationSchema);
+        Persistence persistence = PersistenceConfigurator.configurePersistence(configuration, specification);
+        SagaLog sagaLog = SagaLogInitializer.initializeSagaLog(configuration.evaluateToString("saga.log.type"), configuration.evaluateToString("saga.log.type.file.path"));
+        String host = configuration.evaluateToString("http.host");
+        int port = configuration.evaluateToInt("http.port");
+        SagaRepository sagaRepository = new SagaRepository(specification, persistence);
+        final SagasObserver sagasObserver = new SagasObserver(sagaRepository).start();
+        final AtomicLong nextWorkerId = new AtomicLong(1);
+        int sagaThreadPoolQueueCapacity = configuration.evaluateToInt("saga.threadpool.queue.capacity");
+        int sagaThreadPoolCoreSize = configuration.evaluateToInt("saga.threadpool.core");
+        if (sagaThreadPoolQueueCapacity >= sagaThreadPoolCoreSize) {
+            LOG.warn("Configuration: saga.threadpool.core ({}) must be greater than saga.threadpool.queue.capacity ({}) in order to avoid potential deadlocks.",
+                    sagaThreadPoolCoreSize, sagaThreadPoolQueueCapacity);
+        }
+        SelectableThreadPoolExectutor sagaThreadPool = new SelectableThreadPoolExectutor(
+                sagaThreadPoolCoreSize, configuration.evaluateToInt("saga.threadpool.max"),
+                configuration.evaluateToInt("saga.threadpool.keepalive.seconds"), TimeUnit.SECONDS,
+                new ArrayBlockingQueue<>(sagaThreadPoolQueueCapacity),
+                runnable -> {
+                    Thread thread = new Thread(runnable);
+                    thread.setName("sec-" + nextWorkerId.getAndIncrement());
+                    thread.setUncaughtExceptionHandler((t, e) -> {
+                        System.err.println("Uncaught exception in thread " + thread.getName());
+                        e.printStackTrace();
+                    });
+                    return thread;
+                },
+                new ThreadPoolExecutor.AbortPolicy()
+        );
+        SagaExecutionCoordinator sec = new SagaExecutionCoordinator(sagaLog, sagaRepository, sagasObserver, sagaThreadPool);
+
+        HystrixThreadPoolProperties.Setter().withMaximumSize(50); // TODO Configure Hystrix properly
+
+        NamespaceController namespaceController = new NamespaceController(
+                configuration.evaluateToString("namespace.default"),
+                specification,
+                specification,
+                persistence,
+                configuration.evaluateToString("http.cors.allow.origin"),
+                configuration.evaluateToString("http.cors.allow.header"),
+                configuration.evaluateToBoolean("http.cors.allow.origin.test"),
+                sec,
+                sagaRepository,
+                port
+        );
+
+        return new UndertowApplication(specification, persistence, sec, sagaRepository, sagasObserver, host, port, sagaLog, sagaThreadPool, namespaceController);
+    }
+
+    private final Specification specification;
+    private final Undertow server;
+    private final String host;
+    private final int port;
+    private final Persistence persistence;
+    private final SagaExecutionCoordinator sec;
+    private final SagaRepository sagaRepository;
+    private final SagasObserver sagasObserver;
+    private final SagaLog sagaLog;
+    private final SelectableThreadPoolExectutor sagaThreadPool;
+
+    UndertowApplication(Specification specification, Persistence persistence, SagaExecutionCoordinator sec, SagaRepository sagaRepository, SagasObserver sagasObserver, String host, int port, SagaLog sagaLog, SelectableThreadPoolExectutor sagaThreadPool, NamespaceController namespaceController) {
+        this.specification = specification;
+        this.host = host;
+        this.port = port;
+        this.persistence = persistence;
+        this.sec = sec;
+        this.sagaRepository = sagaRepository;
+        this.sagasObserver = sagasObserver;
+        this.sagaLog = sagaLog;
+        this.sagaThreadPool = sagaThreadPool;
+        NamespaceController handler = namespaceController;
+        Undertow server = Undertow.builder()
+                .addHttpListener(port, host)
+                .setHandler(handler)
+                .build();
+        this.server = server;
+    }
+
+    public void enableSagaExecutionAutomaticDeadlockDetectionAndResolution() {
+        sec.startThreadpoolWatchdog();
+    }
+
+    public void triggerRecoveryOfIncompleteSagas() {
+        sec.recoverIncompleteSagas();
+    }
+
+    public String getHost() {
+        return host;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public void start() {
+        server.start();
+        LOG.info("Started Linked Data Store server. PID {}", ProcessHandle.current().pid());
+        LOG.info("Listening on {}:{}", host, port);
+    }
+
+    public void stop() {
+        server.stop();
+        persistence.close();
+        sagasObserver.shutdown();
+        sec.shutdown();
+        shutdownAndAwaitTermination(sagaThreadPool);
+        if (sagaLog instanceof FileSagaLog) {
+            ((FileSagaLog) sagaLog).close();
+        }
+        LOG.info("Leaving.. Bye!");
+    }
+
+    static void shutdownAndAwaitTermination(ExecutorService pool) {
+        pool.shutdown();
+        try {
+            if (!pool.awaitTermination(10, TimeUnit.SECONDS)) {
+                pool.shutdownNow();
+                if (!pool.awaitTermination(10, TimeUnit.SECONDS)) {
+                    LOG.error("Pool did not terminate");
+                }
+            }
+        } catch (InterruptedException ie) {
+            pool.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    public Undertow getServer() {
+        return server;
+    }
+
+    public Persistence getPersistence() {
+        return persistence;
+    }
+
+    public SagaExecutionCoordinator getSec() {
+        return sec;
+    }
+
+    public SagaRepository getSagaRepository() {
+        return sagaRepository;
+    }
+
+    public SagasObserver getSagasObserver() {
+        return sagasObserver;
+    }
+
+    public SagaLog getSagaLog() {
+        return sagaLog;
+    }
+
+    public SelectableThreadPoolExectutor getSagaThreadPool() {
+        return sagaThreadPool;
+    }
+
+    public Undertow getUndertowServer() {
+        return server;
+    }
+
+    public Specification getSpecification() {
+        return specification;
+    }
+}
