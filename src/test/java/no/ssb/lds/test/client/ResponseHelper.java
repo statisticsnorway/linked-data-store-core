@@ -3,6 +3,7 @@ package no.ssb.lds.test.client;
 import java.net.HttpURLConnection;
 import java.net.http.HttpResponse;
 
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 public class ResponseHelper<T> {

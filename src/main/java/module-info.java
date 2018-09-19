@@ -21,7 +21,6 @@ module no.ssb.lds.core {
 
     opens spec.demo;
     opens spec.v1.schemas;
-    opens postgres;
 
     exports no.ssb.lds.core;
 }

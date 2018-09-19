@@ -103,11 +103,6 @@
             <version>0.1</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>no.ssb.config</groupId>
-            <artifactId>dynamic-configuration</artifactId>
-            <version>0.1</version>
-        </dependency>
 
         <dependency>
             <groupId>org.json</groupId>
