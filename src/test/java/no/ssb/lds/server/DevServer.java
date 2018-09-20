@@ -15,8 +15,11 @@ public class DevServer {
 
         DynamicConfiguration configuration = new StoreBasedDynamicConfiguration.Builder()
                 .propertiesResource(UndertowApplication.getDefaultConfigurationResourcePath())
-                .propertiesResource("application.properties")
-                .propertiesResource("application_override.properties")
+                .values("persistence.provider", "mem",
+                        "persistence.mem.wait.min", "0",
+                        "persistence.mem.wait.max", "0",
+                        "specification.schema", "spec/demo/contact.json,spec/demo/provisionagreement.json")
+                .propertiesResource("conf/application.properties")
                 .environment("LDS_")
                 .systemProperties()
                 .build();
@@ -35,8 +38,6 @@ public class DevServer {
             LOG.info("Server started in {}ms..", time);
 
             application.enableSagaExecutionAutomaticDeadlockDetectionAndResolution();
-
-            application.triggerRecoveryOfIncompleteSagas();
 
             // wait for termination signal
             try {

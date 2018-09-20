@@ -6,6 +6,7 @@ import no.ssb.lds.test.server.TestServer;
 import no.ssb.lds.test.server.TestServerListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testng.annotations.Ignore;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -13,7 +14,7 @@ import javax.inject.Inject;
 
 // https://neo4j.com/developer/java/#neo4j-java-driver
 
-//@Ignore
+@Ignore
 @Test(groups = "neo4j")
 @Listeners(TestServerListener.class)
 public class Neo4JPersistenceIntegrationTest extends PersistenceIntegrationTests {

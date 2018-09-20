@@ -169,24 +169,16 @@ public class TestServerListener implements ITestListener, IInvokedMethodListener
         String profile;
         if (configurationProfile != null) {
             profile = configurationProfile.value();
-            StoreBasedDynamicConfiguration.Builder builder = new StoreBasedDynamicConfiguration.Builder()
-                    .propertiesResource(UndertowApplication.getDefaultConfigurationResourcePath())
-                    .propertiesResource("application_test.properties")
-                    .propertiesResource(String.format("application_test_%s.properties", profile));
-            if (configurationOverride != null) {
-                builder.values(configurationOverride.value());
-            }
-            addProfile(profile, builder.build());
         } else {
             profile = "TEST_DEFAULT";
-            StoreBasedDynamicConfiguration.Builder builder = new StoreBasedDynamicConfiguration.Builder()
-                    .propertiesResource(UndertowApplication.getDefaultConfigurationResourcePath())
-                    .propertiesResource("application_test.properties");
-            if (configurationOverride != null) {
-                builder.values(configurationOverride.value());
-            }
-            addProfile(profile, builder.build());
         }
+        StoreBasedDynamicConfiguration.Builder builder = new StoreBasedDynamicConfiguration.Builder()
+                .propertiesResource(UndertowApplication.getDefaultConfigurationResourcePath())
+                .propertiesResource("application_test.properties");
+        if (configurationOverride != null) {
+            builder.values(configurationOverride.value());
+        }
+        addProfile(profile, builder.build());
         DynamicConfiguration configuration = configurationThreadLocal.get();
         if (configuration != null && !configuration.equals(configurationInstance(profile))) {
             // Configuration profile has changed, stop server to avoid using dirty configuration

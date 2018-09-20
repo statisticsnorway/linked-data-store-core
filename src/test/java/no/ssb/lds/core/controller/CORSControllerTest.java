@@ -47,7 +47,7 @@ public class CORSControllerTest {
             assertEquals(Integer.valueOf(code), Integer.valueOf(HTTP_ACCEPTED));
             assertEquals(conn.getHeaderField("access-control-allow-methods"), "GET, PUT, DELETE, OPTIONS, HEAD");
             assertEquals(conn.getHeaderField("access-control-allow-headers"), "Content-Type");
-            assertEquals(conn.getHeaderField("access-control-allow-origin"), "http://localhost:9090");
+            assertEquals(conn.getHeaderField("access-control-allow-origin"), "http://localhost:9090,http://0.0.0.0:9090");
             conn.disconnect();
     }
 
@@ -77,6 +77,6 @@ public class CORSControllerTest {
         response.expect200Ok();
         assertEquals(response.response().headers().map().get("access-control-allow-methods").get(0), "GET, PUT, DELETE, OPTIONS, HEAD");
         assertEquals(response.response().headers().map().get("access-control-allow-headers").get(0), "Content-Type");
-        assertEquals(response.response().headers().map().get("access-control-allow-origin").get(0), "http://localhost:9090");
+        assertEquals(response.response().headers().map().get("access-control-allow-origin").get(0), "http://localhost:9090,http://0.0.0.0:9090");
     }
 }
