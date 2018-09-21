@@ -138,6 +138,9 @@ class SpecificationElementBuilder {
     Map<String, SpecificationElement> properties() {
         Map<String, SpecificationElement> map = new LinkedHashMap<>();
         if (SpecificationElementType.ROOT.equals(specificationElementType)) {
+            if (jsonSchema == null) {
+                return map;
+            }
             for (Map.Entry<String, JsonSchemaDefinitionElement> entry : jsonSchema.getDefinitions().entrySet()) {
                 SpecificationElement managed = new SpecificationElementBuilder(entry.getValue())
                         .name(entry.getKey())

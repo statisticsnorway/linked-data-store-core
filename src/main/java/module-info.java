@@ -19,8 +19,5 @@ module no.ssb.lds.core {
 
     uses PersistenceInitializer;
 
-    opens spec.demo;
-    opens spec.v1.schemas;
-
     exports no.ssb.lds.core;
 }

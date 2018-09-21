@@ -12,6 +12,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -73,6 +74,9 @@ public class JsonSchemaBasedSpecification implements Specification, SchemaReposi
 
     @Override
     public Set<String> getManagedDomains() {
+        if (jsonSchema == null) {
+            return Collections.emptySet();
+        }
         return jsonSchema.getSchemaNames();
     }
 
