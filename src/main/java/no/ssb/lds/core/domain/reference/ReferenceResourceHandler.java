@@ -116,7 +116,7 @@ public class ReferenceResourceHandler implements HttpHandler {
         JSONObject rootNode = persistence.read(namespace, managedDomain, managedDocumentId);
         boolean referenceToExists = resourceContext.referenceToExists(rootNode);
         if (!referenceToExists) {
-            exchange.setStatusCode(204);
+            exchange.setStatusCode(200);
             return;
         } else {
             new ReferenceJsonHelper(specification, topLevelElement).deleteReferenceJson(resourceContext, rootNode);

@@ -87,10 +87,10 @@ public class ReferenceResourceHandlerTest {
     }
 
     @Test
-    public void thatDELETENonResourceReturns204() {
+    public void thatDELETENonResourceReturns200() {
         createTestResource("provisionagreement", "r9", "{\"id\":\"r9\"}");
         client.get("/data/provisionagreement/r9/friend/contact/f1").expect404NotFound();
-        client.delete("/data/provisionagreement/r9/friend/contact/f1").expect204NoContent();
+        client.delete("/data/provisionagreement/r9/friend/contact/f1").expect200Ok();
     }
 
     @Test
@@ -99,7 +99,7 @@ public class ReferenceResourceHandlerTest {
         client.get("/data/provisionagreement/r10/friend/contact/f1").expect200Ok();
         client.delete("/data/provisionagreement/r10/friend/contact/f1?sync=true").expect200Ok();
         client.get("/data/provisionagreement/r10/friend/contact/f1").expect404NotFound();
-        client.delete("/data/provisionagreement/r10/friend/contact/f1").expect204NoContent();
+        client.delete("/data/provisionagreement/r10/friend/contact/f1").expect200Ok();
         client.get("/data/provisionagreement/r10/friend/contact/f1").expect404NotFound();
     }
 
