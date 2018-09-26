@@ -1,6 +1,7 @@
 package no.ssb.lds.core.utils;
 
 import java.io.InputStream;
+import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
@@ -29,7 +30,11 @@ public class FileAndClasspathReaderUtils {
 
     public static String getResourceAsString(String path, Charset charset) {
         try {
-            URLConnection conn = ClassLoader.getSystemResource(path).openConnection();
+            URL systemResource = ClassLoader.getSystemResource(path);
+            if (systemResource == null) {
+                return null;
+            }
+            URLConnection conn = systemResource.openConnection();
             try (InputStream is = conn.getInputStream()) {
                 byte[] bytes = is.readAllBytes();
                 CharBuffer cbuf = CharBuffer.allocate(bytes.length);

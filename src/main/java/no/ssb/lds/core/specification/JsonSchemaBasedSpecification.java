@@ -48,9 +48,12 @@ public class JsonSchemaBasedSpecification implements Specification, SchemaReposi
         return SpecificationJsonSchemaBuilder.createBuilder(jsonSchema).build();
     }
 
-    private static JsonSchema schemaFromFile(JsonSchema jsonSchema, StringBuilder sb, Path filePath) {
-        String json = FileAndClasspathReaderUtils.readFileOrClasspathResource(filePath.toString());
-        String filename = filePath.toFile().getName();
+    private static JsonSchema schemaFromFile(JsonSchema jsonSchema, StringBuilder sb, Path path) {
+        String json = FileAndClasspathReaderUtils.readFileOrClasspathResource(path.toString());
+        if (json == null) {
+            throw new IllegalArgumentException("Unable to find resource: " + path.toString());
+        }
+        String filename = path.toFile().getName();
         String schemaFilename = filename.substring(filename.lastIndexOf("/") + 1);
         String managedDomain = schemaFilename.substring(0, schemaFilename.length() - ".json".length());
         sb.append(" /" + managedDomain);
