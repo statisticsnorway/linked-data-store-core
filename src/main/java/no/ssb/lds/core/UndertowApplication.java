@@ -33,6 +33,11 @@ public class UndertowApplication {
     }
 
     public static UndertowApplication initializeUndertowApplication(DynamicConfiguration configuration) {
+        int port = configuration.evaluateToInt("http.port");
+        return initializeUndertowApplication(configuration, port);
+    }
+
+    public static UndertowApplication initializeUndertowApplication(DynamicConfiguration configuration, int port) {
         LOG.info("Initializing Linked Data Store (LDS) server ...");
         String schemaConfigStr = configuration.evaluateToString("specification.schema");
         String[] specificationSchema = ("".equals(schemaConfigStr) ? new String[0] : schemaConfigStr.split(","));
@@ -40,7 +45,6 @@ public class UndertowApplication {
         Persistence persistence = PersistenceConfigurator.configurePersistence(configuration, specification);
         SagaLog sagaLog = SagaLogInitializer.initializeSagaLog(configuration.evaluateToString("saga.log.type"), configuration.evaluateToString("saga.log.type.file.path"));
         String host = configuration.evaluateToString("http.host");
-        int port = configuration.evaluateToInt("http.port");
         SagaRepository sagaRepository = new SagaRepository(specification, persistence);
         final SagasObserver sagasObserver = new SagasObserver(sagaRepository).start();
         final AtomicLong nextWorkerId = new AtomicLong(1);
