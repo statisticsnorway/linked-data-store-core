@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class PersistenceConfigurator {
@@ -64,13 +65,27 @@ public class PersistenceConfigurator {
             }
         }
 
-        try {
-            Persistence persistence = initializer.initialize(configuration.evaluateToString("namespace.default"), configurationByKey, specification.getManagedDomains());
-            LOG.info("Persistence service-provider configured: {}", providerId);
-            return persistence;
-        } catch (RuntimeException e) {
-            LOG.info("Configuration keys: {}", configurationKeys);
-            throw e;
-        }
+        int maxWaitSeconds = configuration.evaluateToInt("persistence.initialization.max-wait-seconds");
+        long start = System.currentTimeMillis();
+        do {
+            try {
+                Persistence persistence = initializer.initialize(configuration.evaluateToString("namespace.default"), configurationByKey, specification.getManagedDomains());
+                LOG.info("Persistence service-provider configured: {}", providerId);
+                return persistence;
+            } catch (RuntimeException e) {
+                long durationMs = System.currentTimeMillis() - start;
+                long remainingMs = TimeUnit.SECONDS.toMillis(maxWaitSeconds) - durationMs;
+                if (remainingMs > 0) {
+                    try {
+                        Thread.sleep(Math.min(1000, remainingMs));
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException("Interrupted while attempting to sleep, interrupt status preserved.", e);
+                    }
+                } else {
+                    throw e;
+                }
+            }
+        } while (true);
     }
 }

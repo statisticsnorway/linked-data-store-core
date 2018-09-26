@@ -20,6 +20,7 @@ public class PersistenceConfiguratorTest {
     public void thatServiceLoadingWorks() {
         DynamicConfiguration configuration = new StoreBasedDynamicConfiguration.Builder()
                 .values("persistence.provider", "mem",
+                        "persistence.initialization.max-wait-seconds", "0",
                         "persistence.mem.wait.min", "0",
                         "persistence.mem.wait.max", "0")
                 .build();
