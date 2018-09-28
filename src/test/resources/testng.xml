@@ -1,12 +1,6 @@
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
 <suite name="tests">
     <test name="default">
-        <groups>
-            <run>
-                <exclude name="neo4j"/>
-                <exclude name="postgres"/>
-            </run>
-        </groups>
         <packages>
             <package name="no.ssb.lds.*"/>
         </packages>
