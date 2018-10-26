@@ -36,10 +36,8 @@ public class LinkedDocumentValidator {
         try {
             schema.validate(linkedDocument);
         } catch (ValidationException e) {
-            e.getCausingExceptions().stream()
-                    .map(ValidationException::getMessage)
-                    .forEach(m -> LOG.debug("{}", m));
-            throw new LinkedDocumentValidationException("Exception while validating json-schema", e);
+            e.getAllMessages().forEach(m -> LOG.debug("{}", m));
+            throw new LinkedDocumentValidationException(e.getAllMessages().toString(), e);
         }
         SpecificationElement managedDomainElement = specification.getRootElement().getProperties().get(managedDomain);
         SpecificationTraverals.depthFirstPreOrderFullTraversal(managedDomainElement, (ancestors, te) -> {
