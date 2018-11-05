@@ -17,6 +17,8 @@ module no.ssb.lds.core {
     requires org.everit.json.schema;
     requires java.xml; // TODO this should be in test-scope only!
 
+    requires graphql.java;
+
     uses PersistenceInitializer;
 
     exports no.ssb.lds.core;
