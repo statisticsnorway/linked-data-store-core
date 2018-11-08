@@ -74,7 +74,7 @@ public class NamespaceController implements HttpHandler {
             return;
         }
 
-        if (requestPath.startsWith(defaultNamespace) && exchange.getQueryParameters().containsKey("schema") && exchange.getQueryParameters().get("schema").getFirst().isBlank()) {
+        if (requestPath.equals(defaultNamespace) && exchange.getQueryParameters().containsKey("schema") && exchange.getQueryParameters().get("schema").getFirst().isBlank()) {
             JSONArray managedDomainsArray = new JSONArray();
             specification.getManagedDomains().stream().map(md -> managedDomainsArray.put(String.format("%s/%s?schema", defaultNamespace, md))).collect(Collectors.toSet());
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
@@ -82,7 +82,7 @@ public class NamespaceController implements HttpHandler {
             return;
         }
 
-        if (requestPath.startsWith(defaultNamespace) && exchange.getQueryParameters().containsKey("schema") && exchange.getQueryParameters().get("schema").contains("embed")) {
+        if (requestPath.equals(defaultNamespace) && exchange.getQueryParameters().containsKey("schema") && exchange.getQueryParameters().get("schema").contains("embed")) {
             JSONArray managedDomainsArray = new JSONArray();
             specification.getManagedDomains().stream().map(md -> managedDomainsArray.put(new JSONObject(schemaRepository.getJsonSchema().getSchemaJson(md)))).collect(Collectors.toSet());
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
