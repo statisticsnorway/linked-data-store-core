@@ -128,8 +128,11 @@ class SpecificationElementBuilder {
         if (schemaElement == null || schemaElement.items == null) {
             return null;
         }
+        // Name is required for graphql implementation.
+        // See comment in JsonSchemaDefinitionElement.java.
+        String name = schemaElement.items.name != null ? schemaElement.items.name : "";
         SpecificationElement child = new SpecificationElementBuilder(schemaElement.items)
-                .name("")
+                .name(name)
                 .parent(specificationElement)
                 .build();
         return child;
