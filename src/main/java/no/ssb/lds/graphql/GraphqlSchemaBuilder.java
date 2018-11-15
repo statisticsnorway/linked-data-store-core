@@ -1,5 +1,6 @@
 package no.ssb.lds.graphql;
 
+import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLObjectType;
@@ -14,16 +15,19 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
 import static graphql.Scalars.GraphQLBoolean;
 import static graphql.Scalars.GraphQLFloat;
+import static graphql.Scalars.GraphQLID;
 import static graphql.Scalars.GraphQLLong;
 import static graphql.Scalars.GraphQLString;
-import static java.lang.String.*;
+import static java.lang.String.format;
 import static no.ssb.lds.core.specification.SpecificationElementType.EMBEDDED;
 import static no.ssb.lds.core.specification.SpecificationElementType.REF;
 
@@ -79,41 +83,43 @@ public class GraphqlSchemaBuilder {
     // Build a graphql schema out of the specification.
     public GraphQLSchema getSchema() {
 
-        // TODO: createAdditionaTypes();
-        Set<GraphQLType> types = new LinkedHashSet<>();
+        Set<GraphQLType> additionalTypes = new LinkedHashSet<>();
+        GraphQLObjectType.Builder queryBuilder = GraphQLObjectType.newObject().name("Query");
+
         SpecificationElement root = specification.getRootElement();
         for (SpecificationElement element : root.getProperties().values()) {
-            GraphQLObjectType buildType = createObjectType(element).build();
+
+            GraphQLObjectType buildType = createObjectType(element)
+                    .build();
+
+            GraphQLFieldDefinition.Builder rootQueryField = createRootQueryField(element);
+            StaticDataFetcher rootQueryFetcher = createRootQueryFetcher(element);
+            queryBuilder.field(rootQueryField.dataFetcher(rootQueryFetcher).build());
             log.debug("Converted {} to graphql type {}", element.getName(), buildType);
-            types.add(buildType);
+
+            additionalTypes.add(buildType);
         }
 
-        // TODO: Create query dynamically.
-        //GraphQLSchema build = GraphQLSchema.newSchema().query(
-        //        GraphQLObjectType.newObject()
-        //                .name("Query")
-        //                .field(
-        //                        GraphQLFieldDefinition.newFieldDefinition()
-        //                                .name("contact")
-        //                                .argument(
-        //                                        GraphQLArgument.newArgument()
-        //                                                .name("id")
-        //                                                .type(GraphQLID)
-        //                                                .build()
-        //                                )
-        //                                .type(GraphQLList.list(GraphQLTypeReference.typeRef("contact")))
-        //                                .dataFetcher(
-        //                                        new StaticDataFetcher(
-        //                                                Arrays.asList(
-        //                                                        new JSONObject(Map.of("name", "Hadrien")).toMap(),
-        //                                                        new JSONObject(Map.of("name", "Kim")).toMap()
-        //                                                )
-        //                                        )
-        //                                )
-        //                                .build()
-        //                )
-        //).additionalTypes(types).build();
-        return GraphQLSchema.newSchema().query(GraphQLObjectType.newObject().name("Query").build()).additionalTypes(types).build();
+        return GraphQLSchema.newSchema().query(queryBuilder.build()).additionalTypes(additionalTypes).build();
+    }
+
+    private StaticDataFetcher createRootQueryFetcher(SpecificationElement element) {
+        return new StaticDataFetcher(Arrays.asList(
+                new JSONObject(Map.of("name", "Hadrien", "type", element.getName())).toMap(),
+                new JSONObject(Map.of("name", "Kim")).toMap()
+        ));
+    }
+
+    private GraphQLFieldDefinition.Builder createRootQueryField(SpecificationElement element) {
+        return GraphQLFieldDefinition.newFieldDefinition()
+                .name(element.getName())
+                .argument(
+                        GraphQLArgument.newArgument()
+                                .name("id")
+                                .type(GraphQLID)
+                                .build()
+                )
+                .type(GraphQLList.list(GraphQLTypeReference.typeRef(element.getName())));
     }
 
     public GraphQLObjectType.Builder createObjectType(SpecificationElement specificationElement) {
