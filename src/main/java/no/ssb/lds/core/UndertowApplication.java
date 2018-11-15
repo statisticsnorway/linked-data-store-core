@@ -1,7 +1,12 @@
 package no.ssb.lds.core;
 
 import com.netflix.hystrix.HystrixThreadPoolProperties;
+import graphql.GraphQL;
+import io.undertow.Handlers;
 import io.undertow.Undertow;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.RoutingHandler;
+import io.undertow.server.handlers.resource.ClassPathResourceManager;
 import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
 import no.ssb.config.DynamicConfiguration;
 import no.ssb.lds.api.persistence.Persistence;
@@ -14,10 +19,13 @@ import no.ssb.lds.core.saga.SagaRepository;
 import no.ssb.lds.core.saga.SagasObserver;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import no.ssb.lds.core.specification.Specification;
+import no.ssb.lds.graphql.GraphqlHandler;
+import no.ssb.lds.graphql.GraphqlSchemaBuilder;
 import no.ssb.saga.execution.sagalog.SagaLog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.URL;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -111,9 +119,24 @@ public class UndertowApplication {
         this.sagaLog = sagaLog;
         this.sagaThreadPool = sagaThreadPool;
         NamespaceController handler = namespaceController;
+
+
+        GraphQL graphQL = GraphQL.newGraphQL(new GraphqlSchemaBuilder(specification).getSchema()).build();
+
+        // TODO: Clean up.
+        HttpHandler routingHandler = Handlers.routing()
+                .get("graphiql**", Handlers.resource(new ClassPathResourceManager(
+                                Thread.currentThread().getContextClassLoader(), "no/ssb/lds/graphql"
+                        )).setDirectoryListingEnabled(true).addWelcomeFiles("graphiql.html")
+                )
+                .post("graphql", new GraphqlHandler(graphQL))
+                .setFallbackHandler(handler);
+
+        routingHandler = Handlers.requestDump(routingHandler);
+
         Undertow server = Undertow.builder()
                 .addHttpListener(port, host)
-                .setHandler(handler)
+                .setHandler(routingHandler)
                 .build();
         this.server = server;
     }
