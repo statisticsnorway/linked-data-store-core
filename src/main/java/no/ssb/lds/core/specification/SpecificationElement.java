@@ -8,6 +8,8 @@ public interface SpecificationElement {
 
     String getName();
 
+    String getDescription();
+
     SpecificationElement getParent();
 
     SpecificationElementType getSpecificationElementType();

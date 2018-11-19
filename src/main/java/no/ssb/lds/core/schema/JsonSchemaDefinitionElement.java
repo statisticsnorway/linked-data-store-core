@@ -25,6 +25,11 @@ public class JsonSchemaDefinitionElement {
     public final String title;
 
     /**
+     * The description.
+     */
+    public final String description;
+
+    /**
      * Format when type is one of: .
      */
     public final String format;
@@ -47,12 +52,14 @@ public class JsonSchemaDefinitionElement {
     JsonSchemaDefinitionElement(
             String[] types,
             String title,
+            String description,
             String format,
             Map<String, JsonSchemaDefinitionElement> properties,
             JsonSchemaDefinitionElement items,
             Set<String> required) {
         this.types = types;
         this.title = title;
+        this.description = description;
         this.format = format;
         this.properties = properties;
         this.items = items;

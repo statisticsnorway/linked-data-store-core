@@ -1,6 +1,5 @@
 package no.ssb.lds.graphql;
 
-import graphql.GraphQL;
 import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLList;
@@ -19,7 +18,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -121,6 +119,9 @@ public class GraphqlSchemaBuilder {
         ));
     }
 
+    /**
+     * Creates a root query field with ID argument.
+     */
     private GraphQLFieldDefinition.Builder createRootQueryField(SpecificationElement element) {
         return GraphQLFieldDefinition.newFieldDefinition()
                 .name(element.getName())
@@ -136,6 +137,7 @@ public class GraphqlSchemaBuilder {
     public GraphQLObjectType.Builder createObjectType(SpecificationElement specificationElement) {
         GraphQLObjectType.Builder object = GraphQLObjectType.newObject();
         object.name(specificationElement.getName());
+        object.description(specificationElement.getDescription());
 
         // For each property
         for (SpecificationElement property : specificationElement.getProperties().values()) {
@@ -145,6 +147,7 @@ public class GraphqlSchemaBuilder {
             field.name(typeName);
 
             SpecificationElementType elementType = property.getSpecificationElementType();
+            field.description(property.getDescription());
             if (EMBEDDED.equals(elementType)) {
                 String jsonType = getOneJsonType(property);
                 if ("object".equals(jsonType)) {
