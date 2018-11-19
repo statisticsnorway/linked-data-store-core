@@ -131,7 +131,7 @@ public class GraphqlSchemaBuilder {
                                 .type(GraphQLID)
                                 .build()
                 )
-                .type(GraphQLList.list(GraphQLTypeReference.typeRef(element.getName())));
+                .type(GraphQLTypeReference.typeRef(element.getName()));
     }
 
     public GraphQLObjectType.Builder createObjectType(SpecificationElement specificationElement) {
@@ -192,7 +192,6 @@ public class GraphqlSchemaBuilder {
                         graphQLOutputType = unionType.build();
                         unionTypes.add(typeName);
                     }
-
                 } else {
                     String refType = getOneRefType(property);
                     graphQLOutputType = GraphQLTypeReference.typeRef(refType);

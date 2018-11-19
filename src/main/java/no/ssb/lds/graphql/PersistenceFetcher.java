@@ -2,7 +2,6 @@ package no.ssb.lds.graphql;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
-import graphql.schema.GraphQLType;
 import no.ssb.lds.api.persistence.Persistence;
 import org.json.JSONObject;
 
