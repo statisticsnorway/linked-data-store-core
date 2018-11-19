@@ -1,12 +1,15 @@
 package no.ssb.lds.graphql;
 
+import graphql.GraphQL;
 import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLObjectType;
+import graphql.schema.GraphQLOutputType;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeReference;
+import graphql.schema.GraphQLUnionType;
 import graphql.schema.StaticDataFetcher;
 import no.ssb.lds.core.specification.Specification;
 import no.ssb.lds.core.specification.SpecificationElement;
@@ -16,6 +19,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -38,6 +43,7 @@ public class GraphqlSchemaBuilder {
 
     private static final Logger log = LoggerFactory.getLogger(GraphqlSchemaBuilder.class);
     private final Specification specification;
+    private final Set<String> unionTypes = new HashSet<>();
 
     public GraphqlSchemaBuilder(Specification specification) {
         this.specification = Objects.requireNonNull(specification);
@@ -89,15 +95,20 @@ public class GraphqlSchemaBuilder {
         SpecificationElement root = specification.getRootElement();
         for (SpecificationElement element : root.getProperties().values()) {
 
-            GraphQLObjectType buildType = createObjectType(element)
-                    .build();
+            try {
+                GraphQLObjectType buildType = createObjectType(element)
+                        .build();
 
-            GraphQLFieldDefinition.Builder rootQueryField = createRootQueryField(element);
-            StaticDataFetcher rootQueryFetcher = createRootQueryFetcher(element);
-            queryBuilder.field(rootQueryField.dataFetcher(rootQueryFetcher).build());
-            log.debug("Converted {} to graphql type {}", element.getName(), buildType);
+                GraphQLFieldDefinition.Builder rootQueryField = createRootQueryField(element);
+                StaticDataFetcher rootQueryFetcher = createRootQueryFetcher(element);
+                queryBuilder.field(rootQueryField.dataFetcher(rootQueryFetcher).build());
+                log.debug("Converted {} to graphql type {}", element.getName(), buildType);
 
-            additionalTypes.add(buildType);
+                additionalTypes.add(buildType);
+            } catch (Exception ex) {
+                log.error("could not convert {}", element.getName(), ex);
+                throw ex;
+            }
         }
 
         return GraphQLSchema.newSchema().query(queryBuilder.build()).additionalTypes(additionalTypes).build();
@@ -130,7 +141,8 @@ public class GraphqlSchemaBuilder {
         for (SpecificationElement property : specificationElement.getProperties().values()) {
 
             GraphQLFieldDefinition.Builder field = GraphQLFieldDefinition.newFieldDefinition();
-            field.name(property.getName());
+            String typeName = property.getName();
+            field.name(typeName);
 
             SpecificationElementType elementType = property.getSpecificationElementType();
             if (EMBEDDED.equals(elementType)) {
@@ -159,9 +171,35 @@ public class GraphqlSchemaBuilder {
                     field.type(GraphQLLong);
                 }
             } else if (REF.equals(elementType)) {
-                // TODO: are ref always arrays?
-                String refType = getOneRefType(property);
-                field.type(GraphQLList.list(GraphQLTypeReference.typeRef(refType)));
+                GraphQLOutputType graphQLOutputType;
+                // If more than one type in ref, try to create a Union type.
+                if (property.getRefTypes().size() > 1) {
+                    if (unionTypes.contains(typeName)) {
+                        graphQLOutputType = GraphQLTypeReference.typeRef(typeName);
+                    } else {
+                        GraphQLUnionType.Builder unionType = GraphQLUnionType.newUnionType()
+                                .name(typeName);
+                        for (String refType : property.getRefTypes()) {
+                            unionType.possibleType(GraphQLTypeReference.typeRef(refType));
+                        }
+                        // TODO: Handle abstract type.
+                        unionType.typeResolver(env -> {
+                            throw new UnsupportedOperationException("Abstract type not supported yet");
+                        });
+                        graphQLOutputType = unionType.build();
+                        unionTypes.add(typeName);
+                    }
+
+                } else {
+                    String refType = getOneRefType(property);
+                    graphQLOutputType = GraphQLTypeReference.typeRef(refType);
+                }
+                String jsonType = getOneJsonType(property);
+                if ("array".equals(jsonType)) {
+                    field.type(GraphQLList.list(graphQLOutputType));
+                } else if ("string".equals(jsonType)) {
+                    field.type(graphQLOutputType);
+                }
             } else {
                 throw new AssertionError();
             }
