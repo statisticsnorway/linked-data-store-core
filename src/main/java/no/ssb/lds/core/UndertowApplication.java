@@ -118,7 +118,6 @@ public class UndertowApplication {
         this.sagasObserver = sagasObserver;
         this.sagaLog = sagaLog;
         this.sagaThreadPool = sagaThreadPool;
-        NamespaceController handler = namespaceController;
 
 
         GraphQL graphQL = GraphQL.newGraphQL(new GraphqlSchemaBuilder(specification).getSchema()).build();
@@ -130,15 +129,14 @@ public class UndertowApplication {
                         )).setDirectoryListingEnabled(true).addWelcomeFiles("graphiql.html")
                 )
                 .post("graphql", new GraphqlHandler(graphQL))
-                .setFallbackHandler(handler);
+                .setFallbackHandler(namespaceController);
 
         routingHandler = Handlers.requestDump(routingHandler);
 
-        Undertow server = Undertow.builder()
+        this.server = Undertow.builder()
                 .addHttpListener(port, host)
                 .setHandler(routingHandler)
                 .build();
-        this.server = server;
     }
 
     public void enableSagaExecutionAutomaticDeadlockDetectionAndResolution() {
