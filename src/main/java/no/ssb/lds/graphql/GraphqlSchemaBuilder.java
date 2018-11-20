@@ -10,12 +10,10 @@ import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeReference;
 import graphql.schema.GraphQLUnionType;
-import graphql.schema.StaticDataFetcher;
 import no.ssb.lds.api.persistence.Persistence;
 import no.ssb.lds.core.specification.Specification;
 import no.ssb.lds.core.specification.SpecificationElement;
 import no.ssb.lds.core.specification.SpecificationElementType;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,8 +29,6 @@ import static graphql.Scalars.GraphQLID;
 import static graphql.Scalars.GraphQLLong;
 import static graphql.Scalars.GraphQLString;
 import static java.lang.String.format;
-import static no.ssb.lds.core.specification.SpecificationElementType.EMBEDDED;
-import static no.ssb.lds.core.specification.SpecificationElementType.REF;
 
 /**
  * Converts a LDS specification to GraphQL schema.
@@ -41,7 +37,10 @@ public class GraphqlSchemaBuilder {
 
     private static final Logger log = LoggerFactory.getLogger(GraphqlSchemaBuilder.class);
     private final Specification specification;
+
+    // Keep track of the union types we registered.
     private final Set<String> unionTypes = new HashSet<>();
+
     private final Persistence persistence;
 
     public GraphqlSchemaBuilder(Specification specification, Persistence persistence) {
@@ -49,33 +48,38 @@ public class GraphqlSchemaBuilder {
         this.persistence = Objects.requireNonNull(persistence);
     }
 
-    private static Boolean isRequired(SpecificationElement property) {
-        return property.getJsonTypes().contains("null");
+    /**
+     * Returns true if the element is nullable (has null as allowed type).
+     */
+    private static Boolean isNullable(SpecificationElement element) {
+        return elementJsonTypes(element).contains(JsonType.NULL);
     }
 
     /**
-     * TODO: Fix this.
+     * Returns type safe element types.
      */
-    private static String getOneJsonType(SpecificationElement property) {
-        if (!isRequired(property)) {
-            Set<String> types = property.getJsonTypes();
-            if (types.size() != 1) {
-                throw new IllegalArgumentException("more than one json type");
-            }
-            return types.iterator().next();
-        } else {
-            Set<String> types = property.getJsonTypes();
-            if (types.size() != 2) {
-                throw new IllegalArgumentException("unsupported type");
-            }
-            Iterator<String> iterator = types.iterator();
-            String next = iterator.next();
-            if ("null".equals(next)) {
-                return iterator.next();
-            } else {
-                return next;
-            }
+    private static Set<JsonType> elementJsonTypes(SpecificationElement element) {
+        LinkedHashSet<JsonType> types = new LinkedHashSet<>();
+        for (String jsonType : element.getJsonTypes()) {
+            types.add(JsonType.valueOf(jsonType.toUpperCase()));
         }
+        return types;
+    }
+
+    /**
+     * Returns type safe element type.
+     * <p>
+     * Null type, since it is used to mark fields as nullable is ignored.
+     */
+    private static JsonType elementJsonType(SpecificationElement element) {
+        Set<JsonType> types = elementJsonTypes(element);
+        types.remove(JsonType.NULL);
+        if (types.size() != 1) {
+            throw new IllegalArgumentException(format(
+                    "more than one json type in %s: %s", element.getName(), types
+            ));
+        }
+        return types.iterator().next();
     }
 
     private static String getOneRefType(SpecificationElement property) {
@@ -84,6 +88,13 @@ public class GraphqlSchemaBuilder {
             throw new IllegalArgumentException(format("More than one ref type for property %s", property.getName()));
         }
         return types.iterator().next();
+    }
+
+    private static GraphQLFieldDefinition.Builder createFieldDefinition(SpecificationElement property) {
+        GraphQLFieldDefinition.Builder field = GraphQLFieldDefinition.newFieldDefinition();
+        field.name(property.getName());
+        field.description(property.getDescription());
+        return field;
     }
 
     // Build a graphql schema out of the specification.
@@ -134,91 +145,145 @@ public class GraphqlSchemaBuilder {
     }
 
     public GraphQLObjectType.Builder createObjectType(SpecificationElement specificationElement) {
-        GraphQLObjectType.Builder object = GraphQLObjectType.newObject();
-        object.name(specificationElement.getName());
-        object.description(specificationElement.getDescription());
+        try {
+            GraphQLObjectType.Builder object = GraphQLObjectType.newObject();
+            String objectName = specificationElement.getName();
+            object.name(objectName);
+            object.description(specificationElement.getDescription());
 
-        // For each property
-        for (SpecificationElement property : specificationElement.getProperties().values()) {
+            // For each property
+            for (SpecificationElement property : specificationElement.getProperties().values()) {
+                GraphQLFieldDefinition.Builder field = buildField(property);
 
-            GraphQLFieldDefinition.Builder field = GraphQLFieldDefinition.newFieldDefinition();
-            String typeName = property.getName();
-            field.name(typeName);
-
-            SpecificationElementType elementType = property.getSpecificationElementType();
-            field.description(property.getDescription());
-            if (EMBEDDED.equals(elementType)) {
-                String jsonType = getOneJsonType(property);
-                if ("object".equals(jsonType)) {
-                    // Recurse if embedded.
-                    field.type(createObjectType(property));
-                    field.dataFetcher(new StaticDataFetcher(new JSONObject()));
-                }
-                if ("boolean".equals(jsonType)) {
-                    field.type(GraphQLList.list(GraphQLBoolean));
-                } else if ("array".equals(jsonType)) {
-                    SpecificationElement arrayType = property.getItems();
-                    String type = getOneJsonType(arrayType);
-                    if ("object".equals(type) && !"".equals(arrayType.getName())) {
-                        String refType = arrayType.getName();
-                        field.type(GraphQLList.list(GraphQLTypeReference.typeRef(refType)));
-                    } else {
-                        field.type(GraphQLList.list(GraphQLString));
-                    }
-                } else if ("string".equals(jsonType)) {
-                    field.type(GraphQLString);
-                } else if ("number".equals(jsonType)) {
-                    field.type(GraphQLFloat);
-                } else if ("integer".equals(jsonType)) {
-                    field.type(GraphQLLong);
-                }
-            } else if (REF.equals(elementType)) {
-                GraphQLOutputType graphQLOutputType;
-                // If more than one type in ref, try to create a Union type.
-                if (property.getRefTypes().size() > 1) {
-                    if (unionTypes.contains(typeName)) {
-                        graphQLOutputType = GraphQLTypeReference.typeRef(typeName);
-                    } else {
-                        GraphQLUnionType.Builder unionType = GraphQLUnionType.newUnionType()
-                                .name(typeName);
-                        for (String refType : property.getRefTypes()) {
-                            unionType.possibleType(GraphQLTypeReference.typeRef(refType));
-                        }
-                        // TODO: Handle abstract type.
-                        unionType.typeResolver(env -> {
-                            throw new UnsupportedOperationException("Abstract type not supported yet");
-                        });
-                        graphQLOutputType = unionType.build();
-                        unionTypes.add(typeName);
-                    }
-                } else {
-                    String refType = getOneRefType(property);
-                    graphQLOutputType = GraphQLTypeReference.typeRef(refType);
-                }
-                String jsonType = getOneJsonType(property);
-                if ("array".equals(jsonType)) {
-                    field.type(GraphQLList.list(graphQLOutputType));
-                    field.dataFetcher(new PersistenceLinksFetcher(
-                            persistence,
-                            "data",
-                            typeName, graphQLOutputType.getName()
-                    ));
-                } else if ("string".equals(jsonType)) {
-                    field.type(graphQLOutputType);
-                    field.dataFetcher(new PersistenceLinkFetcher(
-                            persistence,
-                            "data",
-                            typeName, graphQLOutputType.getName()
-                    ));
-                }
-            } else {
-                throw new AssertionError();
+                object.field(field);
             }
 
-            object.field(field);
+            return object;
+        } catch (IllegalArgumentException iae) {
+            throw new IllegalArgumentException(
+                    format(
+                            "could not create GraphQLObjectType for %s: %s",
+                            specificationElement.getName(), iae.getMessage()),
+                    iae
+            );
         }
+    }
 
-        return object;
+    private GraphQLFieldDefinition.Builder buildField(SpecificationElement property) {
+        SpecificationElementType elementType = property.getSpecificationElementType();
+        switch (elementType) {
+            case EMBEDDED:
+                return buildEmbeddedField(property);
+            case REF:
+                return buildReferenceField(property);
+            case ROOT:
+            case MANAGED:
+            default:
+                throw new IllegalArgumentException(format(
+                        "property %s was of type %s",
+                        property.getName(), elementType
+                ));
+        }
+    }
+
+    private GraphQLFieldDefinition.Builder buildReferenceField(SpecificationElement property) {
+
+        GraphQLFieldDefinition.Builder field = createFieldDefinition(property);
+
+        GraphQLOutputType graphQLOutputType = buildReferencedField(property);
+        String propertyName = property.getName();
+        JsonType propertyType = elementJsonType(property);
+        switch (propertyType) {
+            case ARRAY:
+                field.type(GraphQLList.list(graphQLOutputType));
+                field.dataFetcher(new PersistenceLinksFetcher(
+                        persistence,
+                        "data",
+                        propertyName, graphQLOutputType.getName()
+                ));
+                return field;
+            case STRING:
+                field.type(graphQLOutputType);
+                field.dataFetcher(new PersistenceLinkFetcher(
+                        persistence,
+                        "data",
+                        propertyName, graphQLOutputType.getName()
+                ));
+                return field;
+            default:
+                throw new IllegalArgumentException(format(
+                        "reference %s was of type %s",
+                        propertyName, propertyType
+                ));
+        }
+    }
+
+    private GraphQLOutputType buildReferencedField(SpecificationElement property) {
+        String propertyName = property.getName();
+        // If more than one type in ref, try to create a Union type.
+        if (property.getRefTypes().size() > 1) {
+            if (unionTypes.contains(propertyName)) {
+                return GraphQLTypeReference.typeRef(propertyName);
+            } else {
+                GraphQLUnionType.Builder unionType = GraphQLUnionType.newUnionType()
+                        .name(propertyName);
+                for (String refType : property.getRefTypes()) {
+                    unionType.possibleType(GraphQLTypeReference.typeRef(refType));
+                }
+                // TODO: Handle abstract type.
+                unionType.typeResolver(env -> {
+                    throw new UnsupportedOperationException("Abstract type not supported yet");
+                });
+                unionTypes.add(propertyName);
+                return unionType.build();
+            }
+        } else {
+            String refType = getOneRefType(property);
+            return GraphQLTypeReference.typeRef(refType);
+        }
+    }
+
+    private GraphQLFieldDefinition.Builder buildEmbeddedField(SpecificationElement property) {
+
+        GraphQLFieldDefinition.Builder field = createFieldDefinition(property);
+
+        JsonType jsonType = elementJsonType(property);
+        switch (jsonType) {
+            case OBJECT:
+                // Recurse if embedded.
+                return field.type(createObjectType(property));
+            case ARRAY:
+                // TODO: Extract to method.
+                SpecificationElement arrayElement = property.getItems();
+                JsonType arrayType = elementJsonType(arrayElement);
+                if (arrayType == JsonType.OBJECT && !"".equals(arrayElement.getName())) {
+                    String refType = arrayElement.getName();
+                    field.type(GraphQLList.list(GraphQLTypeReference.typeRef(refType)));
+                } else {
+                    // TODO: Not so sure about this.
+                    field.type(GraphQLList.list(GraphQLString));
+                }
+                return field;
+            case STRING:
+                return field.type(GraphQLString);
+            case NUMBER:
+                return field.type(GraphQLFloat);
+            case BOOLEAN:
+                field.type(GraphQLList.list(GraphQLBoolean));
+            case INTEGER:
+                return field.type(GraphQLLong);
+        }
+        throw new AssertionError();
+    }
+
+    public enum JsonType {
+        OBJECT,
+        ARRAY,
+        BOOLEAN,
+        STRING,
+        NUMBER,
+        INTEGER,
+        NULL
     }
 
 }
