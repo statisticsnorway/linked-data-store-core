@@ -106,7 +106,7 @@ public class GraphqlHandler implements HttpHandler {
                 String query = readFile(exchange.getInputStream());
                 JSONObject json = new JSONObject(query);
                 executionInput.query(json.getString("query"));
-                if (json.has("variables")) {
+                if (json.has("variables") && !json.isNull("variables")) {
                     executionInput.variables(json.getJSONObject("variables").toMap());
                 }
                 if (json.has("operationName")) {
