@@ -66,7 +66,7 @@ public class ManagedResourceHandler implements HttpHandler {
         boolean isManagedList = topLevelElement.id() == null;
 
         if (isManagedList && exchange.getQueryParameters().containsKey("schema")) {
-            String jsonSchema = new JSONObject(schemaRepository.getJsonSchema().getSchemaJson(resourceContext.getFirstElement().name())).toString();
+            String jsonSchema = schemaRepository.getJsonSchema().getSchemaJson(resourceContext.getFirstElement().name());
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
             exchange.getResponseSender().send(jsonSchema, StandardCharsets.UTF_8);
             return;

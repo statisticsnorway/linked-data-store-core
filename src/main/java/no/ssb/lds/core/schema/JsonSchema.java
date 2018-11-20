@@ -6,9 +6,11 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 public class JsonSchema {
 
+    static final Pattern compactJsonPattern = Pattern.compile("\\s(?=([^\"]*\"[^\"]*\")*[^\"]*$)");
     final Map<String, Schema> schemas = new LinkedHashMap<>();
     final Map<String, String> schemaJsonByName = new LinkedHashMap<>();
     final Map<String, JsonSchemaDefinitionElement> definitions = new LinkedHashMap<>();
@@ -34,7 +36,7 @@ public class JsonSchema {
     }
 
     JsonSchema addSchemaJson(String name, String schemaJson) {
-        schemaJsonByName.put(name, schemaJson);
+        schemaJsonByName.put(name, compactJsonPattern.matcher(schemaJson).replaceAll(""));
         return this;
     }
 
