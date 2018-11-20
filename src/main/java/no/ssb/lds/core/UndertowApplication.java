@@ -120,7 +120,7 @@ public class UndertowApplication {
         this.sagaThreadPool = sagaThreadPool;
 
 
-        GraphQL graphQL = GraphQL.newGraphQL(new GraphqlSchemaBuilder(specification).getSchema()).build();
+        GraphQL graphQL = GraphQL.newGraphQL(new GraphqlSchemaBuilder(specification, persistence).getSchema()).build();
 
         // TODO: Clean up.
         HttpHandler routingHandler = Handlers.routing()

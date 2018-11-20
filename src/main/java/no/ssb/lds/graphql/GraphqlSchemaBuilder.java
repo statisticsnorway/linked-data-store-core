@@ -1,5 +1,6 @@
 package no.ssb.lds.graphql;
 
+import graphql.schema.DataFetcher;
 import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLList;
@@ -10,6 +11,7 @@ import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeReference;
 import graphql.schema.GraphQLUnionType;
 import graphql.schema.StaticDataFetcher;
+import no.ssb.lds.api.persistence.Persistence;
 import no.ssb.lds.core.specification.Specification;
 import no.ssb.lds.core.specification.SpecificationElement;
 import no.ssb.lds.core.specification.SpecificationElementType;
@@ -17,11 +19,9 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -42,9 +42,11 @@ public class GraphqlSchemaBuilder {
     private static final Logger log = LoggerFactory.getLogger(GraphqlSchemaBuilder.class);
     private final Specification specification;
     private final Set<String> unionTypes = new HashSet<>();
+    private final Persistence persistence;
 
-    public GraphqlSchemaBuilder(Specification specification) {
+    public GraphqlSchemaBuilder(Specification specification, Persistence persistence) {
         this.specification = Objects.requireNonNull(specification);
+        this.persistence = Objects.requireNonNull(persistence);
     }
 
     private static Boolean isRequired(SpecificationElement property) {
@@ -98,7 +100,7 @@ public class GraphqlSchemaBuilder {
                         .build();
 
                 GraphQLFieldDefinition.Builder rootQueryField = createRootQueryField(element);
-                StaticDataFetcher rootQueryFetcher = createRootQueryFetcher(element);
+                DataFetcher rootQueryFetcher = createRootQueryFetcher(element);
                 queryBuilder.field(rootQueryField.dataFetcher(rootQueryFetcher).build());
                 log.debug("Converted {} to graphql type {}", element.getName(), buildType);
 
@@ -112,11 +114,8 @@ public class GraphqlSchemaBuilder {
         return GraphQLSchema.newSchema().query(queryBuilder.build()).additionalTypes(additionalTypes).build();
     }
 
-    private StaticDataFetcher createRootQueryFetcher(SpecificationElement element) {
-        return new StaticDataFetcher(Arrays.asList(
-                new JSONObject(Map.of("name", "Hadrien", "type", element.getName())).toMap(),
-                new JSONObject(Map.of("name", "Kim")).toMap()
-        ));
+    private DataFetcher createRootQueryFetcher(SpecificationElement element) {
+        return new PersistenceFetcher(persistence, "data", element.getName());
     }
 
     /**
@@ -199,8 +198,18 @@ public class GraphqlSchemaBuilder {
                 String jsonType = getOneJsonType(property);
                 if ("array".equals(jsonType)) {
                     field.type(GraphQLList.list(graphQLOutputType));
+                    field.dataFetcher(new PersistenceLinksFetcher(
+                            persistence,
+                            "data",
+                            typeName, graphQLOutputType.getName()
+                    ));
                 } else if ("string".equals(jsonType)) {
                     field.type(graphQLOutputType);
+                    field.dataFetcher(new PersistenceLinkFetcher(
+                            persistence,
+                            "data",
+                            typeName, graphQLOutputType.getName()
+                    ));
                 }
             } else {
                 throw new AssertionError();

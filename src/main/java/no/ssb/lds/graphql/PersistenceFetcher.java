@@ -5,13 +5,14 @@ import graphql.schema.DataFetchingEnvironment;
 import no.ssb.lds.api.persistence.Persistence;
 import org.json.JSONObject;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.StringJoiner;
 
 /**
  * DataFetcher that gets the data from {@link Persistence}.
  */
-public class PersistenceFetcher implements DataFetcher<JSONObject> {
+public class PersistenceFetcher implements DataFetcher<Map<String, Object>> {
 
     private final Persistence backend;
     private final String nameSpace;
@@ -31,8 +32,9 @@ public class PersistenceFetcher implements DataFetcher<JSONObject> {
     }
 
     @Override
-    public JSONObject get(DataFetchingEnvironment environment) throws Exception {
-        return backend.read(nameSpace, entity, null);
+    public Map<String, Object> get(DataFetchingEnvironment environment) throws Exception {
+        JSONObject entity = backend.read(nameSpace, this.entity, environment.getArgument("id"));
+        return entity != null ? entity.toMap() : null;
     }
 
     @Override
