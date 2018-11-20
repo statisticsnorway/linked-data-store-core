@@ -4,6 +4,7 @@ import graphql.schema.DataFetcher;
 import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLList;
+import graphql.schema.GraphQLNonNull;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLOutputType;
 import graphql.schema.GraphQLSchema;
@@ -18,7 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -90,6 +90,9 @@ public class GraphqlSchemaBuilder {
         return types.iterator().next();
     }
 
+    /**
+     * Helper method that create a {@link GraphQLFieldDefinition.Builder} with name and description.
+     */
     private static GraphQLFieldDefinition.Builder createFieldDefinition(SpecificationElement property) {
         GraphQLFieldDefinition.Builder field = GraphQLFieldDefinition.newFieldDefinition();
         field.name(property.getName());
@@ -97,7 +100,9 @@ public class GraphqlSchemaBuilder {
         return field;
     }
 
-    // Build a graphql schema out of the specification.
+    /**
+     * Build a {@link GraphQLSchema}
+     */
     public GraphQLSchema getSchema() {
 
         Set<GraphQLType> additionalTypes = new LinkedHashSet<>();
@@ -113,7 +118,7 @@ public class GraphqlSchemaBuilder {
                 GraphQLFieldDefinition.Builder rootQueryField = createRootQueryField(element);
                 DataFetcher rootQueryFetcher = createRootQueryFetcher(element);
                 queryBuilder.field(rootQueryField.dataFetcher(rootQueryFetcher).build());
-                log.debug("Converted {} to graphql type {}", element.getName(), buildType);
+                log.debug("Converted {} to GraphQL type {}", element.getName(), buildType);
 
                 additionalTypes.add(buildType);
             } catch (Exception ex) {
@@ -138,12 +143,15 @@ public class GraphqlSchemaBuilder {
                 .argument(
                         GraphQLArgument.newArgument()
                                 .name("id")
-                                .type(GraphQLID)
+                                .type(new GraphQLNonNull(GraphQLID))
                                 .build()
                 )
                 .type(GraphQLTypeReference.typeRef(element.getName()));
     }
 
+    /**
+     * Create GraphQL object type from {@link SpecificationElement}
+     */
     public GraphQLObjectType.Builder createObjectType(SpecificationElement specificationElement) {
         try {
             GraphQLObjectType.Builder object = GraphQLObjectType.newObject();
@@ -169,6 +177,9 @@ public class GraphqlSchemaBuilder {
         }
     }
 
+    /**
+     * Create a {@link GraphQLFieldDefinition.Builder} from {@link SpecificationElement}
+     */
     private GraphQLFieldDefinition.Builder buildField(SpecificationElement property) {
         SpecificationElementType elementType = property.getSpecificationElementType();
         switch (elementType) {
@@ -186,11 +197,14 @@ public class GraphqlSchemaBuilder {
         }
     }
 
+    /**
+     * Create a {@link GraphQLFieldDefinition.Builder} that is a reference (linked) {@link SpecificationElement}.
+     */
     private GraphQLFieldDefinition.Builder buildReferenceField(SpecificationElement property) {
 
         GraphQLFieldDefinition.Builder field = createFieldDefinition(property);
 
-        GraphQLOutputType graphQLOutputType = buildReferencedField(property);
+        GraphQLOutputType graphQLOutputType = buildReferenceTargetType(property);
         String propertyName = property.getName();
         JsonType propertyType = elementJsonType(property);
         switch (propertyType) {
@@ -218,7 +232,10 @@ public class GraphqlSchemaBuilder {
         }
     }
 
-    private GraphQLOutputType buildReferencedField(SpecificationElement property) {
+    /**
+     * Create the referenced {@link GraphQLOutputType} of a reference (linked) {@link SpecificationElement}.
+     */
+    private GraphQLOutputType buildReferenceTargetType(SpecificationElement property) {
         String propertyName = property.getName();
         // If more than one type in ref, try to create a Union type.
         if (property.getRefTypes().size() > 1) {
@@ -243,35 +260,55 @@ public class GraphqlSchemaBuilder {
         }
     }
 
+    /**
+     * Create an embedded {@link GraphQLFieldDefinition.Builder}.
+     * <p>
+     * Nullability is checked using {@link #isNullable(SpecificationElement)}.
+     */
     private GraphQLFieldDefinition.Builder buildEmbeddedField(SpecificationElement property) {
 
         GraphQLFieldDefinition.Builder field = createFieldDefinition(property);
+        GraphQLOutputType propertyType = buildEmbeddedTargetType(property);
 
+        if (isNullable(property)) {
+            field.type(propertyType);
+        } else {
+            field.type(new GraphQLNonNull(propertyType));
+        }
+
+        return field;
+    }
+
+    /**
+     * Returns a {@link GraphQLOutputType} of an embedded {@link SpecificationElement}.
+     * <p>
+     * If the type is object, the method recurse.
+     */
+    private GraphQLOutputType buildEmbeddedTargetType(SpecificationElement property) {
         JsonType jsonType = elementJsonType(property);
         switch (jsonType) {
             case OBJECT:
                 // Recurse if embedded.
-                return field.type(createObjectType(property));
+                return createObjectType(property).build();
             case ARRAY:
-                // TODO: Extract to method.
+                // TODO: Ideally we should recurse.
                 SpecificationElement arrayElement = property.getItems();
                 JsonType arrayType = elementJsonType(arrayElement);
                 if (arrayType == JsonType.OBJECT && !"".equals(arrayElement.getName())) {
                     String refType = arrayElement.getName();
-                    field.type(GraphQLList.list(GraphQLTypeReference.typeRef(refType)));
+                    return GraphQLList.list(GraphQLTypeReference.typeRef(refType));
                 } else {
-                    // TODO: Not so sure about this.
-                    field.type(GraphQLList.list(GraphQLString));
+                    // TODO: Array can be of scalar type.
+                    return GraphQLList.list(GraphQLString);
                 }
-                return field;
             case STRING:
-                return field.type(GraphQLString);
+                return GraphQLString;
             case NUMBER:
-                return field.type(GraphQLFloat);
+                return GraphQLFloat;
             case BOOLEAN:
-                field.type(GraphQLList.list(GraphQLBoolean));
+                return GraphQLBoolean;
             case INTEGER:
-                return field.type(GraphQLLong);
+                return GraphQLLong;
         }
         throw new AssertionError();
     }
