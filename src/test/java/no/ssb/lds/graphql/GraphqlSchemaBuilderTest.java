@@ -1,17 +1,10 @@
 package no.ssb.lds.graphql;
 
-import graphql.ExecutionResult;
-import graphql.GraphQL;
-import graphql.GraphQLError;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.idl.SchemaPrinter;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import no.ssb.lds.core.specification.Specification;
 import org.testng.annotations.Test;
-
-import java.util.List;
-
-import static org.testng.Assert.*;
 
 public class GraphqlSchemaBuilderTest {
 
@@ -53,7 +46,7 @@ public class GraphqlSchemaBuilderTest {
 
         );
 
-        no.ssb.lds.graphql.GraphqlSchemaBuilder builder = new GraphqlSchemaBuilder(specification);
+        no.ssb.lds.graphql.GraphqlSchemaBuilder builder = new GraphqlSchemaBuilder(specification, null);
         GraphQLSchema schema = builder.getSchema();
 
         SchemaPrinter printer = new SchemaPrinter();

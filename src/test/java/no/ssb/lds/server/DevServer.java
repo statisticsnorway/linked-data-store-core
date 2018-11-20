@@ -17,9 +17,8 @@ public class DevServer {
                 .propertiesResource(UndertowApplication.getDefaultConfigurationResourcePath())
                 .values("persistence.provider", "mem",
                         "persistence.mem.wait.min", "0",
-                        "persistence.mem.wait.max", "0",
-                        "specification.schema", "spec/demo/contact.json,spec/demo/provisionagreement.json")
-                .propertiesResource("conf/application.properties")
+                       "persistence.mem.wait.max", "0"
+                )
                 .environment("LDS_")
                 .systemProperties()
                 .build();
