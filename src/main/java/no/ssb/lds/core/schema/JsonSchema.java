@@ -43,6 +43,7 @@ public class JsonSchema {
     }
 
     JsonSchema addDefinition(String definitionName, JsonSchemaDefinitionElement jsde) {
+        jsde.name = definitionName;
         definitions.put(definitionName, jsde);
         return this;
     }

@@ -60,7 +60,6 @@ public class JsonSchema04Builder {
                     throw new IllegalStateException("Referenced definition does not exist: " + refValue);
                 }
                 JsonSchemaDefinitionElement jsde = buildElement(definitions, definition);
-                jsde.name = definitionRef;
                 jsonSchema.addDefinition(definitionRef, jsde);
             }
             JsonSchemaDefinitionElement refElement = jsonSchema.getDefinitions().get(definitionRef);
