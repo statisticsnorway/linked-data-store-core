@@ -3,33 +3,43 @@ package no.ssb.lds.core.domain.reference;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
+import no.ssb.concurrent.futureselector.SelectableFuture;
 import no.ssb.lds.api.persistence.Persistence;
+import no.ssb.lds.api.persistence.Transaction;
+import no.ssb.lds.api.persistence.buffered.BufferedPersistence;
+import no.ssb.lds.api.persistence.buffered.DefaultBufferedPersistence;
+import no.ssb.lds.api.persistence.buffered.Document;
+import no.ssb.lds.api.persistence.buffered.DocumentIterator;
+import no.ssb.lds.core.buffered.DocumentToJson;
 import no.ssb.lds.core.domain.resource.ResourceContext;
 import no.ssb.lds.core.domain.resource.ResourceElement;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
 import no.ssb.lds.core.saga.SagaRepository;
 import no.ssb.lds.core.specification.Specification;
 import no.ssb.saga.api.Saga;
+import no.ssb.saga.execution.SagaHandoffResult;
 import no.ssb.saga.execution.adapter.AdapterLoader;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
+import java.util.concurrent.CompletableFuture;
 
 public class ReferenceResourceHandler implements HttpHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(ReferenceResourceHandler.class);
 
-    final Persistence persistence;
+    final BufferedPersistence persistence;
     final Specification specification;
     final ResourceContext resourceContext;
     final SagaExecutionCoordinator sec;
     final SagaRepository sagaRepository;
 
     public ReferenceResourceHandler(Persistence persistence, Specification specification, ResourceContext resourceContext, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
-        this.persistence = persistence;
+        this.persistence = new DefaultBufferedPersistence(persistence);
         this.specification = specification;
         this.resourceContext = resourceContext;
         this.sec = sec;
@@ -56,14 +66,22 @@ public class ReferenceResourceHandler implements HttpHandler {
     private void getReferenceTo(HttpServerExchange exchange) {
         ResourceElement topLevelElement = resourceContext.getFirstElement();
 
-        JSONObject rootNode = persistence.read(resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id());
-
-        if (rootNode == null) {
-            exchange.setStatusCode(404);
-            return;
+        JSONObject jsonObject;
+        try (Transaction tx = persistence.createTransaction(true)) {
+            DocumentIterator documentIterator = persistence.read(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).join();
+            if (!documentIterator.hasNext()) {
+                exchange.setStatusCode(404);
+                return;
+            }
+            Document document = documentIterator.next();
+            if (document.isDeleted()) {
+                exchange.setStatusCode(404);
+                return;
+            }
+            jsonObject = new DocumentToJson(document).toJSONObject();
         }
 
-        boolean referenceToExists = resourceContext.referenceToExists(rootNode);
+        boolean referenceToExists = resourceContext.referenceToExists(jsonObject);
 
         if (referenceToExists) {
             exchange.setStatusCode(200);
@@ -80,8 +98,19 @@ public class ReferenceResourceHandler implements HttpHandler {
 
         exchange.getRequestReceiver().receiveFullString(
                 (httpServerExchange, message) -> {
-                    JSONObject rootNode = persistence.read(namespace, managedDomain, managedDocumentId);
-                    boolean referenceToExists = resourceContext.referenceToExists(rootNode);
+                    Document document = null;
+                    try (Transaction tx = persistence.createTransaction(true)) {
+                        DocumentIterator documentIterator = persistence.read(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).join();
+                        if (documentIterator.hasNext()) {
+                            document = documentIterator.next();
+                        }
+                    }
+                    boolean referenceToExists = false;
+                    JSONObject rootNode = null;
+                    if (document != null) {
+                        rootNode = new DocumentToJson(document).toJSONObject();
+                        referenceToExists = resourceContext.referenceToExists(rootNode);
+                    }
                     if (referenceToExists) {
                         exchange.setStatusCode(200);
                     } else {
@@ -92,11 +121,12 @@ public class ReferenceResourceHandler implements HttpHandler {
                         Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
                         AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-                        String executionId = sec.handoff(sync, adapterLoader, saga, namespace, managedDomain, managedDocumentId, rootNode);
+                        SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), rootNode);
+                        SagaHandoffResult sagaHandoffResult = handoff.join();
 
                         exchange.setStatusCode(200);
                         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-                        exchange.getResponseSender().send("{\"saga-execution-id\":\"" + executionId + "\"}");
+                        exchange.getResponseSender().send("{\"saga-execution-id\":\"" + sagaHandoffResult.executionId + "\"}");
                     }
                 },
                 (exchange1, e) -> {
@@ -113,24 +143,50 @@ public class ReferenceResourceHandler implements HttpHandler {
         String managedDomain = topLevelElement.name();
         String managedDocumentId = topLevelElement.id();
 
-        JSONObject rootNode = persistence.read(namespace, managedDomain, managedDocumentId);
+        JSONArray output = new JSONArray();
+        try (Transaction tx = persistence.createTransaction(true)) {
+            CompletableFuture<DocumentIterator> future = persistence.read(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId);
+            DocumentIterator iterator = future.join();
+            while (iterator.hasNext()) {
+                Document document = iterator.next();
+                if (document.isDeleted()) {
+                    continue;
+                }
+                output.put(new DocumentToJson(document).toJSONObject());
+            }
+        }
+        if (output.length() == 0) {
+            exchange.setStatusCode(200);
+            exchange.endExchange();
+            return;
+        }
+        if (output.length() > 1) {
+            throw new IllegalStateException("More than one document version match.");
+        }
+        // output.length() == 1
+        JSONObject rootNode = output.getJSONObject(0);
         boolean referenceToExists = resourceContext.referenceToExists(rootNode);
         if (!referenceToExists) {
             exchange.setStatusCode(200);
             return;
-        } else {
-            new ReferenceJsonHelper(specification, topLevelElement).deleteReferenceJson(resourceContext, rootNode);
-
-            boolean sync = exchange.getQueryParameters().getOrDefault("sync", new LinkedList()).stream().anyMatch(s -> "true".equalsIgnoreCase((String) s));
-
-            Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
-
-            AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-            String executionId = sec.handoff(sync, adapterLoader, saga, namespace, managedDomain, managedDocumentId, rootNode);
-
-            exchange.setStatusCode(200);
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-            exchange.getResponseSender().send("{\"saga-execution-id\":\"" + executionId + "\"}");
         }
+
+        new ReferenceJsonHelper(specification, resourceContext.getFirstElement()).deleteReferenceJson(resourceContext, rootNode);
+
+        boolean sync = exchange.getQueryParameters().getOrDefault("sync", new LinkedList()).stream().anyMatch(s -> "true".equalsIgnoreCase((String) s));
+
+        Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
+
+        AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
+        SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, resourceContext.getNamespace(), resourceContext.getFirstElement().name(), resourceContext.getFirstElement().id(), resourceContext.getTimestamp(), rootNode);
+        SagaHandoffResult handoffResult = handoff.join();
+
+        exchange.setStatusCode(200);
+        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
+        exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.executionId + "\"}");
+
+        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
+        exchange.getResponseSender().send(output.getJSONObject(0).toString(), StandardCharsets.UTF_8);
+        exchange.endExchange();
     }
 }

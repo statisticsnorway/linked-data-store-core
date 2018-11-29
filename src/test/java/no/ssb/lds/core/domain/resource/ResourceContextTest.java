@@ -4,6 +4,9 @@ import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import no.ssb.lds.core.specification.Specification;
 import org.testng.annotations.Test;
 
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+
 public class ResourceContextTest {
 
     private Specification specification() {
@@ -15,31 +18,31 @@ public class ResourceContextTest {
 
     @Test
     public void thatResourcesWithoutManagedDomainDocumentIdAreValid() {
-        ResourceContext.createResourceContext(specification(), "/ns/contact");
+        ResourceContext.createResourceContext(specification(), "/ns/contact", ZonedDateTime.now(ZoneId.of("Etc/UTC")));
     }
 
     @Test(expectedExceptions = ResourceException.class)
     public void unmanaged() {
-        ResourceContext.createResourceContext(specification(), "/ns/unmanaged");
+        ResourceContext.createResourceContext(specification(), "/ns/unmanaged", ZonedDateTime.now(ZoneId.of("Etc/UTC")));
     }
 
     @Test(expectedExceptions = ResourceException.class)
     public void emptyDocumentId() {
-        ResourceContext.createResourceContext(specification(), "/ns/contact/%20");
+        ResourceContext.createResourceContext(specification(), "/ns/contact/%20", ZonedDateTime.now(ZoneId.of("Etc/UTC")));
     }
 
     @Test(expectedExceptions = ResourceException.class)
     public void invalidEmbeddedPath() {
-        ResourceContext.createResourceContext(specification(), "/ns/contact/1/bad");
+        ResourceContext.createResourceContext(specification(), "/ns/contact/1/bad", ZonedDateTime.now(ZoneId.of("Etc/UTC")));
     }
 
     @Test(expectedExceptions = ResourceException.class)
     public void invalidReferenceWithMissingLinkTargetId() {
-        ResourceContext.createResourceContext(specification(), "/ns/provisionagreement/1/friend/contact");
+        ResourceContext.createResourceContext(specification(), "/ns/provisionagreement/1/friend/contact", ZonedDateTime.now(ZoneId.of("Etc/UTC")));
     }
 
     @Test(expectedExceptions = ResourceException.class)
     public void invalidNavigationThroughReference() {
-        ResourceContext.createResourceContext(specification(), "/ns/provisionagreement/1/friend/contact/1/name");
+        ResourceContext.createResourceContext(specification(), "/ns/provisionagreement/1/friend/contact/1/name", ZonedDateTime.now(ZoneId.of("Etc/UTC")));
     }
 }

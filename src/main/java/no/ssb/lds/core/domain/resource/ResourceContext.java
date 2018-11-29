@@ -8,12 +8,13 @@ import org.json.JSONObject;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.time.ZonedDateTime;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class ResourceContext {
 
-    public static ResourceContext createResourceContext(Specification specification, String requestPath) throws ResourceException {
+    public static ResourceContext createResourceContext(Specification specification, String requestPath, ZonedDateTime timestamp) throws ResourceException {
         SpecificationElement specificationRootElement = specification.getRootElement();
         String[] pathParts = requestPath.substring(1).split("/");
         if (pathParts.length < 2) {
@@ -34,7 +35,7 @@ public class ResourceContext {
         SpecificationElement managedSpecificationElement = specificationRootElement.getProperties().get(managedResourceName);
         ResourceElement secondElement = navigateSpecAndCreateResourceContext(managedSpecificationElement, 3, pathParts);
         ResourceElement firstElement = new ResourceElement(managedSpecificationElement, managedResourceName, managedResourceId, secondElement);
-        return new ResourceContext(namespace, firstElement);
+        return new ResourceContext(namespace, firstElement, timestamp);
     }
 
     private static ResourceElement navigateSpecAndCreateResourceContext(SpecificationElement parentSpecificationElement, int depth, String[] resourcePath) {
@@ -89,11 +90,13 @@ public class ResourceContext {
     private final String namespace;
     private final ResourceElement firstElement;
     private final ResourceType resourcetype;
+    private final ZonedDateTime timestamp;
 
-    private ResourceContext(String namespace, ResourceElement firstElement) {
+    private ResourceContext(String namespace, ResourceElement firstElement, ZonedDateTime timestamp) {
         this.namespace = namespace;
         this.firstElement = firstElement;
         this.resourcetype = getResourceType(firstElement);
+        this.timestamp = timestamp;
     }
 
     private static String urlDecode(String encoded) {
@@ -118,6 +121,10 @@ public class ResourceContext {
 
     public boolean isEmbedded() {
         return ResourceType.EMBEDDED == resourcetype;
+    }
+
+    public ZonedDateTime getTimestamp() {
+        return timestamp;
     }
 
     static class VisitContext {

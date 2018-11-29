@@ -3,7 +3,14 @@ package no.ssb.lds.core.domain.managed;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
+import no.ssb.concurrent.futureselector.SelectableFuture;
 import no.ssb.lds.api.persistence.Persistence;
+import no.ssb.lds.api.persistence.Transaction;
+import no.ssb.lds.api.persistence.buffered.BufferedPersistence;
+import no.ssb.lds.api.persistence.buffered.DefaultBufferedPersistence;
+import no.ssb.lds.api.persistence.buffered.Document;
+import no.ssb.lds.api.persistence.buffered.DocumentIterator;
+import no.ssb.lds.core.buffered.DocumentToJson;
 import no.ssb.lds.core.domain.resource.ResourceContext;
 import no.ssb.lds.core.domain.resource.ResourceElement;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
@@ -13,21 +20,22 @@ import no.ssb.lds.core.specification.Specification;
 import no.ssb.lds.core.validation.LinkedDocumentValidationException;
 import no.ssb.lds.core.validation.LinkedDocumentValidator;
 import no.ssb.saga.api.Saga;
+import no.ssb.saga.execution.SagaHandoffResult;
 import no.ssb.saga.execution.adapter.AdapterLoader;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
-
-import static java.util.Optional.ofNullable;
+import java.util.concurrent.CompletableFuture;
 
 public class ManagedResourceHandler implements HttpHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(ManagedResourceHandler.class);
 
-    private final Persistence persistence;
+    private final BufferedPersistence persistence;
     private final Specification specification;
     private final SchemaRepository schemaRepository;
     private final ResourceContext resourceContext;
@@ -35,7 +43,7 @@ public class ManagedResourceHandler implements HttpHandler {
     private final SagaRepository sagaRepository;
 
     public ManagedResourceHandler(Persistence persistence, Specification specification, SchemaRepository schemaRepository, ResourceContext resourceContext, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
-        this.persistence = persistence;
+        this.persistence = new DefaultBufferedPersistence(persistence);
         this.specification = specification;
         this.schemaRepository = schemaRepository;
         this.resourceContext = resourceContext;
@@ -72,17 +80,34 @@ public class ManagedResourceHandler implements HttpHandler {
             return;
         }
 
-        String managedResourceJson = (isManagedList ?
-                ofNullable(persistence.findAll(resourceContext.getNamespace(), topLevelElement.name())).map(m -> m.toString()).orElse(null) :
-                ofNullable(persistence.read(resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id())).map(m -> m.toString()).orElse(null));
-
-        if (managedResourceJson == null) {
-            exchange.setStatusCode(404);
-            return;
+        try (Transaction tx = persistence.createTransaction(true)) {
+            CompletableFuture<DocumentIterator> future;
+            if (isManagedList) {
+                future = persistence.findAll(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), null, 100);
+            } else {
+                future = persistence.read(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id());
+            }
+            DocumentIterator iterator = future.join(); // blocking
+            JSONArray output = new JSONArray();
+            while (iterator.hasNext()) {
+                Document document = iterator.next();
+                if (document.isDeleted()) {
+                    continue;
+                }
+                output.put(new DocumentToJson(document).toJSONObject());
+            }
+            if (output.length() == 0) {
+                exchange.setStatusCode(404);
+            } else if (output.length() == 1) {
+                exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
+                exchange.getResponseSender().send(output.getJSONObject(0).toString(), StandardCharsets.UTF_8);
+            } else {
+                // (output.length() > 1
+                exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
+                exchange.getResponseSender().send(output.toString(), StandardCharsets.UTF_8);
+            }
+            exchange.endExchange();
         }
-
-        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
-        exchange.getResponseSender().send(managedResourceJson, StandardCharsets.UTF_8);
     }
 
     private void putManaged(HttpServerExchange exchange) {
@@ -125,11 +150,12 @@ public class ManagedResourceHandler implements HttpHandler {
                     Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
                     AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-                    String executionId = sec.handoff(sync, adapterLoader, saga, namespace, managedDomain, managedDocumentId, requestData);
+                    SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), requestData);
+                    SagaHandoffResult handoffResult = handoff.join();
 
                     exchange.setStatusCode(200);
                     exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-                    exchange.getResponseSender().send("{\"saga-execution-id\":\"" + executionId + "\"}");
+                    exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.executionId + "\"}");
                 },
                 (exchange1, e) -> {
                     exchange.setStatusCode(500);
@@ -149,10 +175,11 @@ public class ManagedResourceHandler implements HttpHandler {
         Saga saga = sagaRepository.get(SagaRepository.SAGA_DELETE_MANAGED_RESOURCE);
 
         AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-        String executionId = sec.handoff(sync, adapterLoader, saga, resourceContext.getNamespace(), managedDomain, topLevelElement.id(), null);
+        SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, resourceContext.getNamespace(), managedDomain, topLevelElement.id(), resourceContext.getTimestamp(), null);
+        SagaHandoffResult handoffResult = handoff.join();
 
         exchange.setStatusCode(200);
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-        exchange.getResponseSender().send("{\"saga-execution-id\":\"" + executionId + "\"}");
+        exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.executionId + "\"}");
     }
 }

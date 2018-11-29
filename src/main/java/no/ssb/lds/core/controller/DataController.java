@@ -16,6 +16,9 @@ import no.ssb.lds.core.specification.Specification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+
 class DataController implements HttpHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(DataController.class);
@@ -43,7 +46,8 @@ class DataController implements HttpHandler {
 
         ResourceContext resourceContext;
         try {
-            resourceContext = ResourceContext.createResourceContext(specification, exchange.getRequestPath());
+            ZonedDateTime timestamp = ZonedDateTime.now(ZoneId.of("Etc/UTC"));
+            resourceContext = ResourceContext.createResourceContext(specification, exchange.getRequestPath(), timestamp);
         } catch (ResourceException e) {
             exchange.setStatusCode(400);
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
