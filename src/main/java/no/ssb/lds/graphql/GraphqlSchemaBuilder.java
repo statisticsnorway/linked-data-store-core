@@ -12,6 +12,8 @@ import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeReference;
 import graphql.schema.GraphQLUnionType;
 import no.ssb.lds.api.persistence.Persistence;
+import no.ssb.lds.api.persistence.buffered.BufferedPersistence;
+import no.ssb.lds.api.persistence.buffered.DefaultBufferedPersistence;
 import no.ssb.lds.core.specification.Specification;
 import no.ssb.lds.core.specification.SpecificationElement;
 import no.ssb.lds.core.specification.SpecificationElementType;
@@ -41,11 +43,11 @@ public class GraphqlSchemaBuilder {
     // Keep track of the union types we registered.
     private final Set<String> unionTypes = new HashSet<>();
 
-    private final Persistence persistence;
+    private final BufferedPersistence persistence;
 
     public GraphqlSchemaBuilder(Specification specification, Persistence persistence) {
         this.specification = Objects.requireNonNull(specification);
-        this.persistence = Objects.requireNonNull(persistence);
+        this.persistence = new DefaultBufferedPersistence(Objects.requireNonNull(persistence));
     }
 
     /**
