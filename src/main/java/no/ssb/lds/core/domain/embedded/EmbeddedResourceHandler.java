@@ -3,7 +3,14 @@ package no.ssb.lds.core.domain.embedded;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
+import no.ssb.concurrent.futureselector.SelectableFuture;
 import no.ssb.lds.api.persistence.Persistence;
+import no.ssb.lds.api.persistence.Transaction;
+import no.ssb.lds.api.persistence.buffered.BufferedPersistence;
+import no.ssb.lds.api.persistence.buffered.DefaultBufferedPersistence;
+import no.ssb.lds.api.persistence.buffered.Document;
+import no.ssb.lds.api.persistence.buffered.DocumentIterator;
+import no.ssb.lds.core.buffered.DocumentToJson;
 import no.ssb.lds.core.domain.resource.ResourceContext;
 import no.ssb.lds.core.domain.resource.ResourceElement;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
@@ -13,6 +20,7 @@ import no.ssb.lds.core.specification.Specification;
 import no.ssb.lds.core.validation.LinkedDocumentValidationException;
 import no.ssb.lds.core.validation.LinkedDocumentValidator;
 import no.ssb.saga.api.Saga;
+import no.ssb.saga.execution.SagaHandoffResult;
 import no.ssb.saga.execution.adapter.AdapterLoader;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -31,11 +39,11 @@ public class EmbeddedResourceHandler implements HttpHandler {
     private final SchemaRepository schemaRepository;
     private final ResourceContext resourceContext;
     private final SagaExecutionCoordinator sec;
-    private final Persistence persistence;
+    private final BufferedPersistence persistence;
     private final SagaRepository sagaRepository;
 
     public EmbeddedResourceHandler(Persistence persistence, Specification specification, SchemaRepository schemaRepository, ResourceContext resourceContext, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
-        this.persistence = persistence;
+        this.persistence = new DefaultBufferedPersistence(persistence);
         this.specification = specification;
         this.schemaRepository = schemaRepository;
         this.resourceContext = resourceContext;
@@ -63,14 +71,22 @@ public class EmbeddedResourceHandler implements HttpHandler {
     private void getEmbedded(HttpServerExchange exchange) {
         ResourceElement topLevelElement = resourceContext.getFirstElement();
 
-        JSONObject managedResourceJson = persistence.read(resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id());
-
-        if (managedResourceJson == null) {
-            exchange.setStatusCode(404);
-            return;
+        JSONObject jsonObject;
+        try (Transaction tx = persistence.createTransaction(true)) {
+            DocumentIterator documentIterator = persistence.read(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).join();
+            if (!documentIterator.hasNext()) {
+                exchange.setStatusCode(404);
+                return;
+            }
+            Document document = documentIterator.next();
+            if (document.isDeleted()) {
+                exchange.setStatusCode(404);
+                return;
+            }
+            jsonObject = new DocumentToJson(document).toJSONObject();
         }
 
-        Object subTreeRoot = resourceContext.subTree(managedResourceJson);
+        Object subTreeRoot = resourceContext.subTree(jsonObject);
         String result;
         if (subTreeRoot != null &&
                 (subTreeRoot instanceof JSONObject
@@ -92,11 +108,15 @@ public class EmbeddedResourceHandler implements HttpHandler {
                     String managedDomain = topLevelElement.name();
                     String managedDocumentId = topLevelElement.id();
 
-                    JSONObject managedDocument = persistence.read(namespace, managedDomain, managedDocumentId);
-
-                    if (managedDocument == null) {
-                        exchange.setStatusCode(404);
-                        return;
+                    JSONObject managedDocument;
+                    try (Transaction tx = persistence.createTransaction(true)) {
+                        DocumentIterator documentIterator = persistence.read(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).join();
+                        if (!documentIterator.hasNext()) {
+                            exchange.setStatusCode(404);
+                            return;
+                        }
+                        Document document = documentIterator.next();
+                        managedDocument = new DocumentToJson(document).toJSONObject();
                     }
 
                     if (LOG.isTraceEnabled()) {
@@ -121,11 +141,12 @@ public class EmbeddedResourceHandler implements HttpHandler {
                     Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
                     AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-                    String executionId = sec.handoff(sync, adapterLoader, saga, namespace, managedDomain, managedDocumentId, managedDocument);
+                    SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), managedDocument);
+                    SagaHandoffResult handoffResult = handoff.join();
 
                     exchange.setStatusCode(200);
                     exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-                    exchange.getResponseSender().send("{\"saga-execution-id\":\"" + executionId + "\"}");
+                    exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.executionId + "\"}");
                 },
                 (exchange1, e) -> {
                     exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
@@ -143,11 +164,15 @@ public class EmbeddedResourceHandler implements HttpHandler {
                     String managedDomain = topLevelElement.name();
                     String managedDocumentId = topLevelElement.id();
 
-                    JSONObject rootNode = persistence.read(namespace, managedDomain, managedDocumentId);
-
-                    if (rootNode == null) {
-                        exchange.setStatusCode(404);
-                        return;
+                    JSONObject rootNode;
+                    try (Transaction tx = persistence.createTransaction(true)) {
+                        DocumentIterator documentIterator = persistence.read(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).join();
+                        if (!documentIterator.hasNext()) {
+                            exchange.setStatusCode(404);
+                            return;
+                        }
+                        Document document = documentIterator.next();
+                        rootNode = new DocumentToJson(document).toJSONObject();
                     }
 
                     createEmbeddedJson(resourceContext, rootNode, null);
@@ -157,11 +182,12 @@ public class EmbeddedResourceHandler implements HttpHandler {
                     Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
                     AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-                    String executionId = sec.handoff(sync, adapterLoader, saga, namespace, managedDomain, managedDocumentId, rootNode);
+                    SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), rootNode);
+                    SagaHandoffResult handoffResult = handoff.join();
 
                     exchange.setStatusCode(200);
                     exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-                    exchange.getResponseSender().send("{\"saga-execution-id\":\"" + executionId + "\"}");
+                    exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.executionId + "\"}");
                 },
                 (exchange1, e) -> {
                     exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");

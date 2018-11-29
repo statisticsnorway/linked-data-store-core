@@ -9,6 +9,10 @@ import no.ssb.lds.core.saga.SagaRepository;
 import no.ssb.lds.core.schema.SchemaRepository;
 import no.ssb.lds.core.specification.Specification;
 
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.stream.Collectors;
+
 public class NamespaceController implements HttpHandler {
 
     private final String defaultNamespace;
@@ -66,6 +70,20 @@ public class NamespaceController implements HttpHandler {
 
         if (requestPath.startsWith("/ping")) {
             new PingController().handleRequest(exchange);
+            return;
+        }
+
+        if (requestPath.equals(defaultNamespace) && exchange.getQueryParameters().containsKey("schema") && exchange.getQueryParameters().get("schema").getFirst().isBlank()) {
+            List<String> managedDomains = specification.getManagedDomains().stream().sorted().map(md -> String.format("\"%s/%s?schema\"", defaultNamespace, md)).collect(Collectors.toList());
+            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
+            exchange.getResponseSender().send("["+managedDomains.stream().collect(Collectors.joining(","))+"]", StandardCharsets.UTF_8);
+            return;
+        }
+
+        if (requestPath.equals(defaultNamespace) && exchange.getQueryParameters().containsKey("schema") && exchange.getQueryParameters().get("schema").contains("embed")) {
+            List<String> managedDomains = specification.getManagedDomains().stream().sorted().map(md -> schemaRepository.getJsonSchema().getSchemaJson(md)).collect(Collectors.toList());
+            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
+            exchange.getResponseSender().send("["+managedDomains.stream().collect(Collectors.joining(","))+"]", StandardCharsets.UTF_8);
             return;
         }
 

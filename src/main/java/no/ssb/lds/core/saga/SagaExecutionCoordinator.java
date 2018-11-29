@@ -13,12 +13,13 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -57,12 +58,14 @@ public class SagaExecutionCoordinator {
         return threadPool;
     }
 
-    public String handoff(boolean sync, AdapterLoader adapterLoader, Saga saga, String namespace, String entity, String id, JSONObject data) {
+    public SelectableFuture<SagaHandoffResult> handoff(boolean sync, AdapterLoader adapterLoader, Saga saga, String namespace, String entity, String id, ZonedDateTime version, JSONObject data) {
+        String versionStr = version.format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
         SagaExecution sagaExecution = new SagaExecution(sagaLog, threadPool, saga, adapterLoader);
         JSONObject input = new JSONObject();
         input.put("namespace", namespace);
         input.put("entity", entity);
         input.put("id", id);
+        input.put("version", versionStr);
         input.put("data", data);
         String executionId = UUID.randomUUID().toString();
 
@@ -72,12 +75,8 @@ public class SagaExecutionCoordinator {
         SelectableFuture<SagaHandoffResult> future = sync ?
                 handoffControl.getCompletionFuture() : // full saga-execution
                 handoffControl.getHandoffFuture();     // first saga-log write
-        try {
-            future.get(); // wait
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
-        }
-        return executionId;
+
+        return future;
     }
 
     private SagaHandoffControl startSagaExecutionWithThrottling(SagaExecution sagaExecution, JSONObject input, String executionId) {

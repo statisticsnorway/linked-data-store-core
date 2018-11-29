@@ -1,6 +1,10 @@
 package no.ssb.lds.core.domain.reference;
 
-import no.ssb.lds.core.linkeddata.LinkedData;
+import no.ssb.lds.api.persistence.Transaction;
+import no.ssb.lds.api.persistence.buffered.BufferedPersistence;
+import no.ssb.lds.api.persistence.buffered.DefaultBufferedPersistence;
+import no.ssb.lds.api.persistence.buffered.Document;
+import no.ssb.lds.core.buffered.JsonToDocument;
 import no.ssb.lds.test.client.TestClient;
 import no.ssb.lds.test.server.TestServer;
 import no.ssb.lds.test.server.TestServerListener;
@@ -10,6 +14,8 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 
 @Listeners(TestServerListener.class)
 public class ReferenceResourceHandlerTest {
@@ -21,9 +27,13 @@ public class ReferenceResourceHandlerTest {
     private TestServer server;
 
     private void createTestResource(String entity, String id, String json) {
+        ZonedDateTime timestamp = ZonedDateTime.now(ZoneId.of("Etc/UTC"));
         JSONObject jsonObject = new JSONObject(json);
-        server.getPersistence().createOrOverwrite("data", entity, id, jsonObject,
-                new LinkedData(server.getSpecification(), "data", entity, id, jsonObject).parse());
+        Document document = new JsonToDocument("data", entity, id, timestamp, jsonObject, 8 * 1024).toDocument();
+        BufferedPersistence persistence = new DefaultBufferedPersistence(server.getPersistence());
+        try (Transaction tx = persistence.createTransaction(false)) {
+            persistence.createOrOverwrite(tx, document);
+        }
     }
 
     @Test

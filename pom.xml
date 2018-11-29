@@ -4,7 +4,7 @@
 
     <groupId>no.ssb.lds</groupId>
     <artifactId>linked-data-store-core</artifactId>
-    <version>0.3-SNAPSHOT</version>
+    <version>0.5-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>LinkedDataStore Core</name>
@@ -83,7 +83,7 @@
         <dependency>
             <groupId>no.ssb.lds</groupId>
             <artifactId>linked-data-store-persistence-provider-api</artifactId>
-            <version>0.1</version>
+            <version>0.2-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>no.ssb.config</groupId>
@@ -93,7 +93,7 @@
         <dependency>
             <groupId>no.ssb.lds</groupId>
             <artifactId>linked-data-store-persistence-provider-memory</artifactId>
-            <version>0.1</version>
+            <version>0.2-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
 
@@ -164,7 +164,7 @@
         <dependency>
             <groupId>no.ssb.concurrent.futureselector</groupId>
             <artifactId>future-selector</artifactId>
-            <version>0.1</version>
+            <version>0.2</version>
         </dependency>
         <dependency>
             <groupId>no.ssb.saga</groupId>
@@ -174,7 +174,7 @@
         <dependency>
             <groupId>no.ssb.saga</groupId>
             <artifactId>distributed-saga-execution</artifactId>
-            <version>0.1</version>
+            <version>0.2</version>
         </dependency>
 
         <dependency>
