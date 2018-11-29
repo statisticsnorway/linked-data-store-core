@@ -4,6 +4,9 @@
     "provisionagreement" : {
       "type" : "object",
       "properties" : {
+        "str/ange=Prop#Name" : {
+          "type" : "string"
+        },
         "name" : {
           "anyOf" : [ {
             "type" : "string"

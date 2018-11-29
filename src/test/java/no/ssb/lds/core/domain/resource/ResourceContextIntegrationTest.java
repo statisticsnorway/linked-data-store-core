@@ -5,6 +5,7 @@ import no.ssb.lds.api.persistence.buffered.BufferedPersistence;
 import no.ssb.lds.api.persistence.buffered.DefaultBufferedPersistence;
 import no.ssb.lds.api.persistence.buffered.Document;
 import no.ssb.lds.core.buffered.JsonToDocument;
+import no.ssb.lds.test.ConfigurationOverride;
 import no.ssb.lds.test.client.TestClient;
 import no.ssb.lds.test.server.TestServer;
 import no.ssb.lds.test.server.TestServerListener;
@@ -44,6 +45,10 @@ public class ResourceContextIntegrationTest {
     }
 
     @Test
+    @ConfigurationOverride({
+            "specification.schema", "spec/strangeschema/contact.json,spec/strangeschema/provisionagreement.json",
+            "graphql.enabled", "false"
+    })
     public void thatFreakyResourceURLsAreDecodedProperly() {
         createTestResource("provisionagreement", "rc1", "{\"id\":\"rc1\",\"str/ange=Prop#Name\":\"some-value\"}");
         String response = client.get("/data/provisionagreement/rc1/" + urlEncode("str/ange=Prop#Name")).expect200Ok().body();

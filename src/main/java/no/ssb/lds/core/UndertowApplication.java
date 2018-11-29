@@ -25,7 +25,6 @@ import no.ssb.saga.execution.sagalog.SagaLog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.URL;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -94,7 +93,9 @@ public class UndertowApplication {
                 port
         );
 
-        return new UndertowApplication(specification, persistence, sec, sagaRepository, sagasObserver, host, port, sagaLog, sagaThreadPool, namespaceController);
+        boolean graphqlEnabled = configuration.evaluateToBoolean("graphql.enabled");
+
+        return new UndertowApplication(specification, persistence, sec, sagaRepository, sagasObserver, host, port, sagaLog, sagaThreadPool, namespaceController, graphqlEnabled);
     }
 
     private final Specification specification;
@@ -108,7 +109,7 @@ public class UndertowApplication {
     private final SagaLog sagaLog;
     private final SelectableThreadPoolExectutor sagaThreadPool;
 
-    UndertowApplication(Specification specification, Persistence persistence, SagaExecutionCoordinator sec, SagaRepository sagaRepository, SagasObserver sagasObserver, String host, int port, SagaLog sagaLog, SelectableThreadPoolExectutor sagaThreadPool, NamespaceController namespaceController) {
+    UndertowApplication(Specification specification, Persistence persistence, SagaExecutionCoordinator sec, SagaRepository sagaRepository, SagasObserver sagasObserver, String host, int port, SagaLog sagaLog, SelectableThreadPoolExectutor sagaThreadPool, NamespaceController namespaceController, boolean graphqlEnabled) {
         this.specification = specification;
         this.host = host;
         this.port = port;
@@ -119,23 +120,27 @@ public class UndertowApplication {
         this.sagaLog = sagaLog;
         this.sagaThreadPool = sagaThreadPool;
 
-
-        GraphQL graphQL = GraphQL.newGraphQL(new GraphqlSchemaBuilder(specification, persistence).getSchema()).build();
-
         // TODO: Clean up.
-        HttpHandler routingHandler = Handlers.routing()
-                .get("graphiql**", Handlers.resource(new ClassPathResourceManager(
-                                Thread.currentThread().getContextClassLoader(), "no/ssb/lds/graphql"
-                        )).setDirectoryListingEnabled(true).addWelcomeFiles("graphiql.html")
-                )
-                .post("graphql", new GraphqlHandler(graphQL))
+        RoutingHandler routingHandler = Handlers.routing();
+
+        if (graphqlEnabled) {
+            GraphQL graphQL = GraphQL.newGraphQL(new GraphqlSchemaBuilder(specification, persistence).getSchema()).build();
+            routingHandler = routingHandler
+                    .get("graphiql**", Handlers.resource(new ClassPathResourceManager(
+                                    Thread.currentThread().getContextClassLoader(), "no/ssb/lds/graphql"
+                            )).setDirectoryListingEnabled(true).addWelcomeFiles("graphiql.html")
+                    )
+                    .post("graphql", new GraphqlHandler(graphQL));
+        }
+
+        HttpHandler httpHandler = routingHandler
                 .setFallbackHandler(namespaceController);
 
-        routingHandler = Handlers.requestDump(routingHandler);
+        httpHandler = Handlers.requestDump(httpHandler);
 
         this.server = Undertow.builder()
                 .addHttpListener(port, host)
-                .setHandler(routingHandler)
+                .setHandler(httpHandler)
                 .build();
     }
 
