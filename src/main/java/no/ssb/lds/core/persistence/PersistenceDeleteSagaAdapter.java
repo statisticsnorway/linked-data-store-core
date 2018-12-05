@@ -21,7 +21,7 @@ public class PersistenceDeleteSagaAdapter extends Adapter<JSONObject> {
 
     public PersistenceDeleteSagaAdapter(Persistence persistence) {
         super(JSONObject.class, NAME);
-        this.persistence = new DefaultBufferedPersistence(persistence);
+        this.persistence = new DefaultBufferedPersistence(persistence, 8 * 1024);
     }
 
     @Override

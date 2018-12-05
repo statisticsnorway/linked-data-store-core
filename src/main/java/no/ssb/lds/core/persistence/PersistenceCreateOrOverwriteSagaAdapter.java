@@ -25,7 +25,7 @@ public class PersistenceCreateOrOverwriteSagaAdapter extends Adapter<JSONObject>
 
     public PersistenceCreateOrOverwriteSagaAdapter(Persistence persistence, Specification specification) {
         super(JSONObject.class, NAME);
-        this.persistence = new DefaultBufferedPersistence(persistence);
+        this.persistence = new DefaultBufferedPersistence(persistence, 8 * 1024);
         this.specification = specification;
     }
 

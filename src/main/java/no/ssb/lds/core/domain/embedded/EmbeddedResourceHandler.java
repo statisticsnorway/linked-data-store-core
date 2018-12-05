@@ -43,7 +43,7 @@ public class EmbeddedResourceHandler implements HttpHandler {
     private final SagaRepository sagaRepository;
 
     public EmbeddedResourceHandler(Persistence persistence, Specification specification, SchemaRepository schemaRepository, ResourceContext resourceContext, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
-        this.persistence = new DefaultBufferedPersistence(persistence);
+        this.persistence = new DefaultBufferedPersistence(persistence, 8 * 1024);
         this.specification = specification;
         this.schemaRepository = schemaRepository;
         this.resourceContext = resourceContext;

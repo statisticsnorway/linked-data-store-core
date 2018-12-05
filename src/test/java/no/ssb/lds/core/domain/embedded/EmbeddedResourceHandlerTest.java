@@ -33,7 +33,7 @@ public class EmbeddedResourceHandlerTest {
         ZonedDateTime timestamp = ZonedDateTime.now(ZoneId.of("Etc/UTC"));
         JSONObject jsonObject = new JSONObject(json);
         Document document = new JsonToDocument("data", entity, id, timestamp, jsonObject, 8 * 1024).toDocument();
-        BufferedPersistence persistence = new DefaultBufferedPersistence(server.getPersistence());
+        BufferedPersistence persistence = new DefaultBufferedPersistence(server.getPersistence(), 8 * 1024);
         try (Transaction tx = persistence.createTransaction(false)) {
             persistence.createOrOverwrite(tx, document);
         }
