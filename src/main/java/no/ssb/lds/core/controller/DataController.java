@@ -18,6 +18,10 @@ import org.slf4j.LoggerFactory;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeParseException;
+import java.util.Deque;
+
+import static java.util.Optional.ofNullable;
 
 class DataController implements HttpHandler {
 
@@ -46,7 +50,23 @@ class DataController implements HttpHandler {
 
         ResourceContext resourceContext;
         try {
-            ZonedDateTime timestamp = ZonedDateTime.now(ZoneId.of("Etc/UTC"));
+            Deque<String> timestampParams = ofNullable(exchange.getQueryParameters().get("timestamp")).orElseGet(() -> exchange.getQueryParameters().get("t"));
+            ZonedDateTime timestamp;
+            if (timestampParams == null || timestampParams.isEmpty()) {
+                // no timestamp given by client, use time now
+                timestamp = ZonedDateTime.now(ZoneId.of("Etc/UTC"));
+            } else {
+                String timestampParam = timestampParams.getLast();
+                try {
+                    timestamp = ZonedDateTime.parse(timestampParam); // ISO-8601
+                } catch (DateTimeParseException e) {
+                    exchange.setStatusCode(400);
+                    exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
+                    exchange.getResponseSender().send("The 'timestamp' query-parameter must follow the ISO-8601 standard. Example of a valid formatted timestamp is '2018-12-06T11:05:31.000+01:00'");
+                    return;
+                }
+                timestamp.withZoneSameInstant(ZoneId.of("Etc/UTC"));
+            }
             resourceContext = ResourceContext.createResourceContext(specification, exchange.getRequestPath(), timestamp);
         } catch (ResourceException e) {
             exchange.setStatusCode(400);
