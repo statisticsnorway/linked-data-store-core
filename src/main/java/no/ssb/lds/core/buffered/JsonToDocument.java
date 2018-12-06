@@ -58,13 +58,13 @@ public class JsonToDocument {
             leafNodesByPath.put(path, new DocumentLeafNode(documentKey, path, FragmentType.NULL, null, fragmentCapacity));
         } else if (object instanceof String) {
             String path = parentPath.stream().collect(Collectors.joining("."));
-            leafNodesByPath.put(path, new DocumentLeafNode(documentKey, path, FragmentType.STRING, object, fragmentCapacity));
+            leafNodesByPath.put(path, new DocumentLeafNode(documentKey, path, FragmentType.STRING, (String) object, fragmentCapacity));
         } else if (object instanceof Number) {
             String path = parentPath.stream().collect(Collectors.joining("."));
             leafNodesByPath.put(path, new DocumentLeafNode(documentKey, path, FragmentType.NUMERIC, object.toString(), fragmentCapacity));
         } else if (object instanceof Boolean) {
             String path = parentPath.stream().collect(Collectors.joining("."));
-            leafNodesByPath.put(path, new DocumentLeafNode(documentKey, path, FragmentType.BOOLEAN, object, fragmentCapacity));
+            leafNodesByPath.put(path, new DocumentLeafNode(documentKey, path, FragmentType.BOOLEAN, object.toString(), fragmentCapacity));
         } else if (object instanceof JSONArray) {
             JSONArray array = (JSONArray) object;
             if (array.isEmpty()) {
