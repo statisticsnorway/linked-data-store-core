@@ -18,6 +18,7 @@ public class DevServer {
                 .values("persistence.provider", "mem",
                         "persistence.mem.wait.min", "0",
                         "persistence.mem.wait.max", "0",
+                        "persistence.fragment.capacity", "8192",
                         "specification.schema", "spec/demo/contact.json,spec/demo/provisionagreement.json")
                 .propertiesResource("conf/application.properties")
                 .environment("LDS_")

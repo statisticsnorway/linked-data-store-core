@@ -1,7 +1,7 @@
 package no.ssb.lds.test.server;
 
 import no.ssb.config.DynamicConfiguration;
-import no.ssb.lds.api.persistence.streaming.Persistence;
+import no.ssb.lds.api.persistence.json.JsonPersistence;
 import no.ssb.lds.core.UndertowApplication;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
 import no.ssb.lds.core.specification.Specification;
@@ -49,7 +49,7 @@ public class TestServer implements TestUriResolver {
         }
     }
 
-    public Persistence getPersistence() {
+    public JsonPersistence getPersistence() {
         return application.getPersistence();
     }
 

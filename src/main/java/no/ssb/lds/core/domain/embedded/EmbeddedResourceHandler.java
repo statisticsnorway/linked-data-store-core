@@ -5,12 +5,8 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import no.ssb.concurrent.futureselector.SelectableFuture;
 import no.ssb.lds.api.persistence.Transaction;
-import no.ssb.lds.api.persistence.buffered.BufferedPersistence;
-import no.ssb.lds.api.persistence.buffered.DefaultBufferedPersistence;
-import no.ssb.lds.api.persistence.buffered.FlattenedDocument;
-import no.ssb.lds.api.persistence.buffered.FlattenedDocumentIterator;
-import no.ssb.lds.api.persistence.json.FlattenedDocumentToJson;
-import no.ssb.lds.api.persistence.streaming.Persistence;
+import no.ssb.lds.api.persistence.json.JsonDocument;
+import no.ssb.lds.api.persistence.json.JsonPersistence;
 import no.ssb.lds.core.domain.resource.ResourceContext;
 import no.ssb.lds.core.domain.resource.ResourceElement;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
@@ -31,6 +27,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.Set;
 
+import static java.util.Optional.ofNullable;
+
 public class EmbeddedResourceHandler implements HttpHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(EmbeddedResourceHandler.class);
@@ -39,11 +37,11 @@ public class EmbeddedResourceHandler implements HttpHandler {
     private final SchemaRepository schemaRepository;
     private final ResourceContext resourceContext;
     private final SagaExecutionCoordinator sec;
-    private final BufferedPersistence persistence;
+    private final JsonPersistence persistence;
     private final SagaRepository sagaRepository;
 
-    public EmbeddedResourceHandler(Persistence persistence, Specification specification, SchemaRepository schemaRepository, ResourceContext resourceContext, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
-        this.persistence = new DefaultBufferedPersistence(persistence, 8 * 1024);
+    public EmbeddedResourceHandler(JsonPersistence persistence, Specification specification, SchemaRepository schemaRepository, ResourceContext resourceContext, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
+        this.persistence = persistence;
         this.specification = specification;
         this.schemaRepository = schemaRepository;
         this.resourceContext = resourceContext;
@@ -73,17 +71,13 @@ public class EmbeddedResourceHandler implements HttpHandler {
 
         JSONObject jsonObject;
         try (Transaction tx = persistence.createTransaction(true)) {
-            FlattenedDocumentIterator flattenedDocumentIterator = persistence.read(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).join();
-            if (!flattenedDocumentIterator.hasNext()) {
-                exchange.setStatusCode(404);
-                return;
-            }
-            FlattenedDocument document = flattenedDocumentIterator.next();
-            if (document.isDeleted()) {
-                exchange.setStatusCode(404);
-                return;
-            }
-            jsonObject = new FlattenedDocumentToJson(document).toJSONObject();
+            JsonDocument jsonDocument = persistence.read(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).join();
+            jsonObject = ofNullable(jsonDocument).map(JsonDocument::document).orElse(null);
+        }
+
+        if (jsonObject == null) {
+            exchange.setStatusCode(404);
+            return;
         }
 
         Object subTreeRoot = resourceContext.subTree(jsonObject);
@@ -110,13 +104,13 @@ public class EmbeddedResourceHandler implements HttpHandler {
 
                     JSONObject managedDocument;
                     try (Transaction tx = persistence.createTransaction(true)) {
-                        FlattenedDocumentIterator flattenedDocumentIterator = persistence.read(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).join();
-                        if (!flattenedDocumentIterator.hasNext()) {
-                            exchange.setStatusCode(404);
-                            return;
-                        }
-                        FlattenedDocument document = flattenedDocumentIterator.next();
-                        managedDocument = new FlattenedDocumentToJson(document).toJSONObject();
+                        JsonDocument jsonDocument = persistence.read(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).join();
+                        managedDocument = ofNullable(jsonDocument).map(JsonDocument::document).orElse(null);
+                    }
+
+                    if (managedDocument == null) {
+                        exchange.setStatusCode(404);
+                        return;
                     }
 
                     if (LOG.isTraceEnabled()) {
@@ -166,13 +160,13 @@ public class EmbeddedResourceHandler implements HttpHandler {
 
                     JSONObject rootNode;
                     try (Transaction tx = persistence.createTransaction(true)) {
-                        FlattenedDocumentIterator flattenedDocumentIterator = persistence.read(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).join();
-                        if (!flattenedDocumentIterator.hasNext()) {
-                            exchange.setStatusCode(404);
-                            return;
-                        }
-                        FlattenedDocument document = flattenedDocumentIterator.next();
-                        rootNode = new FlattenedDocumentToJson(document).toJSONObject();
+                        JsonDocument jsonDocument = persistence.read(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).join();
+                        rootNode = ofNullable(jsonDocument).map(JsonDocument::document).orElse(null);
+                    }
+
+                    if (rootNode == null) {
+                        exchange.setStatusCode(404);
+                        return;
                     }
 
                     createEmbeddedJson(resourceContext, rootNode, null);

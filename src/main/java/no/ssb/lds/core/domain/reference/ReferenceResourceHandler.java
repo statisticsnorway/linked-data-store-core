@@ -5,12 +5,8 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import no.ssb.concurrent.futureselector.SelectableFuture;
 import no.ssb.lds.api.persistence.Transaction;
-import no.ssb.lds.api.persistence.buffered.BufferedPersistence;
-import no.ssb.lds.api.persistence.buffered.DefaultBufferedPersistence;
-import no.ssb.lds.api.persistence.buffered.FlattenedDocument;
-import no.ssb.lds.api.persistence.buffered.FlattenedDocumentIterator;
-import no.ssb.lds.api.persistence.json.FlattenedDocumentToJson;
-import no.ssb.lds.api.persistence.streaming.Persistence;
+import no.ssb.lds.api.persistence.json.JsonDocument;
+import no.ssb.lds.api.persistence.json.JsonPersistence;
 import no.ssb.lds.core.domain.resource.ResourceContext;
 import no.ssb.lds.core.domain.resource.ResourceElement;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
@@ -26,20 +22,19 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
-import java.util.concurrent.CompletableFuture;
 
 public class ReferenceResourceHandler implements HttpHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(ReferenceResourceHandler.class);
 
-    final BufferedPersistence persistence;
+    final JsonPersistence persistence;
     final Specification specification;
     final ResourceContext resourceContext;
     final SagaExecutionCoordinator sec;
     final SagaRepository sagaRepository;
 
-    public ReferenceResourceHandler(Persistence persistence, Specification specification, ResourceContext resourceContext, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
-        this.persistence = new DefaultBufferedPersistence(persistence, 8 * 1024);
+    public ReferenceResourceHandler(JsonPersistence persistence, Specification specification, ResourceContext resourceContext, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
+        this.persistence = persistence;
         this.specification = specification;
         this.resourceContext = resourceContext;
         this.sec = sec;
@@ -68,17 +63,12 @@ public class ReferenceResourceHandler implements HttpHandler {
 
         JSONObject jsonObject;
         try (Transaction tx = persistence.createTransaction(true)) {
-            FlattenedDocumentIterator flattenedDocumentIterator = persistence.read(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).join();
-            if (!flattenedDocumentIterator.hasNext()) {
+            JsonDocument jsonDocument = persistence.read(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).join();
+            if (jsonDocument == null || jsonDocument.deleted()) {
                 exchange.setStatusCode(404);
                 return;
             }
-            FlattenedDocument document = flattenedDocumentIterator.next();
-            if (document.isDeleted()) {
-                exchange.setStatusCode(404);
-                return;
-            }
-            jsonObject = new FlattenedDocumentToJson(document).toJSONObject();
+            jsonObject = jsonDocument.document();
         }
 
         boolean referenceToExists = resourceContext.referenceToExists(jsonObject);
@@ -98,30 +88,25 @@ public class ReferenceResourceHandler implements HttpHandler {
 
         exchange.getRequestReceiver().receiveFullString(
                 (httpServerExchange, message) -> {
-                    FlattenedDocument document = null;
+                    JsonDocument jsonDocument;
                     try (Transaction tx = persistence.createTransaction(true)) {
-                        FlattenedDocumentIterator flattenedDocumentIterator = persistence.read(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).join();
-                        if (flattenedDocumentIterator.hasNext()) {
-                            document = flattenedDocumentIterator.next();
-                        }
+                        jsonDocument = persistence.read(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).join();
                     }
                     boolean referenceToExists = false;
-                    JSONObject rootNode = null;
-                    if (document != null) {
-                        rootNode = new FlattenedDocumentToJson(document).toJSONObject();
-                        referenceToExists = resourceContext.referenceToExists(rootNode);
+                    if (jsonDocument != null && !jsonDocument.deleted()) {
+                        referenceToExists = resourceContext.referenceToExists(jsonDocument.document());
                     }
                     if (referenceToExists) {
                         exchange.setStatusCode(200);
                     } else {
-                        new ReferenceJsonHelper(specification, topLevelElement).createReferenceJson(resourceContext, rootNode);
+                        new ReferenceJsonHelper(specification, topLevelElement).createReferenceJson(resourceContext, jsonDocument.document());
 
                         boolean sync = exchange.getQueryParameters().getOrDefault("sync", new LinkedList<>()).stream().anyMatch(s -> "true".equalsIgnoreCase(s));
 
                         Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
                         AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-                        SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), rootNode);
+                        SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), jsonDocument.document());
                         SagaHandoffResult sagaHandoffResult = handoff.join();
 
                         exchange.setStatusCode(200);
@@ -145,14 +130,10 @@ public class ReferenceResourceHandler implements HttpHandler {
 
         JSONArray output = new JSONArray();
         try (Transaction tx = persistence.createTransaction(true)) {
-            CompletableFuture<FlattenedDocumentIterator> future = persistence.read(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId);
-            FlattenedDocumentIterator iterator = future.join();
-            while (iterator.hasNext()) {
-                FlattenedDocument document = iterator.next();
-                if (document.isDeleted()) {
-                    continue;
-                }
-                output.put(new FlattenedDocumentToJson(document).toJSONObject());
+            JsonDocument jsonDocument = persistence.read(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).join();
+            if (jsonDocument != null && !jsonDocument.deleted()) {
+                output.put(jsonDocument.document());
+
             }
         }
         if (output.length() == 0) {

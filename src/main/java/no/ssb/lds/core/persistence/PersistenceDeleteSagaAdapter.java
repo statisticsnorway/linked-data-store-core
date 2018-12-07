@@ -2,9 +2,7 @@ package no.ssb.lds.core.persistence;
 
 import no.ssb.lds.api.persistence.PersistenceDeletePolicy;
 import no.ssb.lds.api.persistence.Transaction;
-import no.ssb.lds.api.persistence.buffered.BufferedPersistence;
-import no.ssb.lds.api.persistence.buffered.DefaultBufferedPersistence;
-import no.ssb.lds.api.persistence.streaming.Persistence;
+import no.ssb.lds.api.persistence.json.JsonPersistence;
 import no.ssb.saga.api.SagaNode;
 import no.ssb.saga.execution.adapter.Adapter;
 import org.json.JSONObject;
@@ -17,11 +15,11 @@ public class PersistenceDeleteSagaAdapter extends Adapter<JSONObject> {
 
     public static final String NAME = "Persistence-Delete";
 
-    private final BufferedPersistence persistence;
+    private final JsonPersistence persistence;
 
-    public PersistenceDeleteSagaAdapter(Persistence persistence) {
+    public PersistenceDeleteSagaAdapter(JsonPersistence persistence) {
         super(JSONObject.class, NAME);
-        this.persistence = new DefaultBufferedPersistence(persistence, 8 * 1024);
+        this.persistence = persistence;
     }
 
     @Override

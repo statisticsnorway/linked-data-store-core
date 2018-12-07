@@ -3,7 +3,7 @@ package no.ssb.lds.core.controller;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
-import no.ssb.lds.api.persistence.streaming.Persistence;
+import no.ssb.lds.api.persistence.json.JsonPersistence;
 import no.ssb.lds.core.domain.embedded.EmbeddedResourceHandler;
 import no.ssb.lds.core.domain.managed.ManagedResourceHandler;
 import no.ssb.lds.core.domain.reference.ReferenceResourceHandler;
@@ -29,11 +29,11 @@ class DataController implements HttpHandler {
 
     final Specification specification;
     final SchemaRepository schemaRepository;
-    final Persistence persistence;
+    final JsonPersistence persistence;
     final SagaExecutionCoordinator sec;
     final SagaRepository sagaRepository;
 
-    DataController(Specification specification, SchemaRepository schemaRepository, Persistence persistence, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
+    DataController(Specification specification, SchemaRepository schemaRepository, JsonPersistence persistence, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
         this.specification = specification;
         this.schemaRepository = schemaRepository;
         this.persistence = persistence;
