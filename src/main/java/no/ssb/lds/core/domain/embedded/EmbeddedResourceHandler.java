@@ -9,8 +9,8 @@ import no.ssb.lds.api.persistence.buffered.BufferedPersistence;
 import no.ssb.lds.api.persistence.buffered.DefaultBufferedPersistence;
 import no.ssb.lds.api.persistence.buffered.FlattenedDocument;
 import no.ssb.lds.api.persistence.buffered.FlattenedDocumentIterator;
+import no.ssb.lds.api.persistence.json.FlattenedDocumentToJson;
 import no.ssb.lds.api.persistence.streaming.Persistence;
-import no.ssb.lds.core.buffered.DocumentToJson;
 import no.ssb.lds.core.domain.resource.ResourceContext;
 import no.ssb.lds.core.domain.resource.ResourceElement;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
@@ -83,7 +83,7 @@ public class EmbeddedResourceHandler implements HttpHandler {
                 exchange.setStatusCode(404);
                 return;
             }
-            jsonObject = new DocumentToJson(document).toJSONObject();
+            jsonObject = new FlattenedDocumentToJson(document).toJSONObject();
         }
 
         Object subTreeRoot = resourceContext.subTree(jsonObject);
@@ -116,7 +116,7 @@ public class EmbeddedResourceHandler implements HttpHandler {
                             return;
                         }
                         FlattenedDocument document = flattenedDocumentIterator.next();
-                        managedDocument = new DocumentToJson(document).toJSONObject();
+                        managedDocument = new FlattenedDocumentToJson(document).toJSONObject();
                     }
 
                     if (LOG.isTraceEnabled()) {
@@ -172,7 +172,7 @@ public class EmbeddedResourceHandler implements HttpHandler {
                             return;
                         }
                         FlattenedDocument document = flattenedDocumentIterator.next();
-                        rootNode = new DocumentToJson(document).toJSONObject();
+                        rootNode = new FlattenedDocumentToJson(document).toJSONObject();
                     }
 
                     createEmbeddedJson(resourceContext, rootNode, null);

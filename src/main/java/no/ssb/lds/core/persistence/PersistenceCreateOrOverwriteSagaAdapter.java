@@ -4,8 +4,8 @@ import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.buffered.BufferedPersistence;
 import no.ssb.lds.api.persistence.buffered.DefaultBufferedPersistence;
 import no.ssb.lds.api.persistence.buffered.FlattenedDocument;
+import no.ssb.lds.api.persistence.json.JsonToFlattenedDocument;
 import no.ssb.lds.api.persistence.streaming.Persistence;
-import no.ssb.lds.core.buffered.JsonToDocument;
 import no.ssb.lds.core.specification.Specification;
 import no.ssb.saga.api.SagaNode;
 import no.ssb.saga.execution.adapter.AbortSagaException;
@@ -34,7 +34,7 @@ public class PersistenceCreateOrOverwriteSagaAdapter extends Adapter<JSONObject>
         JSONObject input = (JSONObject) sagaInput;
         String versionStr = input.getString("version");
         ZonedDateTime version = ZonedDateTime.parse(versionStr, DateTimeFormatter.ISO_ZONED_DATE_TIME);
-        FlattenedDocument document = new JsonToDocument(
+        FlattenedDocument document = new JsonToFlattenedDocument(
                 input.getString("namespace"),
                 input.getString("entity"),
                 input.getString("id"),

@@ -9,8 +9,8 @@ import no.ssb.lds.api.persistence.buffered.BufferedPersistence;
 import no.ssb.lds.api.persistence.buffered.DefaultBufferedPersistence;
 import no.ssb.lds.api.persistence.buffered.FlattenedDocument;
 import no.ssb.lds.api.persistence.buffered.FlattenedDocumentIterator;
+import no.ssb.lds.api.persistence.json.FlattenedDocumentToJson;
 import no.ssb.lds.api.persistence.streaming.Persistence;
-import no.ssb.lds.core.buffered.DocumentToJson;
 import no.ssb.lds.core.domain.resource.ResourceContext;
 import no.ssb.lds.core.domain.resource.ResourceElement;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
@@ -94,7 +94,7 @@ public class ManagedResourceHandler implements HttpHandler {
                 if (document.isDeleted()) {
                     continue;
                 }
-                output.put(new DocumentToJson(document).toJSONObject());
+                output.put(new FlattenedDocumentToJson(document).toJSONObject());
             }
             if (output.length() == 0) {
                 exchange.setStatusCode(404);
