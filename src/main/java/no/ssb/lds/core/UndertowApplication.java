@@ -4,7 +4,7 @@ import com.netflix.hystrix.HystrixThreadPoolProperties;
 import io.undertow.Undertow;
 import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
 import no.ssb.config.DynamicConfiguration;
-import no.ssb.lds.api.persistence.Persistence;
+import no.ssb.lds.api.persistence.streaming.Persistence;
 import no.ssb.lds.core.controller.NamespaceController;
 import no.ssb.lds.core.persistence.PersistenceConfigurator;
 import no.ssb.lds.core.saga.FileSagaLog;

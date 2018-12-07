@@ -1,10 +1,10 @@
 package no.ssb.lds.core.persistence;
 
-import no.ssb.lds.api.persistence.Persistence;
 import no.ssb.lds.api.persistence.PersistenceDeletePolicy;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.buffered.BufferedPersistence;
 import no.ssb.lds.api.persistence.buffered.DefaultBufferedPersistence;
+import no.ssb.lds.api.persistence.streaming.Persistence;
 import no.ssb.saga.api.SagaNode;
 import no.ssb.saga.execution.adapter.Adapter;
 import org.json.JSONObject;

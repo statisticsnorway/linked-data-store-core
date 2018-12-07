@@ -3,7 +3,7 @@ package no.ssb.lds.core.domain.embedded;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.buffered.BufferedPersistence;
 import no.ssb.lds.api.persistence.buffered.DefaultBufferedPersistence;
-import no.ssb.lds.api.persistence.buffered.Document;
+import no.ssb.lds.api.persistence.buffered.FlattenedDocument;
 import no.ssb.lds.core.buffered.JsonToDocument;
 import no.ssb.lds.test.client.TestClient;
 import no.ssb.lds.test.server.TestServer;
@@ -32,7 +32,7 @@ public class EmbeddedResourceHandlerTest {
     private void createTestResource(String entity, String id, String json) {
         ZonedDateTime timestamp = ZonedDateTime.now(ZoneId.of("Etc/UTC"));
         JSONObject jsonObject = new JSONObject(json);
-        Document document = new JsonToDocument("data", entity, id, timestamp, jsonObject, 8 * 1024).toDocument();
+        FlattenedDocument document = new JsonToDocument("data", entity, id, timestamp, jsonObject, 8 * 1024).toDocument();
         BufferedPersistence persistence = new DefaultBufferedPersistence(server.getPersistence(), 8 * 1024);
         try (Transaction tx = persistence.createTransaction(false)) {
             persistence.createOrOverwrite(tx, document);

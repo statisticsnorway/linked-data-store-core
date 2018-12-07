@@ -1,9 +1,9 @@
 package no.ssb.lds.core.buffered;
 
-import no.ssb.lds.api.persistence.FragmentType;
-import no.ssb.lds.api.persistence.buffered.Document;
 import no.ssb.lds.api.persistence.buffered.DocumentKey;
-import no.ssb.lds.api.persistence.buffered.DocumentLeafNode;
+import no.ssb.lds.api.persistence.buffered.FlattenedDocument;
+import no.ssb.lds.api.persistence.buffered.FlattenedDocumentLeafNode;
+import no.ssb.lds.api.persistence.streaming.FragmentType;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -35,12 +35,12 @@ public class JsonToDocument {
         documentKey = new DocumentKey(namespace, entity, id, version);
     }
 
-    public Document toDocument() {
-        Map<String, DocumentLeafNode> leafNodesByPath = new LinkedHashMap<>();
+    public FlattenedDocument toDocument() {
+        Map<String, FlattenedDocumentLeafNode> leafNodesByPath = new LinkedHashMap<>();
         Deque<String> parentPath = new LinkedList<>();
         parentPath.add("$");
         populateMapFromJson(parentPath, leafNodesByPath, jsonObject);
-        return new Document(
+        return new FlattenedDocument(
                 new DocumentKey(
                         namespace,
                         entity,
@@ -52,24 +52,24 @@ public class JsonToDocument {
         );
     }
 
-    void populateMapFromJson(Deque<String> parentPath, Map<String, DocumentLeafNode> leafNodesByPath, Object object) {
+    void populateMapFromJson(Deque<String> parentPath, Map<String, FlattenedDocumentLeafNode> leafNodesByPath, Object object) {
         if (object == null || JSONObject.NULL.equals(object)) {
             String path = parentPath.stream().collect(Collectors.joining("."));
-            leafNodesByPath.put(path, new DocumentLeafNode(documentKey, path, FragmentType.NULL, null, fragmentCapacity));
+            leafNodesByPath.put(path, new FlattenedDocumentLeafNode(documentKey, path, FragmentType.NULL, null, fragmentCapacity));
         } else if (object instanceof String) {
             String path = parentPath.stream().collect(Collectors.joining("."));
-            leafNodesByPath.put(path, new DocumentLeafNode(documentKey, path, FragmentType.STRING, (String) object, fragmentCapacity));
+            leafNodesByPath.put(path, new FlattenedDocumentLeafNode(documentKey, path, FragmentType.STRING, (String) object, fragmentCapacity));
         } else if (object instanceof Number) {
             String path = parentPath.stream().collect(Collectors.joining("."));
-            leafNodesByPath.put(path, new DocumentLeafNode(documentKey, path, FragmentType.NUMERIC, object.toString(), fragmentCapacity));
+            leafNodesByPath.put(path, new FlattenedDocumentLeafNode(documentKey, path, FragmentType.NUMERIC, object.toString(), fragmentCapacity));
         } else if (object instanceof Boolean) {
             String path = parentPath.stream().collect(Collectors.joining("."));
-            leafNodesByPath.put(path, new DocumentLeafNode(documentKey, path, FragmentType.BOOLEAN, object.toString(), fragmentCapacity));
+            leafNodesByPath.put(path, new FlattenedDocumentLeafNode(documentKey, path, FragmentType.BOOLEAN, object.toString(), fragmentCapacity));
         } else if (object instanceof JSONArray) {
             JSONArray array = (JSONArray) object;
             if (array.isEmpty()) {
                 String path = parentPath.stream().collect(Collectors.joining("."));
-                leafNodesByPath.put(path, new DocumentLeafNode(documentKey, path, FragmentType.EMPTY_ARRAY, null, fragmentCapacity));
+                leafNodesByPath.put(path, new FlattenedDocumentLeafNode(documentKey, path, FragmentType.EMPTY_ARRAY, null, fragmentCapacity));
             } else {
                 for (int i = 0; i < array.length(); i++) {
                     String originalLast = parentPath.removeLast();
@@ -84,7 +84,7 @@ public class JsonToDocument {
             List array = (List) object;
             if (array.isEmpty()) {
                 String path = parentPath.stream().collect(Collectors.joining("."));
-                leafNodesByPath.put(path, new DocumentLeafNode(documentKey, path, FragmentType.EMPTY_ARRAY, null, fragmentCapacity));
+                leafNodesByPath.put(path, new FlattenedDocumentLeafNode(documentKey, path, FragmentType.EMPTY_ARRAY, null, fragmentCapacity));
             } else {
                 for (int i = 0; i < array.size(); i++) {
                     String originalLast = parentPath.removeLast();
@@ -99,7 +99,7 @@ public class JsonToDocument {
             JSONObject node = (JSONObject) object;
             if (node.isEmpty()) {
                 String path = parentPath.stream().collect(Collectors.joining("."));
-                leafNodesByPath.put(path, new DocumentLeafNode(documentKey, path, FragmentType.EMPTY_OBJECT, null, fragmentCapacity));
+                leafNodesByPath.put(path, new FlattenedDocumentLeafNode(documentKey, path, FragmentType.EMPTY_OBJECT, null, fragmentCapacity));
             } else {
                 for (Map.Entry<String, Object> entry : node.toMap().entrySet()) {
                     parentPath.addLast(entry.getKey());
@@ -111,7 +111,7 @@ public class JsonToDocument {
             Map<String, Object> map = (Map<String, Object>) object;
             if (map.isEmpty()) {
                 String path = parentPath.stream().collect(Collectors.joining("."));
-                leafNodesByPath.put(path, new DocumentLeafNode(documentKey, path, FragmentType.EMPTY_OBJECT, null, fragmentCapacity));
+                leafNodesByPath.put(path, new FlattenedDocumentLeafNode(documentKey, path, FragmentType.EMPTY_OBJECT, null, fragmentCapacity));
             } else {
                 for (Map.Entry<String, Object> entry : map.entrySet()) {
                     parentPath.addLast(entry.getKey());

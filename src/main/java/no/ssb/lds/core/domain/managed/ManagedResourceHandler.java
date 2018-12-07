@@ -4,12 +4,12 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import no.ssb.concurrent.futureselector.SelectableFuture;
-import no.ssb.lds.api.persistence.Persistence;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.buffered.BufferedPersistence;
 import no.ssb.lds.api.persistence.buffered.DefaultBufferedPersistence;
-import no.ssb.lds.api.persistence.buffered.Document;
-import no.ssb.lds.api.persistence.buffered.DocumentIterator;
+import no.ssb.lds.api.persistence.buffered.FlattenedDocument;
+import no.ssb.lds.api.persistence.buffered.FlattenedDocumentIterator;
+import no.ssb.lds.api.persistence.streaming.Persistence;
 import no.ssb.lds.core.buffered.DocumentToJson;
 import no.ssb.lds.core.domain.resource.ResourceContext;
 import no.ssb.lds.core.domain.resource.ResourceElement;
@@ -81,16 +81,16 @@ public class ManagedResourceHandler implements HttpHandler {
         }
 
         try (Transaction tx = persistence.createTransaction(true)) {
-            CompletableFuture<DocumentIterator> future;
+            CompletableFuture<FlattenedDocumentIterator> future;
             if (isManagedList) {
                 future = persistence.findAll(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), null, 100);
             } else {
                 future = persistence.read(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id());
             }
-            DocumentIterator iterator = future.join(); // blocking
+            FlattenedDocumentIterator iterator = future.join(); // blocking
             JSONArray output = new JSONArray();
             while (iterator.hasNext()) {
-                Document document = iterator.next();
+                FlattenedDocument document = iterator.next();
                 if (document.isDeleted()) {
                     continue;
                 }

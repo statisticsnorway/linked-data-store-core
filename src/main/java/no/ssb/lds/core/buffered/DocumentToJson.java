@@ -1,8 +1,8 @@
 package no.ssb.lds.core.buffered;
 
-import no.ssb.lds.api.persistence.FragmentType;
-import no.ssb.lds.api.persistence.buffered.Document;
-import no.ssb.lds.api.persistence.buffered.DocumentLeafNode;
+import no.ssb.lds.api.persistence.buffered.FlattenedDocument;
+import no.ssb.lds.api.persistence.buffered.FlattenedDocumentLeafNode;
+import no.ssb.lds.api.persistence.streaming.FragmentType;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -14,17 +14,17 @@ public class DocumentToJson {
 
     static final Pattern arrayNavigationPattern = Pattern.compile("([^\\[]*)\\[([0-9]+)\\]");
 
-    final Document document;
+    final FlattenedDocument document;
 
-    public DocumentToJson(Document document) {
+    public DocumentToJson(FlattenedDocument document) {
         this.document = document;
     }
 
     public JSONObject toJSONObject() {
         JSONObject root = new JSONObject();
-        for (Map.Entry<String, DocumentLeafNode> entry : document.leafNodesByPath().entrySet()) {
+        for (Map.Entry<String, FlattenedDocumentLeafNode> entry : document.leafNodesByPath().entrySet()) {
             String path = entry.getKey();
-            DocumentLeafNode leafNode = entry.getValue();
+            FlattenedDocumentLeafNode leafNode = entry.getValue();
             String[] pathElements = path.split("\\.");
             JSONObject parentOfLeaf = root;
             for (int i = 1; i < pathElements.length - 1; i++) {

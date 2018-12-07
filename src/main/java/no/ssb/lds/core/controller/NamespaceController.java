@@ -3,7 +3,7 @@ package no.ssb.lds.core.controller;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
-import no.ssb.lds.api.persistence.Persistence;
+import no.ssb.lds.api.persistence.streaming.Persistence;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
 import no.ssb.lds.core.saga.SagaRepository;
 import no.ssb.lds.core.schema.SchemaRepository;

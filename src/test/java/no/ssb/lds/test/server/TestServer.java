@@ -1,7 +1,7 @@
 package no.ssb.lds.test.server;
 
 import no.ssb.config.DynamicConfiguration;
-import no.ssb.lds.api.persistence.Persistence;
+import no.ssb.lds.api.persistence.streaming.Persistence;
 import no.ssb.lds.core.UndertowApplication;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
 import no.ssb.lds.core.specification.Specification;

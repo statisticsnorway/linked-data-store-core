@@ -4,12 +4,12 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import no.ssb.concurrent.futureselector.SelectableFuture;
-import no.ssb.lds.api.persistence.Persistence;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.buffered.BufferedPersistence;
 import no.ssb.lds.api.persistence.buffered.DefaultBufferedPersistence;
-import no.ssb.lds.api.persistence.buffered.Document;
-import no.ssb.lds.api.persistence.buffered.DocumentIterator;
+import no.ssb.lds.api.persistence.buffered.FlattenedDocument;
+import no.ssb.lds.api.persistence.buffered.FlattenedDocumentIterator;
+import no.ssb.lds.api.persistence.streaming.Persistence;
 import no.ssb.lds.core.buffered.DocumentToJson;
 import no.ssb.lds.core.domain.resource.ResourceContext;
 import no.ssb.lds.core.domain.resource.ResourceElement;
@@ -73,12 +73,12 @@ public class EmbeddedResourceHandler implements HttpHandler {
 
         JSONObject jsonObject;
         try (Transaction tx = persistence.createTransaction(true)) {
-            DocumentIterator documentIterator = persistence.read(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).join();
-            if (!documentIterator.hasNext()) {
+            FlattenedDocumentIterator flattenedDocumentIterator = persistence.read(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).join();
+            if (!flattenedDocumentIterator.hasNext()) {
                 exchange.setStatusCode(404);
                 return;
             }
-            Document document = documentIterator.next();
+            FlattenedDocument document = flattenedDocumentIterator.next();
             if (document.isDeleted()) {
                 exchange.setStatusCode(404);
                 return;
@@ -110,12 +110,12 @@ public class EmbeddedResourceHandler implements HttpHandler {
 
                     JSONObject managedDocument;
                     try (Transaction tx = persistence.createTransaction(true)) {
-                        DocumentIterator documentIterator = persistence.read(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).join();
-                        if (!documentIterator.hasNext()) {
+                        FlattenedDocumentIterator flattenedDocumentIterator = persistence.read(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).join();
+                        if (!flattenedDocumentIterator.hasNext()) {
                             exchange.setStatusCode(404);
                             return;
                         }
-                        Document document = documentIterator.next();
+                        FlattenedDocument document = flattenedDocumentIterator.next();
                         managedDocument = new DocumentToJson(document).toJSONObject();
                     }
 
@@ -166,12 +166,12 @@ public class EmbeddedResourceHandler implements HttpHandler {
 
                     JSONObject rootNode;
                     try (Transaction tx = persistence.createTransaction(true)) {
-                        DocumentIterator documentIterator = persistence.read(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).join();
-                        if (!documentIterator.hasNext()) {
+                        FlattenedDocumentIterator flattenedDocumentIterator = persistence.read(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).join();
+                        if (!flattenedDocumentIterator.hasNext()) {
                             exchange.setStatusCode(404);
                             return;
                         }
-                        Document document = documentIterator.next();
+                        FlattenedDocument document = flattenedDocumentIterator.next();
                         rootNode = new DocumentToJson(document).toJSONObject();
                     }
 

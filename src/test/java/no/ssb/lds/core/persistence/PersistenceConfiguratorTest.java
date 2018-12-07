@@ -2,9 +2,9 @@ package no.ssb.lds.core.persistence;
 
 import no.ssb.config.DynamicConfiguration;
 import no.ssb.config.StoreBasedDynamicConfiguration;
-import no.ssb.lds.api.persistence.Persistence;
 import no.ssb.lds.api.persistence.PersistenceInitializer;
 import no.ssb.lds.api.persistence.ProviderName;
+import no.ssb.lds.api.persistence.streaming.Persistence;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import no.ssb.lds.core.specification.Specification;
 import org.testng.Assert;

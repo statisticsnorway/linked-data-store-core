@@ -1,6 +1,6 @@
 package no.ssb.lds.core.saga;
 
-import no.ssb.lds.api.persistence.Persistence;
+import no.ssb.lds.api.persistence.streaming.Persistence;
 import no.ssb.lds.core.persistence.PersistenceCreateOrOverwriteSagaAdapter;
 import no.ssb.lds.core.persistence.PersistenceDeleteSagaAdapter;
 import no.ssb.lds.core.specification.Specification;
