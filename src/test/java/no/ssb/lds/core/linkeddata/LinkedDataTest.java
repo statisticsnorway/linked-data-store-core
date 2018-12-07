@@ -1,6 +1,5 @@
 package no.ssb.lds.core.linkeddata;
 
-import no.ssb.lds.api.persistence.OutgoingLink;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import no.ssb.lds.core.specification.Specification;
 import no.ssb.lds.core.utils.FileAndClasspathReaderUtils;
