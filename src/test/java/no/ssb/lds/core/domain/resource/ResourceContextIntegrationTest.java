@@ -33,7 +33,7 @@ public class ResourceContextIntegrationTest {
         JSONObject jsonObject = new JSONObject(json);
         JsonPersistence persistence = server.getPersistence();
         try (Transaction tx = persistence.createTransaction(false)) {
-            persistence.createOrOverwrite(tx, new JsonDocument(new DocumentKey("data", entity, id, timestamp), jsonObject));
+            persistence.createOrOverwrite(tx, new JsonDocument(new DocumentKey("data", entity, id, timestamp), jsonObject), server.getSpecification());
         }
     }
 

@@ -33,7 +33,7 @@ public class PersistenceCreateOrOverwriteSagaAdapter extends Adapter<JSONObject>
         String versionStr = input.getString("version");
         ZonedDateTime version = ZonedDateTime.parse(versionStr, DateTimeFormatter.ISO_ZONED_DATE_TIME);
         try (Transaction tx = persistence.createTransaction(false)) {
-            persistence.createOrOverwrite(tx, new JsonDocument(new DocumentKey(input.getString("namespace"), input.getString("entity"), input.getString("id"), version), input.getJSONObject("data"))).join();
+            persistence.createOrOverwrite(tx, new JsonDocument(new DocumentKey(input.getString("namespace"), input.getString("entity"), input.getString("id"), version), input.getJSONObject("data")), specification).join();
         } catch (Throwable t) {
             throw new AbortSagaException("Unable to write data using persistence.", t);
         }

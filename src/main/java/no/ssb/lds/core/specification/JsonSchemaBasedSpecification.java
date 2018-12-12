@@ -90,16 +90,4 @@ public class JsonSchemaBasedSpecification implements Specification, SchemaReposi
         return jsonSchema;
     }
 
-    public SpecificationElement getElement(String managedDomain, String[] path) {
-        SpecificationElement se = root.getProperties().get(managedDomain);
-        for (int i = 0; i < path.length; i++) {
-            String pathElement = path[i];
-            if (se.getJsonTypes().contains("array")) {
-                continue; // skip array index navigation
-            }
-            SpecificationElement next = se.getProperties().get(pathElement);
-            se = next;
-        }
-        return se;
-    }
 }
