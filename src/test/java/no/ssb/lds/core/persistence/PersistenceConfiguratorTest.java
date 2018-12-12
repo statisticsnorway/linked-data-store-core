@@ -5,8 +5,8 @@ import no.ssb.config.StoreBasedDynamicConfiguration;
 import no.ssb.lds.api.persistence.PersistenceInitializer;
 import no.ssb.lds.api.persistence.ProviderName;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
-import no.ssb.lds.core.specification.Specification;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 

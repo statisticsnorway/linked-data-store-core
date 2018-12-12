@@ -1,5 +1,9 @@
 package no.ssb.lds.core.specification;
 
+import no.ssb.lds.api.specification.SpecificationElement;
+import no.ssb.lds.api.specification.SpecificationElementType;
+import no.ssb.lds.api.specification.SpecificationValidator;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;

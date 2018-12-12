@@ -1,9 +1,9 @@
 package no.ssb.lds.core.domain.reference;
 
+import no.ssb.lds.api.specification.Specification;
+import no.ssb.lds.api.specification.SpecificationElement;
 import no.ssb.lds.core.domain.resource.ResourceContext;
 import no.ssb.lds.core.domain.resource.ResourceElement;
-import no.ssb.lds.core.specification.Specification;
-import no.ssb.lds.core.specification.SpecificationElement;
 import org.json.JSONArray;
 import org.json.JSONObject;
 

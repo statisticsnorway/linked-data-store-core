@@ -2,9 +2,9 @@ package no.ssb.lds.test.server;
 
 import no.ssb.config.DynamicConfiguration;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.UndertowApplication;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
-import no.ssb.lds.core.specification.Specification;
 
 import java.net.MalformedURLException;
 import java.net.URL;

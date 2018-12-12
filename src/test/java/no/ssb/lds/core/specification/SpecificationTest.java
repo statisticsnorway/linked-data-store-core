@@ -1,5 +1,7 @@
 package no.ssb.lds.core.specification;
 
+import no.ssb.lds.api.specification.Specification;
+import no.ssb.lds.api.specification.SpecificationElementType;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;

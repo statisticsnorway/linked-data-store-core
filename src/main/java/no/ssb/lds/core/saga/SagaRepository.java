@@ -1,9 +1,9 @@
 package no.ssb.lds.core.saga;
 
 import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.persistence.PersistenceCreateOrOverwriteSagaAdapter;
 import no.ssb.lds.core.persistence.PersistenceDeleteSagaAdapter;
-import no.ssb.lds.core.specification.Specification;
 import no.ssb.saga.api.Saga;
 import no.ssb.saga.execution.adapter.AdapterLoader;
 

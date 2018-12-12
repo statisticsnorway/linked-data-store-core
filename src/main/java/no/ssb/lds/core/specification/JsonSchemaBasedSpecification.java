@@ -1,5 +1,7 @@
 package no.ssb.lds.core.specification;
 
+import no.ssb.lds.api.specification.Specification;
+import no.ssb.lds.api.specification.SpecificationElement;
 import no.ssb.lds.core.schema.JsonSchema;
 import no.ssb.lds.core.schema.JsonSchema04Builder;
 import no.ssb.lds.core.schema.SchemaRepository;

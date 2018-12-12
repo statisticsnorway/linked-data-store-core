@@ -1,7 +1,7 @@
 package no.ssb.lds.core.domain.resource;
 
+import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
-import no.ssb.lds.core.specification.Specification;
 import org.testng.annotations.Test;
 
 import java.time.ZoneId;

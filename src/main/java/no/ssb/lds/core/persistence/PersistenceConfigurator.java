@@ -4,7 +4,7 @@ import no.ssb.config.DynamicConfiguration;
 import no.ssb.lds.api.persistence.PersistenceInitializer;
 import no.ssb.lds.api.persistence.ProviderName;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
-import no.ssb.lds.core.specification.Specification;
+import no.ssb.lds.api.specification.Specification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

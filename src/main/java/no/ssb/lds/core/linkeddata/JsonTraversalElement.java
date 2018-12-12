@@ -1,7 +1,7 @@
 package no.ssb.lds.core.linkeddata;
 
-import no.ssb.lds.core.specification.SpecificationElement;
-import no.ssb.lds.core.specification.SpecificationElementType;
+import no.ssb.lds.api.specification.SpecificationElement;
+import no.ssb.lds.api.specification.SpecificationElementType;
 
 import java.util.Deque;
 

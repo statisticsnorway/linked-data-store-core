@@ -4,7 +4,7 @@ import no.ssb.lds.api.persistence.DocumentKey;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
-import no.ssb.lds.core.specification.Specification;
+import no.ssb.lds.api.specification.Specification;
 import no.ssb.saga.api.SagaNode;
 import no.ssb.saga.execution.adapter.AbortSagaException;
 import no.ssb.saga.execution.adapter.Adapter;
