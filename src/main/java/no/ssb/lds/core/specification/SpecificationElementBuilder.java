@@ -132,7 +132,7 @@ class SpecificationElementBuilder {
             return null;
         }
         SpecificationElement child = new SpecificationElementBuilder(schemaElement.items)
-                .name("")
+                .name("[]")
                 .parent(specificationElement)
                 .build();
         return child;
