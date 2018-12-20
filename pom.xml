@@ -4,7 +4,7 @@
 
     <groupId>no.ssb.lds</groupId>
     <artifactId>linked-data-store-core</artifactId>
-    <version>0.5</version>
+    <version>0.6-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>LinkedDataStore Core</name>
@@ -55,7 +55,7 @@
         <connection>scm:git:git://github.com/statisticsnorway/linked-data-store-core.git</connection>
         <developerConnection>scm:git:git@github.com:statisticsnorway/linked-data-store-core.git</developerConnection>
         <url>https://github.com/statisticsnorway/linked-data-store-core/tree/master</url>
-        <tag>v0.5</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <distributionManagement>
