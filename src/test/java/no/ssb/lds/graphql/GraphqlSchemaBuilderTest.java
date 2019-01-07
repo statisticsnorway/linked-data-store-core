@@ -55,7 +55,8 @@ public class GraphqlSchemaBuilderTest {
 
         );
         JsonPersistence fakePersistence = new MockPersistence();
-        no.ssb.lds.graphql.GraphqlSchemaBuilder builder = new GraphqlSchemaBuilder(specification, fakePersistence);
+        no.ssb.lds.graphql.GraphqlSchemaBuilder builder = new GraphqlSchemaBuilder(specification, fakePersistence,
+                "/ns");
         GraphQLSchema schema = builder.getSchema();
 
         SchemaPrinter printer = new SchemaPrinter();

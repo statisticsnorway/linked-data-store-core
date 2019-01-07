@@ -42,10 +42,15 @@ public class GraphqlSchemaBuilder {
     private final Set<String> unionTypes = new HashSet<>();
 
     private final JsonPersistence persistence;
+    private final String nameSpace;
 
-    public GraphqlSchemaBuilder(Specification specification, JsonPersistence persistence) {
+    public GraphqlSchemaBuilder(Specification specification, JsonPersistence persistence, String nameSpace) {
         this.specification = Objects.requireNonNull(specification);
         this.persistence = Objects.requireNonNull(persistence);
+        this.nameSpace = Objects.requireNonNull(nameSpace);
+        if (this.nameSpace.isEmpty()) {
+            throw new IllegalArgumentException("namespace was empty");
+        }
     }
 
     /**
@@ -131,7 +136,7 @@ public class GraphqlSchemaBuilder {
     }
 
     private DataFetcher createRootQueryFetcher(SpecificationElement element) {
-        return new PersistenceFetcher(persistence, "data", element.getName());
+        return new PersistenceFetcher(persistence, this.nameSpace, element.getName());
     }
 
     /**
@@ -212,7 +217,7 @@ public class GraphqlSchemaBuilder {
                 field.type(GraphQLList.list(graphQLOutputType));
                 field.dataFetcher(new PersistenceLinksFetcher(
                         persistence,
-                        "data",
+                        this.nameSpace,
                         propertyName, graphQLOutputType.getName()
                 ));
                 return field;
@@ -220,7 +225,7 @@ public class GraphqlSchemaBuilder {
                 field.type(graphQLOutputType);
                 field.dataFetcher(new PersistenceLinkFetcher(
                         persistence,
-                        "data",
+                        this.nameSpace,
                         propertyName, graphQLOutputType.getName()
                 ));
                 return field;

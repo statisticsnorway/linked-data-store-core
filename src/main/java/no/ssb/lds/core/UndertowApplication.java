@@ -95,7 +95,10 @@ public class UndertowApplication {
 
         boolean graphqlEnabled = configuration.evaluateToBoolean("graphql.enabled");
 
-        return new UndertowApplication(specification, persistence, sec, sagaRepository, sagasObserver, host, port, sagaLog, sagaThreadPool, namespaceController, graphqlEnabled);
+        // TODO: Pass configuration instead to avoid so many parameters. Undertow has a nice builder pattern.
+        return new UndertowApplication(specification, persistence, sec, sagaRepository, sagasObserver, host, port,
+                sagaLog, sagaThreadPool, namespaceController, graphqlEnabled,
+                configuration.evaluateToString("namespace.default"));
     }
 
     private final Specification specification;
@@ -109,7 +112,10 @@ public class UndertowApplication {
     private final SagaLog sagaLog;
     private final SelectableThreadPoolExectutor sagaThreadPool;
 
-    UndertowApplication(Specification specification, JsonPersistence persistence, SagaExecutionCoordinator sec, SagaRepository sagaRepository, SagasObserver sagasObserver, String host, int port, SagaLog sagaLog, SelectableThreadPoolExectutor sagaThreadPool, NamespaceController namespaceController, boolean graphqlEnabled) {
+    UndertowApplication(Specification specification, JsonPersistence persistence, SagaExecutionCoordinator sec,
+                        SagaRepository sagaRepository, SagasObserver sagasObserver, String host, int port,
+                        SagaLog sagaLog, SelectableThreadPoolExectutor sagaThreadPool,
+                        NamespaceController namespaceController, boolean graphqlEnabled, String nameSpace) {
         this.specification = specification;
         this.host = host;
         this.port = port;
@@ -124,7 +130,8 @@ public class UndertowApplication {
         RoutingHandler routingHandler = Handlers.routing();
 
         if (graphqlEnabled) {
-            GraphQL graphQL = GraphQL.newGraphQL(new GraphqlSchemaBuilder(specification, persistence).getSchema()).build();
+            GraphQL graphQL = GraphQL.newGraphQL(new GraphqlSchemaBuilder(specification, persistence, nameSpace)
+                    .getSchema()).build();
             routingHandler = routingHandler
                     .get("graphiql**", Handlers.resource(new ClassPathResourceManager(
                                     Thread.currentThread().getContextClassLoader(), "no/ssb/lds/graphql"
