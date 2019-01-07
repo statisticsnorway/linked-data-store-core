@@ -46,8 +46,8 @@ public class PersistenceLinksFetcher implements DataFetcher<List<Map<String, Obj
                 String id = matcher.group("id");
                 // TODO get snapshot timestamp from client through data-fetching-environment
                 ZonedDateTime snapshot = ZonedDateTime.now(ZoneId.of("Etc/UTC"));
-                JSONObject entity = readDocument(id, snapshot);
-                results.add(entity != null ? entity.toMap() : null);
+                JsonDocument document = readDocument(id, snapshot);
+                results.add(document != null ? document.document().toMap() : null);
             } else {
                 // TODO: Handle.
             }
@@ -55,10 +55,10 @@ public class PersistenceLinksFetcher implements DataFetcher<List<Map<String, Obj
         return results;
     }
 
-    private JSONObject readDocument(String id, ZonedDateTime snapshot) {
+    private JsonDocument readDocument(String id, ZonedDateTime snapshot) {
         try (Transaction tx = persistence.createTransaction(true)) {
             CompletableFuture<JsonDocument> future = persistence.read(tx, snapshot, namespace, target, id);
-            return future.join().document();
+            return future.join();
         }
     }
 }

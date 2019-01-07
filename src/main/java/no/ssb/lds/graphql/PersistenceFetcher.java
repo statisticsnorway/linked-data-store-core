@@ -40,14 +40,14 @@ public class PersistenceFetcher implements DataFetcher<Map<String, Object>> {
     public Map<String, Object> get(DataFetchingEnvironment environment) throws Exception {
         // TODO get snapshot timestamp from client through data-fetching-environment
         ZonedDateTime snapshot = ZonedDateTime.now(ZoneId.of("Etc/UTC"));
-        JSONObject entity = readDocument(environment.getArgument("id"), snapshot);
-        return entity.toMap();
+        JsonDocument document = readDocument(environment.getArgument("id"), snapshot);
+        return document != null ? document.document().toMap() : null;
     }
 
-    private JSONObject readDocument(String id, ZonedDateTime snapshot) {
+    private JsonDocument readDocument(String id, ZonedDateTime snapshot) {
         try (Transaction tx = backend.createTransaction(true)) {
             CompletableFuture<JsonDocument> future = backend.read(tx, snapshot, nameSpace, this.entity, id);
-            return future.join().document();
+            return future.join();
         }
     }
 
