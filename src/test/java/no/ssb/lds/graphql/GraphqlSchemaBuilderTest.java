@@ -2,9 +2,18 @@ package no.ssb.lds.graphql;
 
 import graphql.schema.GraphQLSchema;
 import graphql.schema.idl.SchemaPrinter;
+import no.ssb.lds.api.persistence.PersistenceDeletePolicy;
+import no.ssb.lds.api.persistence.PersistenceException;
+import no.ssb.lds.api.persistence.Transaction;
+import no.ssb.lds.api.persistence.TransactionFactory;
+import no.ssb.lds.api.persistence.json.JsonDocument;
+import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
-import no.ssb.lds.core.specification.Specification;
 import org.testng.annotations.Test;
+
+import java.time.ZonedDateTime;
+import java.util.concurrent.CompletableFuture;
 
 public class GraphqlSchemaBuilderTest {
 
@@ -45,8 +54,8 @@ public class GraphqlSchemaBuilderTest {
                 "no/ssb/lds/graphql/schemas/Role.json"
 
         );
-
-        no.ssb.lds.graphql.GraphqlSchemaBuilder builder = new GraphqlSchemaBuilder(specification, null);
+        JsonPersistence fakePersistence = new MockPersistence();
+        no.ssb.lds.graphql.GraphqlSchemaBuilder builder = new GraphqlSchemaBuilder(specification, fakePersistence);
         GraphQLSchema schema = builder.getSchema();
 
         SchemaPrinter printer = new SchemaPrinter();
@@ -57,5 +66,67 @@ public class GraphqlSchemaBuilderTest {
         //List<GraphQLError> errors = result.getErrors();
         //System.err.println(errors);
 
+    }
+
+    private class MockPersistence implements JsonPersistence {
+        @Override
+        public TransactionFactory transactionFactory() throws PersistenceException {
+            return null;
+        }
+
+        @Override
+        public Transaction createTransaction(boolean readOnly) throws PersistenceException {
+            return null;
+        }
+
+        @Override
+        public CompletableFuture<Void> createOrOverwrite(Transaction transaction, JsonDocument document, Specification specification) throws PersistenceException {
+            return null;
+        }
+
+        @Override
+        public CompletableFuture<JsonDocument> read(Transaction transaction, ZonedDateTime snapshot, String namespace, String entity, String id) throws PersistenceException {
+            return null;
+        }
+
+        @Override
+        public CompletableFuture<Iterable<JsonDocument>> readVersions(Transaction transaction, ZonedDateTime snapshotFrom, ZonedDateTime snapshotTo, String namespace, String entity, String id, ZonedDateTime firstVersion, int limit) throws PersistenceException {
+            return null;
+        }
+
+        @Override
+        public CompletableFuture<Iterable<JsonDocument>> readAllVersions(Transaction transaction, String namespace, String entity, String id, ZonedDateTime firstVersion, int limit) throws PersistenceException {
+            return null;
+        }
+
+        @Override
+        public CompletableFuture<Void> delete(Transaction transaction, String namespace, String entity, String id, ZonedDateTime version, PersistenceDeletePolicy policy) throws PersistenceException {
+            return null;
+        }
+
+        @Override
+        public CompletableFuture<Void> deleteAllVersions(Transaction transaction, String namespace, String entity, String id, PersistenceDeletePolicy policy) throws PersistenceException {
+            return null;
+        }
+
+        @Override
+        public CompletableFuture<Void> markDeleted(Transaction transaction, String namespace, String entity, String id, ZonedDateTime version, PersistenceDeletePolicy policy) throws PersistenceException {
+            return null;
+        }
+
+        @Override
+        public CompletableFuture<Iterable<JsonDocument>> findAll(Transaction transaction, ZonedDateTime snapshot, String namespace, String entity, String firstId, int limit) throws PersistenceException {
+            return null;
+        }
+
+        @Override
+        public CompletableFuture<Iterable<JsonDocument>> find(Transaction transaction, ZonedDateTime snapshot, String namespace, String entity, String path, Object value, String firstId, int limit) throws PersistenceException {
+            return null;
+        }
+
+        @Override
+        public void close() throws PersistenceException {
+
+        }
     }
 }

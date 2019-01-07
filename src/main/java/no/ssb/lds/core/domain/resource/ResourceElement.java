@@ -1,6 +1,6 @@
 package no.ssb.lds.core.domain.resource;
 
-import no.ssb.lds.core.specification.SpecificationElement;
+import no.ssb.lds.api.specification.SpecificationElement;
 
 import java.util.Objects;
 

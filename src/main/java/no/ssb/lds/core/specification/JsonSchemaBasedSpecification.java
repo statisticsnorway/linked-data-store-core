@@ -1,5 +1,7 @@
 package no.ssb.lds.core.specification;
 
+import no.ssb.lds.api.specification.Specification;
+import no.ssb.lds.api.specification.SpecificationElement;
 import no.ssb.lds.core.schema.JsonSchema;
 import no.ssb.lds.core.schema.JsonSchema04Builder;
 import no.ssb.lds.core.schema.SchemaRepository;
@@ -88,16 +90,4 @@ public class JsonSchemaBasedSpecification implements Specification, SchemaReposi
         return jsonSchema;
     }
 
-    public SpecificationElement getElement(String managedDomain, String[] path) {
-        SpecificationElement se = root.getProperties().get(managedDomain);
-        for (int i = 0; i < path.length; i++) {
-            String pathElement = path[i];
-            if (se.getJsonTypes().contains("array")) {
-                continue; // skip array index navigation
-            }
-            SpecificationElement next = se.getProperties().get(pathElement);
-            se = next;
-        }
-        return se;
-    }
 }

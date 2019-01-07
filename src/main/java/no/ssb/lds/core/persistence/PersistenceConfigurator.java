@@ -1,10 +1,10 @@
 package no.ssb.lds.core.persistence;
 
 import no.ssb.config.DynamicConfiguration;
-import no.ssb.lds.api.persistence.Persistence;
 import no.ssb.lds.api.persistence.PersistenceInitializer;
 import no.ssb.lds.api.persistence.ProviderName;
-import no.ssb.lds.core.specification.Specification;
+import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.specification.Specification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +21,7 @@ public class PersistenceConfigurator {
 
     private static final Logger LOG = LoggerFactory.getLogger(PersistenceConfigurator.class);
 
-    public static Persistence configurePersistence(DynamicConfiguration configuration, Specification specification) {
+    public static JsonPersistence configurePersistence(DynamicConfiguration configuration, Specification specification) {
         final String providerId = configuration.evaluateToString("persistence.provider");
 
         ServiceLoader<PersistenceInitializer> loader = ServiceLoader.load(PersistenceInitializer.class);
@@ -69,7 +69,7 @@ public class PersistenceConfigurator {
         long start = System.currentTimeMillis();
         do {
             try {
-                Persistence persistence = initializer.initialize(configuration.evaluateToString("namespace.default"), configurationByKey, specification.getManagedDomains());
+                JsonPersistence persistence = initializer.initialize(configuration.evaluateToString("namespace.default"), configurationByKey, specification.getManagedDomains());
                 LOG.info("Persistence service-provider configured: {}", providerId);
                 return persistence;
             } catch (RuntimeException e) {

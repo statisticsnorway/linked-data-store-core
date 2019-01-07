@@ -1,5 +1,9 @@
 package no.ssb.lds.core.specification;
 
+import no.ssb.lds.api.specification.SpecificationElement;
+import no.ssb.lds.api.specification.SpecificationElementType;
+import no.ssb.lds.api.specification.SpecificationValidator;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -40,10 +44,10 @@ class ImmutableSpecificationElement implements SpecificationElement {
         return name;
     }
 
-    @Override
-    public String getDescription() {
-        return description;
-    }
+    //TODO @Override
+    //public String getDescription() {
+    //    return description;
+    //}
 
     @Override
     public SpecificationElement getParent() {

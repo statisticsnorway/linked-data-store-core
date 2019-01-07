@@ -1,5 +1,8 @@
 package no.ssb.lds.core.specification;
 
+import no.ssb.lds.api.specification.SpecificationElement;
+import no.ssb.lds.api.specification.SpecificationElementType;
+import no.ssb.lds.api.specification.SpecificationValidator;
 import no.ssb.lds.core.schema.JsonSchema;
 import no.ssb.lds.core.schema.JsonSchemaDefinitionElement;
 
@@ -146,6 +149,7 @@ class SpecificationElementBuilder {
         // See comment in JsonSchemaDefinitionElement.java.
         String name = schemaElement.items.name != null ? schemaElement.items.name : "";
         SpecificationElement child = new SpecificationElementBuilder(schemaElement.items)
+                // TODO: Master uses  .name("[]")
                 .name(name)
                 .parent(specificationElement)
                 .build();

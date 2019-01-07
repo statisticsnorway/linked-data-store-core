@@ -1,6 +1,6 @@
 package no.ssb.lds.core.linkeddata;
 
-import no.ssb.lds.core.specification.Specification;
+import no.ssb.lds.api.specification.Specification;
 import org.json.JSONArray;
 import org.json.JSONObject;
 

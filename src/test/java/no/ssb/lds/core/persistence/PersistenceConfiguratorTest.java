@@ -2,11 +2,11 @@ package no.ssb.lds.core.persistence;
 
 import no.ssb.config.DynamicConfiguration;
 import no.ssb.config.StoreBasedDynamicConfiguration;
-import no.ssb.lds.api.persistence.Persistence;
 import no.ssb.lds.api.persistence.PersistenceInitializer;
 import no.ssb.lds.api.persistence.ProviderName;
+import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
-import no.ssb.lds.core.specification.Specification;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -22,10 +22,11 @@ public class PersistenceConfiguratorTest {
                 .values("persistence.provider", "mem",
                         "persistence.initialization.max-wait-seconds", "0",
                         "persistence.mem.wait.min", "0",
-                        "persistence.mem.wait.max", "0")
+                        "persistence.mem.wait.max", "0",
+                        "persistence.fragment.capacity", "1024")
                 .build();
         Specification specification = JsonSchemaBasedSpecification.create("spec/schemas/contact.json", "spec/schemas/provisionagreement.json");
-        Persistence persistence = PersistenceConfigurator.configurePersistence(configuration, specification);
+        JsonPersistence persistence = PersistenceConfigurator.configurePersistence(configuration, specification);
         Assert.assertNotNull(persistence);
     }
 
@@ -41,6 +42,7 @@ public class PersistenceConfiguratorTest {
         } catch (IllegalArgumentException e) {
             Assert.assertTrue(e.getMessage().contains("persistence.mem.wait.min"));
             Assert.assertTrue(e.getMessage().contains("persistence.mem.wait.max"));
+            Assert.assertTrue(e.getMessage().contains("persistence.fragment.capacity"));
         }
     }
 

@@ -1,10 +1,10 @@
 package no.ssb.lds.core.validation;
 
+import no.ssb.lds.api.specification.Specification;
+import no.ssb.lds.api.specification.SpecificationElement;
+import no.ssb.lds.api.specification.SpecificationElementType;
+import no.ssb.lds.api.specification.SpecificationTraverals;
 import no.ssb.lds.core.schema.SchemaRepository;
-import no.ssb.lds.core.specification.Specification;
-import no.ssb.lds.core.specification.SpecificationElement;
-import no.ssb.lds.core.specification.SpecificationElementType;
-import no.ssb.lds.core.specification.SpecificationTraverals;
 import org.everit.json.schema.Schema;
 import org.everit.json.schema.ValidationException;
 import org.json.JSONArray;

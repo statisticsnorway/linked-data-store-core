@@ -4,19 +4,15 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import no.ssb.concurrent.futureselector.SelectableFuture;
-import no.ssb.lds.api.persistence.Persistence;
 import no.ssb.lds.api.persistence.Transaction;
-import no.ssb.lds.api.persistence.buffered.BufferedPersistence;
-import no.ssb.lds.api.persistence.buffered.DefaultBufferedPersistence;
-import no.ssb.lds.api.persistence.buffered.Document;
-import no.ssb.lds.api.persistence.buffered.DocumentIterator;
-import no.ssb.lds.core.buffered.DocumentToJson;
+import no.ssb.lds.api.persistence.json.JsonDocument;
+import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.domain.resource.ResourceContext;
 import no.ssb.lds.core.domain.resource.ResourceElement;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
 import no.ssb.lds.core.saga.SagaRepository;
 import no.ssb.lds.core.schema.SchemaRepository;
-import no.ssb.lds.core.specification.Specification;
 import no.ssb.lds.core.validation.LinkedDocumentValidationException;
 import no.ssb.lds.core.validation.LinkedDocumentValidator;
 import no.ssb.saga.api.Saga;
@@ -29,21 +25,20 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
-import java.util.concurrent.CompletableFuture;
 
 public class ManagedResourceHandler implements HttpHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(ManagedResourceHandler.class);
 
-    private final BufferedPersistence persistence;
+    private final JsonPersistence persistence;
     private final Specification specification;
     private final SchemaRepository schemaRepository;
     private final ResourceContext resourceContext;
     private final SagaExecutionCoordinator sec;
     private final SagaRepository sagaRepository;
 
-    public ManagedResourceHandler(Persistence persistence, Specification specification, SchemaRepository schemaRepository, ResourceContext resourceContext, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
-        this.persistence = new DefaultBufferedPersistence(persistence);
+    public ManagedResourceHandler(JsonPersistence persistence, Specification specification, SchemaRepository schemaRepository, ResourceContext resourceContext, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
+        this.persistence = persistence;
         this.specification = specification;
         this.schemaRepository = schemaRepository;
         this.resourceContext = resourceContext;
@@ -80,34 +75,33 @@ public class ManagedResourceHandler implements HttpHandler {
             return;
         }
 
+        JSONArray output = new JSONArray();
         try (Transaction tx = persistence.createTransaction(true)) {
-            CompletableFuture<DocumentIterator> future;
             if (isManagedList) {
-                future = persistence.findAll(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), null, 100);
-            } else {
-                future = persistence.read(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id());
-            }
-            DocumentIterator iterator = future.join(); // blocking
-            JSONArray output = new JSONArray();
-            while (iterator.hasNext()) {
-                Document document = iterator.next();
-                if (document.isDeleted()) {
-                    continue;
+                for (JsonDocument jsonDocument : persistence.findAll(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), null, 100).join()) {
+                    if (jsonDocument.deleted()) {
+                        continue;
+                    }
+                    output.put(jsonDocument.document());
                 }
-                output.put(new DocumentToJson(document).toJSONObject());
-            }
-            if (output.length() == 0) {
-                exchange.setStatusCode(404);
-            } else if (output.length() == 1) {
-                exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
-                exchange.getResponseSender().send(output.getJSONObject(0).toString(), StandardCharsets.UTF_8);
             } else {
-                // (output.length() > 1
-                exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
-                exchange.getResponseSender().send(output.toString(), StandardCharsets.UTF_8);
+                JsonDocument jsonDocument = persistence.read(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).join();
+                if (jsonDocument != null && !jsonDocument.deleted()) {
+                    output.put(jsonDocument.document());
+                }
             }
-            exchange.endExchange();
         }
+        if (output.length() == 0) {
+            exchange.setStatusCode(404);
+        } else if (output.length() == 1) {
+            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
+            exchange.getResponseSender().send(output.getJSONObject(0).toString(), StandardCharsets.UTF_8);
+        } else {
+            // (output.length() > 1
+            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
+            exchange.getResponseSender().send(output.toString(), StandardCharsets.UTF_8);
+        }
+        exchange.endExchange();
     }
 
     private void putManaged(HttpServerExchange exchange) {

@@ -1,12 +1,10 @@
 package no.ssb.lds.core.persistence;
 
-import no.ssb.lds.api.persistence.Persistence;
+import no.ssb.lds.api.persistence.DocumentKey;
 import no.ssb.lds.api.persistence.Transaction;
-import no.ssb.lds.api.persistence.buffered.BufferedPersistence;
-import no.ssb.lds.api.persistence.buffered.DefaultBufferedPersistence;
-import no.ssb.lds.api.persistence.buffered.Document;
-import no.ssb.lds.core.buffered.JsonToDocument;
-import no.ssb.lds.core.specification.Specification;
+import no.ssb.lds.api.persistence.json.JsonDocument;
+import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.specification.Specification;
 import no.ssb.saga.api.SagaNode;
 import no.ssb.saga.execution.adapter.AbortSagaException;
 import no.ssb.saga.execution.adapter.Adapter;
@@ -20,12 +18,12 @@ public class PersistenceCreateOrOverwriteSagaAdapter extends Adapter<JSONObject>
 
     public static final String NAME = "Persistence-Create-or-Overwrite";
 
-    private final BufferedPersistence persistence;
+    private final JsonPersistence persistence;
     private final Specification specification;
 
-    public PersistenceCreateOrOverwriteSagaAdapter(Persistence persistence, Specification specification) {
+    public PersistenceCreateOrOverwriteSagaAdapter(JsonPersistence persistence, Specification specification) {
         super(JSONObject.class, NAME);
-        this.persistence = new DefaultBufferedPersistence(persistence);
+        this.persistence = persistence;
         this.specification = specification;
     }
 
@@ -34,16 +32,8 @@ public class PersistenceCreateOrOverwriteSagaAdapter extends Adapter<JSONObject>
         JSONObject input = (JSONObject) sagaInput;
         String versionStr = input.getString("version");
         ZonedDateTime version = ZonedDateTime.parse(versionStr, DateTimeFormatter.ISO_ZONED_DATE_TIME);
-        Document document = new JsonToDocument(
-                input.getString("namespace"),
-                input.getString("entity"),
-                input.getString("id"),
-                version,
-                input.getJSONObject("data"),
-                8 * 1024
-        ).toDocument();
         try (Transaction tx = persistence.createTransaction(false)) {
-            persistence.createOrOverwrite(tx, document).join();
+            persistence.createOrOverwrite(tx, new JsonDocument(new DocumentKey(input.getString("namespace"), input.getString("entity"), input.getString("id"), version), input.getJSONObject("data")), specification).join();
         } catch (Throwable t) {
             throw new AbortSagaException("Unable to write data using persistence.", t);
         }

@@ -2,12 +2,9 @@ package no.ssb.lds.graphql;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
-import no.ssb.lds.api.persistence.Persistence;
 import no.ssb.lds.api.persistence.Transaction;
-import no.ssb.lds.api.persistence.buffered.BufferedPersistence;
-import no.ssb.lds.api.persistence.buffered.Document;
-import no.ssb.lds.api.persistence.buffered.DocumentIterator;
-import no.ssb.lds.core.buffered.DocumentToJson;
+import no.ssb.lds.api.persistence.json.JsonDocument;
+import no.ssb.lds.api.persistence.json.JsonPersistence;
 import org.json.JSONObject;
 
 import java.time.ZoneId;
@@ -18,11 +15,11 @@ import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * DataFetcher that gets the data from {@link Persistence}.
+ * DataFetcher that gets the data from {@link JsonPersistence}.
  */
 public class PersistenceFetcher implements DataFetcher<Map<String, Object>> {
 
-    private final BufferedPersistence backend;
+    private final JsonPersistence backend;
     private final String nameSpace;
     private final String entity;
 
@@ -33,7 +30,7 @@ public class PersistenceFetcher implements DataFetcher<Map<String, Object>> {
      * @param nameSpace the namespace.
      * @param entity    the entity name.
      */
-    public PersistenceFetcher(BufferedPersistence backend, String nameSpace, String entity) {
+    public PersistenceFetcher(JsonPersistence backend, String nameSpace, String entity) {
         this.backend = Objects.requireNonNull(backend);
         this.nameSpace = Objects.requireNonNull(nameSpace);
         this.entity = Objects.requireNonNull(entity);
@@ -48,16 +45,10 @@ public class PersistenceFetcher implements DataFetcher<Map<String, Object>> {
     }
 
     private JSONObject readDocument(String id, ZonedDateTime snapshot) {
-        Document document;
         try (Transaction tx = backend.createTransaction(true)) {
-            CompletableFuture<DocumentIterator> future = backend.read(tx, snapshot, nameSpace, this.entity, id);
-            DocumentIterator iterator = future.join();
-            if (!iterator.hasNext()) {
-                return null;
-            }
-            document = iterator.next();
+            CompletableFuture<JsonDocument> future = backend.read(tx, snapshot, nameSpace, this.entity, id);
+            return future.join().document();
         }
-        return new DocumentToJson(document).toJSONObject();
     }
 
     @Override

@@ -3,11 +3,11 @@ package no.ssb.lds.core.controller;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
-import no.ssb.lds.api.persistence.Persistence;
+import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
 import no.ssb.lds.core.saga.SagaRepository;
 import no.ssb.lds.core.schema.SchemaRepository;
-import no.ssb.lds.core.specification.Specification;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -19,7 +19,7 @@ public class NamespaceController implements HttpHandler {
 
     private final Specification specification;
     private final SchemaRepository schemaRepository;
-    private final Persistence persistence;
+    private final JsonPersistence persistence;
     private final SagaExecutionCoordinator sec;
     private final SagaRepository sagaRepository;
     private String corsAllowOrigin;
@@ -27,7 +27,7 @@ public class NamespaceController implements HttpHandler {
     private boolean corsAllowOriginTest;
     private int undertowPort;
 
-    public NamespaceController(String namespaceDefault, Specification specification, SchemaRepository schemaRepository, Persistence persistence, String corsAllowOrigin, String corsAllowHeaders, boolean corsAllowOriginTest, SagaExecutionCoordinator sec, SagaRepository sagaRepository, int undertowPort) {
+    public NamespaceController(String namespaceDefault, Specification specification, SchemaRepository schemaRepository, JsonPersistence persistence, String corsAllowOrigin, String corsAllowHeaders, boolean corsAllowOriginTest, SagaExecutionCoordinator sec, SagaRepository sagaRepository, int undertowPort) {
         this.specification = specification;
         this.schemaRepository = schemaRepository;
         this.persistence = persistence;
@@ -76,14 +76,14 @@ public class NamespaceController implements HttpHandler {
         if (requestPath.equals(defaultNamespace) && exchange.getQueryParameters().containsKey("schema") && exchange.getQueryParameters().get("schema").getFirst().isBlank()) {
             List<String> managedDomains = specification.getManagedDomains().stream().sorted().map(md -> String.format("\"%s/%s?schema\"", defaultNamespace, md)).collect(Collectors.toList());
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
-            exchange.getResponseSender().send("["+managedDomains.stream().collect(Collectors.joining(","))+"]", StandardCharsets.UTF_8);
+            exchange.getResponseSender().send("[" + managedDomains.stream().collect(Collectors.joining(",")) + "]", StandardCharsets.UTF_8);
             return;
         }
 
         if (requestPath.equals(defaultNamespace) && exchange.getQueryParameters().containsKey("schema") && exchange.getQueryParameters().get("schema").contains("embed")) {
             List<String> managedDomains = specification.getManagedDomains().stream().sorted().map(md -> schemaRepository.getJsonSchema().getSchemaJson(md)).collect(Collectors.toList());
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
-            exchange.getResponseSender().send("["+managedDomains.stream().collect(Collectors.joining(","))+"]", StandardCharsets.UTF_8);
+            exchange.getResponseSender().send("[" + managedDomains.stream().collect(Collectors.joining(",")) + "]", StandardCharsets.UTF_8);
             return;
         }
 

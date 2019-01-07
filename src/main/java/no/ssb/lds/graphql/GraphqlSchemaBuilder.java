@@ -11,12 +11,10 @@ import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeReference;
 import graphql.schema.GraphQLUnionType;
-import no.ssb.lds.api.persistence.Persistence;
-import no.ssb.lds.api.persistence.buffered.BufferedPersistence;
-import no.ssb.lds.api.persistence.buffered.DefaultBufferedPersistence;
-import no.ssb.lds.core.specification.Specification;
-import no.ssb.lds.core.specification.SpecificationElement;
-import no.ssb.lds.core.specification.SpecificationElementType;
+import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.specification.Specification;
+import no.ssb.lds.api.specification.SpecificationElement;
+import no.ssb.lds.api.specification.SpecificationElementType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,11 +41,11 @@ public class GraphqlSchemaBuilder {
     // Keep track of the union types we registered.
     private final Set<String> unionTypes = new HashSet<>();
 
-    private final BufferedPersistence persistence;
+    private final JsonPersistence persistence;
 
-    public GraphqlSchemaBuilder(Specification specification, Persistence persistence) {
+    public GraphqlSchemaBuilder(Specification specification, JsonPersistence persistence) {
         this.specification = Objects.requireNonNull(specification);
-        this.persistence = new DefaultBufferedPersistence(Objects.requireNonNull(persistence));
+        this.persistence = Objects.requireNonNull(persistence);
     }
 
     /**
@@ -98,7 +96,7 @@ public class GraphqlSchemaBuilder {
     private static GraphQLFieldDefinition.Builder createFieldDefinition(SpecificationElement property) {
         GraphQLFieldDefinition.Builder field = GraphQLFieldDefinition.newFieldDefinition();
         field.name(property.getName());
-        field.description(property.getDescription());
+        // TODO: field.description(property.getDescription());
         return field;
     }
 
@@ -159,7 +157,7 @@ public class GraphqlSchemaBuilder {
             GraphQLObjectType.Builder object = GraphQLObjectType.newObject();
             String objectName = specificationElement.getName();
             object.name(objectName);
-            object.description(specificationElement.getDescription());
+            // TODO: object.description(specificationElement.getDescription());
 
             // For each property
             for (SpecificationElement property : specificationElement.getProperties().values()) {

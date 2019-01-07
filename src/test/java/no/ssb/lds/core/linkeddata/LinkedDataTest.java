@@ -1,8 +1,7 @@
 package no.ssb.lds.core.linkeddata;
 
-import no.ssb.lds.api.persistence.OutgoingLink;
+import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
-import no.ssb.lds.core.specification.Specification;
 import no.ssb.lds.core.utils.FileAndClasspathReaderUtils;
 import org.json.JSONObject;
 import org.slf4j.Logger;

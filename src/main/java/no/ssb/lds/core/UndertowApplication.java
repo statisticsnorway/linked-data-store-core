@@ -9,7 +9,8 @@ import io.undertow.server.RoutingHandler;
 import io.undertow.server.handlers.resource.ClassPathResourceManager;
 import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
 import no.ssb.config.DynamicConfiguration;
-import no.ssb.lds.api.persistence.Persistence;
+import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.controller.NamespaceController;
 import no.ssb.lds.core.persistence.PersistenceConfigurator;
 import no.ssb.lds.core.saga.FileSagaLog;
@@ -18,7 +19,6 @@ import no.ssb.lds.core.saga.SagaLogInitializer;
 import no.ssb.lds.core.saga.SagaRepository;
 import no.ssb.lds.core.saga.SagasObserver;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
-import no.ssb.lds.core.specification.Specification;
 import no.ssb.lds.graphql.GraphqlHandler;
 import no.ssb.lds.graphql.GraphqlSchemaBuilder;
 import no.ssb.saga.execution.sagalog.SagaLog;
@@ -49,7 +49,7 @@ public class UndertowApplication {
         String schemaConfigStr = configuration.evaluateToString("specification.schema");
         String[] specificationSchema = ("".equals(schemaConfigStr) ? new String[0] : schemaConfigStr.split(","));
         JsonSchemaBasedSpecification specification = JsonSchemaBasedSpecification.create(specificationSchema);
-        Persistence persistence = PersistenceConfigurator.configurePersistence(configuration, specification);
+        JsonPersistence persistence = PersistenceConfigurator.configurePersistence(configuration, specification);
         SagaLog sagaLog = SagaLogInitializer.initializeSagaLog(configuration.evaluateToString("saga.log.type"), configuration.evaluateToString("saga.log.type.file.path"));
         String host = configuration.evaluateToString("http.host");
         SagaRepository sagaRepository = new SagaRepository(specification, persistence);
@@ -102,14 +102,14 @@ public class UndertowApplication {
     private final Undertow server;
     private final String host;
     private final int port;
-    private final Persistence persistence;
+    private final JsonPersistence persistence;
     private final SagaExecutionCoordinator sec;
     private final SagaRepository sagaRepository;
     private final SagasObserver sagasObserver;
     private final SagaLog sagaLog;
     private final SelectableThreadPoolExectutor sagaThreadPool;
 
-    UndertowApplication(Specification specification, Persistence persistence, SagaExecutionCoordinator sec, SagaRepository sagaRepository, SagasObserver sagasObserver, String host, int port, SagaLog sagaLog, SelectableThreadPoolExectutor sagaThreadPool, NamespaceController namespaceController, boolean graphqlEnabled) {
+    UndertowApplication(Specification specification, JsonPersistence persistence, SagaExecutionCoordinator sec, SagaRepository sagaRepository, SagasObserver sagasObserver, String host, int port, SagaLog sagaLog, SelectableThreadPoolExectutor sagaThreadPool, NamespaceController namespaceController, boolean graphqlEnabled) {
         this.specification = specification;
         this.host = host;
         this.port = port;
@@ -197,7 +197,7 @@ public class UndertowApplication {
         return server;
     }
 
-    public Persistence getPersistence() {
+    public JsonPersistence getPersistence() {
         return persistence;
     }
 
