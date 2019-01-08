@@ -13,13 +13,19 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.Deque;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Scanner;
 
-import static io.undertow.util.FileUtils.readFile;
 import static io.undertow.util.Headers.ALLOW;
 import static io.undertow.util.Methods.GET;
 import static io.undertow.util.Methods.GET_STRING;
@@ -72,6 +78,21 @@ public class GraphqlHttpHandler implements HttpHandler {
         return Optional.empty();
     }
 
+    public JSONObject toJson(HttpServerExchange exchange) {
+        JSONTokener tokener = new JSONTokener(new InputStreamReader(
+                exchange.getInputStream(),
+                Charset.forName(exchange.getRequestCharset())
+        ));
+        return new JSONObject(tokener);
+    }
+
+    public String toString(HttpServerExchange exchange) throws IOException {
+        try (InputStream i = new BufferedInputStream(exchange.getInputStream())) {
+            Scanner scanner = new Scanner(i, Charset.forName(exchange.getRequestCharset())).useDelimiter("\\A");
+            return scanner.hasNext() ? scanner.next() : "";
+        }
+    }
+
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         if (exchange.isInIoThread()) {
@@ -93,14 +114,9 @@ public class GraphqlHttpHandler implements HttpHandler {
         ExecutionInput.Builder executionInput = ExecutionInput.newExecutionInput();
         if (method.equals(POST)) {
             if (IS_GRAPHQL.resolve(exchange)) {
-                // TODO: handle charset: exchange.getRequestCharset()
-
-                String query = readFile(exchange.getInputStream());
-                executionInput.query(query);
+                executionInput.query(toString(exchange));
             } else if (IS_JSON.resolve(exchange)) {
-                // TODO: handle charset: exchange.getRequestCharset()
-                String query = readFile(exchange.getInputStream());
-                JSONObject json = new JSONObject(query);
+                JSONObject json = toJson(exchange);
                 executionInput.query(json.getString("query"));
                 if (json.has("variables") && !json.isNull("variables")) {
                     executionInput.variables(json.getJSONObject("variables").toMap());
