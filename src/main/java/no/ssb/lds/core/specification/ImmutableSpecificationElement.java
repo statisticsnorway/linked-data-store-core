@@ -44,10 +44,10 @@ class ImmutableSpecificationElement implements SpecificationElement {
         return name;
     }
 
-    //TODO @Override
-    //public String getDescription() {
-    //    return description;
-    //}
+    @Override
+    public String getDescription() {
+        return description;
+    }
 
     @Override
     public SpecificationElement getParent() {

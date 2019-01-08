@@ -101,7 +101,7 @@ public class GraphqlSchemaBuilder {
     private static GraphQLFieldDefinition.Builder createFieldDefinition(SpecificationElement property) {
         GraphQLFieldDefinition.Builder field = GraphQLFieldDefinition.newFieldDefinition();
         field.name(property.getName());
-        // TODO: field.description(property.getDescription());
+        field.description(property.getDescription());
         return field;
     }
 
@@ -162,7 +162,7 @@ public class GraphqlSchemaBuilder {
             GraphQLObjectType.Builder object = GraphQLObjectType.newObject();
             String objectName = specificationElement.getName();
             object.name(objectName);
-            // TODO: object.description(specificationElement.getDescription());
+            object.description(specificationElement.getDescription());
 
             // For each property
             for (SpecificationElement property : specificationElement.getProperties().values()) {

@@ -149,7 +149,7 @@ class SpecificationElementBuilder {
         // See comment in JsonSchemaDefinitionElement.java.
         String name = schemaElement.items.name != null ? schemaElement.items.name : "";
         SpecificationElement child = new SpecificationElementBuilder(schemaElement.items)
-                // TODO: Master uses  .name("[]")
+                // TODO(kim): master uses .name("[]"). I (hadrien) need it to link types in graphql.
                 .name(name)
                 .parent(specificationElement)
                 .build();
