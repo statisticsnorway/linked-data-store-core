@@ -1,4 +1,4 @@
-package no.ssb.lds.graphql;
+package no.ssb.lds.graphql.fetcher;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;

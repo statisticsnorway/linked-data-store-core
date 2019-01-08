@@ -1,4 +1,4 @@
-package no.ssb.lds.graphql;
+package no.ssb.lds.graphql.schemas;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.GraphQLArgument;
@@ -15,6 +15,9 @@ import no.ssb.lds.api.persistence.json.JsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.api.specification.SpecificationElement;
 import no.ssb.lds.api.specification.SpecificationElementType;
+import no.ssb.lds.graphql.fetcher.PersistenceFetcher;
+import no.ssb.lds.graphql.fetcher.PersistenceLinkFetcher;
+import no.ssb.lds.graphql.fetcher.PersistenceLinksFetcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

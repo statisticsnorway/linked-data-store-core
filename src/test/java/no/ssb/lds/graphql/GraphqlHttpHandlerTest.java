@@ -26,7 +26,7 @@ import java.util.Map;
 import static graphql.schema.idl.RuntimeWiring.newRuntimeWiring;
 import static org.testng.Assert.assertEquals;
 
-public class GraphqlHandlerTest {
+public class GraphqlHttpHandlerTest {
 
     private GraphQL graphql;
     private Undertow server;
@@ -92,7 +92,7 @@ public class GraphqlHandlerTest {
         int port = findFree();
 
         // Test server.
-        server = Undertow.builder().addHttpListener(port, "localhost", new GraphqlHandler(graphql)).build();
+        server = Undertow.builder().addHttpListener(port, "localhost", new GraphqlHttpHandler(graphql)).build();
         server.start();
 
         // Template for the client.

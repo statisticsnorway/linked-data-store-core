@@ -1,11 +1,10 @@
-package no.ssb.lds.graphql;
+package no.ssb.lds.graphql.fetcher;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
-import org.json.JSONObject;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;

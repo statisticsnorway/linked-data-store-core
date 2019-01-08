@@ -34,7 +34,7 @@ import static io.undertow.util.Methods.POST_STRING;
  * Supports GET and POST requests as described on the
  * <a href="https://graphql.org/learn/serving-over-http/">GraphQL website</a>
  */
-public class GraphqlHandler implements HttpHandler {
+public class GraphqlHttpHandler implements HttpHandler {
 
     private static final Predicate IS_JSON = Predicates.regex(
             ExchangeAttributes.requestHeader(Headers.CONTENT_TYPE),
@@ -54,7 +54,7 @@ public class GraphqlHandler implements HttpHandler {
      * @param graphQl the instance that will execute the queries.
      * @throws NullPointerException if the graphQl was null.
      */
-    public GraphqlHandler(GraphQL graphQl) {
+    public GraphqlHttpHandler(GraphQL graphQl) {
         this.graphQl = Objects.requireNonNull(graphQl);
     }
 
