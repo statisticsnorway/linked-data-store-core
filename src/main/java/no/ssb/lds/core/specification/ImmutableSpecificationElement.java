@@ -17,6 +17,7 @@ import static java.util.Optional.ofNullable;
 class ImmutableSpecificationElement implements SpecificationElement {
 
     private final String name;
+    private final String description;
     private final SpecificationElement parent;
     private final SpecificationElementType specificationElementType;
     private final Set<String> jsonTypes;
@@ -28,6 +29,7 @@ class ImmutableSpecificationElement implements SpecificationElement {
     ImmutableSpecificationElement(SpecificationElementBuilder elementBuilder) {
         elementBuilder.specificationElement(this);
         this.name = elementBuilder.name();
+        this.description = elementBuilder.description();
         this.parent = elementBuilder.parent();
         this.specificationElementType = elementBuilder.specificationElementType();
         this.jsonTypes = ofNullable(elementBuilder.jsonTypes()).map(Collections::unmodifiableSet).orElse(Collections.emptySet());
@@ -40,6 +42,11 @@ class ImmutableSpecificationElement implements SpecificationElement {
     @Override
     public String getName() {
         return name;
+    }
+
+    @Override
+    public String getDescription() {
+        return description;
     }
 
     @Override

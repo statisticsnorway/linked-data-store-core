@@ -1,0 +1,116 @@
+{
+  "$ref" : "#/definitions/EnumeratedValueDomain",
+  "definitions" : {
+    "MultilingualText" : {
+      "type" : "object",
+      "properties" : {
+        "languageCode" : {
+          "type" : "string"
+        },
+        "languageText" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "languageCode", "languageText" ]
+    },
+    "AdministrativeDetails" : {
+      "type" : "object",
+      "properties" : {
+        "administrativeDetailType" : {
+          "type" : "string"
+        },
+        "values" : {
+          "type" : "array",
+          "items" : { }
+        }
+      },
+      "required" : [ "administrativeDetailType", "values" ]
+    },
+    "EnumeratedValueDomain" : {
+      "type" : "object",
+      "properties" : {
+        "id" : {
+          "type" : "string"
+        },
+        "name" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/definitions/MultilingualText"
+          }
+        },
+        "description" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/definitions/MultilingualText"
+          }
+        },
+        "administrativeStatus" : {
+          "type" : "string"
+        },
+        "createdDate" : {
+          "type" : "string",
+          "format" : "date-time"
+        },
+        "createdBy" : {
+          "type" : "string"
+        },
+        "version" : {
+          "type" : "string"
+        },
+        "versionValidFrom" : {
+          "type" : "string",
+          "format" : "date-time"
+        },
+        "versionRationale" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/definitions/MultilingualText"
+          }
+        },
+        "lastUpdatedDate" : {
+          "type" : "string",
+          "format" : "date-time"
+        },
+        "lastUpdatedBy" : {
+          "type" : "string"
+        },
+        "validFrom" : {
+          "type" : "string",
+          "format" : "date-time"
+        },
+        "validUntil" : {
+          "type" : "string",
+          "format" : "date-time"
+        },
+        "administrativeDetails" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/definitions/AdministrativeDetails"
+          }
+        },
+        "agentInRoles" : {
+          "type" : "array",
+          "items" : {
+            "type" : "string"
+          }
+        },
+        "_link_property_agentInRoles" : {
+          "type" : "object",
+          "properties" : {
+            "AgentInRole" : {
+              "type" : "null"
+            }
+          }
+        },
+        "dataType" : {
+          "type" : "string"
+        },
+        "klassUrl" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "id", "name", "description", "createdDate", "createdBy", "versionValidFrom", "validFrom", "dataType", "klassUrl" ]
+    }
+  },
+  "$schema" : "http://json-schema.org/draft-04/schema#"
+}

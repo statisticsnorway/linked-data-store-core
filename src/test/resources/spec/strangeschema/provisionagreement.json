@@ -1,0 +1,113 @@
+{
+  "$ref" : "#/definitions/provisionagreement",
+  "definitions" : {
+    "provisionagreement" : {
+      "type" : "object",
+      "properties" : {
+        "str/ange=Prop#Name" : {
+          "type" : "string"
+        },
+        "name" : {
+          "anyOf" : [ {
+            "type" : "string"
+          }, {
+            "type" : "null"
+          } ]
+        },
+        "address" : {
+          "type" : "object",
+          "properties" : {
+            "street" : {
+              "type" : "string"
+            },
+            "city" : {
+              "type" : "string"
+            },
+            "country" : {
+              "type" : "string"
+            }
+          },
+          "required" : [ "street", "country" ]
+        },
+        "contacts" : {
+          "type" : "array",
+          "items" : {
+            "type" : "string"
+          }
+        },
+        "_link_property_contacts" : {
+          "type" : "object",
+          "properties" : {
+            "contact" : {
+              "type" : "null"
+            }
+          }
+        },
+        "friend" : {
+          "anyOf" : [ {
+            "type" : "string"
+          }, {
+            "type" : "null"
+          } ]
+        },
+        "_link_property_friend" : {
+          "type" : "object",
+          "properties" : {
+            "contact" : {
+              "type" : "null"
+            }
+          }
+        },
+        "support" : {
+          "type" : "object",
+          "properties" : {
+            "technicalSupport" : {
+              "type" : "array",
+              "items" : {
+                "type" : "string"
+              }
+            },
+            "_link_property_technicalSupport" : {
+              "type" : "object",
+              "properties" : {
+                "contact": {
+                  "type": "null"
+                }
+              }
+            },
+            "businessSupport" : {
+              "type" : "array",
+              "items" : {
+                "type" : "string"
+              }
+            },
+            "_link_property_businessSupport" : {
+              "type" : "object",
+              "properties" : {
+                "contact": {
+                  "type": "null"
+                }
+              }
+            },
+            "otherSupport" : {
+              "anyOf" : [ {
+                "type" : "string"
+              }, {
+                "type" : "null"
+              } ]
+            },
+            "_link_property_otherSupport" : {
+              "type" : "object",
+              "properties" : {
+                "contact": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$schema" : "http://json-schema.org/draft-04/schema#"
+}

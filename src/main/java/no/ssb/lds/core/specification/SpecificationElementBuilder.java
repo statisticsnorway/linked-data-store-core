@@ -19,6 +19,7 @@ class SpecificationElementBuilder {
     private JsonSchema jsonSchema;
     private SpecificationElement specificationElement;
     private String name;
+    private String description;
     private SpecificationElement parent;
     private SpecificationElementType specificationElementType;
     private SpecificationElementType parentSpecificationElementType;
@@ -44,6 +45,19 @@ class SpecificationElementBuilder {
 
     SpecificationElementBuilder name(String name) {
         this.name = name;
+        return this;
+    }
+
+    String description() {
+        if (this.schemaElement != null) {
+            return this.schemaElement.description;
+        } else {
+            return description;
+        }
+    }
+
+    SpecificationElementBuilder description(String description) {
+        this.description = description;
         return this;
     }
 
@@ -131,8 +145,12 @@ class SpecificationElementBuilder {
         if (schemaElement == null || schemaElement.items == null) {
             return null;
         }
+        // Name is required for graphql implementation.
+        // See comment in JsonSchemaDefinitionElement.java.
+        String name = schemaElement.items.name != null ? schemaElement.items.name : "";
         SpecificationElement child = new SpecificationElementBuilder(schemaElement.items)
-                .name("[]")
+                // TODO(kim): master uses .name("[]"). I (hadrien) need it to link types in graphql.
+                .name(name)
                 .parent(specificationElement)
                 .build();
         return child;
@@ -164,6 +182,7 @@ class SpecificationElementBuilder {
             Set<String> refTypes = linkedDomains(e.getKey());
             SpecificationElementBuilder childBuilder = new SpecificationElementBuilder(e.getValue())
                     .name(e.getKey())
+                    .description(e.getValue().description)
                     .parent(specificationElement)
                     .parentSpecificationElementType(specificationElementType())
                     .refTypes(refTypes);

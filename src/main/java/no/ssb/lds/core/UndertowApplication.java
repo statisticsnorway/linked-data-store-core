@@ -1,7 +1,12 @@
 package no.ssb.lds.core;
 
 import com.netflix.hystrix.HystrixThreadPoolProperties;
+import graphql.GraphQL;
+import io.undertow.Handlers;
 import io.undertow.Undertow;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.RoutingHandler;
+import io.undertow.server.handlers.resource.ClassPathResourceManager;
 import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
 import no.ssb.config.DynamicConfiguration;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
@@ -14,6 +19,8 @@ import no.ssb.lds.core.saga.SagaLogInitializer;
 import no.ssb.lds.core.saga.SagaRepository;
 import no.ssb.lds.core.saga.SagasObserver;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
+import no.ssb.lds.graphql.GraphqlHandler;
+import no.ssb.lds.graphql.GraphqlSchemaBuilder;
 import no.ssb.saga.execution.sagalog.SagaLog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,7 +93,12 @@ public class UndertowApplication {
                 port
         );
 
-        return new UndertowApplication(specification, persistence, sec, sagaRepository, sagasObserver, host, port, sagaLog, sagaThreadPool, namespaceController);
+        boolean graphqlEnabled = configuration.evaluateToBoolean("graphql.enabled");
+
+        // TODO: Pass configuration instead to avoid so many parameters. Undertow has a nice builder pattern.
+        return new UndertowApplication(specification, persistence, sec, sagaRepository, sagasObserver, host, port,
+                sagaLog, sagaThreadPool, namespaceController, graphqlEnabled,
+                configuration.evaluateToString("namespace.default"));
     }
 
     private final Specification specification;
@@ -100,7 +112,10 @@ public class UndertowApplication {
     private final SagaLog sagaLog;
     private final SelectableThreadPoolExectutor sagaThreadPool;
 
-    UndertowApplication(Specification specification, JsonPersistence persistence, SagaExecutionCoordinator sec, SagaRepository sagaRepository, SagasObserver sagasObserver, String host, int port, SagaLog sagaLog, SelectableThreadPoolExectutor sagaThreadPool, NamespaceController namespaceController) {
+    UndertowApplication(Specification specification, JsonPersistence persistence, SagaExecutionCoordinator sec,
+                        SagaRepository sagaRepository, SagasObserver sagasObserver, String host, int port,
+                        SagaLog sagaLog, SelectableThreadPoolExectutor sagaThreadPool,
+                        NamespaceController namespaceController, boolean graphqlEnabled, String nameSpace) {
         this.specification = specification;
         this.host = host;
         this.port = port;
@@ -110,12 +125,30 @@ public class UndertowApplication {
         this.sagasObserver = sagasObserver;
         this.sagaLog = sagaLog;
         this.sagaThreadPool = sagaThreadPool;
-        NamespaceController handler = namespaceController;
-        Undertow server = Undertow.builder()
+
+        // TODO: Clean up.
+        RoutingHandler routingHandler = Handlers.routing();
+
+        if (graphqlEnabled) {
+            GraphQL graphQL = GraphQL.newGraphQL(new GraphqlSchemaBuilder(specification, persistence, nameSpace)
+                    .getSchema()).build();
+            routingHandler = routingHandler
+                    .get("graphiql**", Handlers.resource(new ClassPathResourceManager(
+                                    Thread.currentThread().getContextClassLoader(), "no/ssb/lds/graphql"
+                            )).setDirectoryListingEnabled(true).addWelcomeFiles("graphiql.html")
+                    )
+                    .post("graphql", new GraphqlHandler(graphQL));
+        }
+
+        HttpHandler httpHandler = routingHandler
+                .setFallbackHandler(namespaceController);
+
+        httpHandler = Handlers.requestDump(httpHandler);
+
+        this.server = Undertow.builder()
                 .addHttpListener(port, host)
-                .setHandler(handler)
+                .setHandler(httpHandler)
                 .build();
-        this.server = server;
     }
 
     public void enableSagaExecutionAutomaticDeadlockDetectionAndResolution() {

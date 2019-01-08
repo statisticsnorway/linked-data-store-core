@@ -6,6 +6,14 @@ import java.util.Set;
 public class JsonSchemaDefinitionElement {
 
     /**
+     * Non standard. Used to get the type name of $ref items. This is because every
+     * type in graphql need a name.
+     * Ideally, we should implement some sort of dereferencing but that's out
+     * of scope ATM.
+     */
+    public String name;
+
+    /**
      * The legal json types of this element, possible values:
      * object, array, string, number, boolean, null.
      */
@@ -15,6 +23,11 @@ public class JsonSchemaDefinitionElement {
      * The title.
      */
     public final String title;
+
+    /**
+     * The description.
+     */
+    public final String description;
 
     /**
      * Format when type is one of: .
@@ -39,12 +52,14 @@ public class JsonSchemaDefinitionElement {
     JsonSchemaDefinitionElement(
             String[] types,
             String title,
+            String description,
             String format,
             Map<String, JsonSchemaDefinitionElement> properties,
             JsonSchemaDefinitionElement items,
             Set<String> required) {
         this.types = types;
         this.title = title;
+        this.description = description;
         this.format = format;
         this.properties = properties;
         this.items = items;

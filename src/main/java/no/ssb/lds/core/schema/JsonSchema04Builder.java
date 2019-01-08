@@ -106,9 +106,14 @@ public class JsonSchema04Builder {
                 required.add(requiredJsonArray.getString(i));
             }
         }
+        String description = "";
+        if (jsonElement.has("description")) {
+            description = jsonElement.getString("description");
+        }
         return new JsonSchemaDefinitionElement(
                 types,
                 title,
+                description,
                 format,
                 properties,
                 items,
