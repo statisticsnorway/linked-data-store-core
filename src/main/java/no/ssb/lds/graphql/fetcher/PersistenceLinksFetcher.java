@@ -5,9 +5,8 @@ import graphql.schema.DataFetchingEnvironment;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
-import org.json.JSONObject;
+import no.ssb.lds.graphql.Context;
 
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,9 +43,8 @@ public class PersistenceLinksFetcher implements DataFetcher<List<Map<String, Obj
             Matcher matcher = pattern.matcher(link);
             if (matcher.matches()) {
                 String id = matcher.group("id");
-                // TODO get snapshot timestamp from client through data-fetching-environment
-                ZonedDateTime snapshot = ZonedDateTime.now(ZoneId.of("Etc/UTC"));
-                JsonDocument document = readDocument(id, snapshot);
+                Context context = environment.getContext();
+                JsonDocument document = readDocument(id, context.getSnapshot());
                 results.add(document != null ? document.document().toMap() : null);
             } else {
                 // TODO: Handle.

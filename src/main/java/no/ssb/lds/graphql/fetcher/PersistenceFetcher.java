@@ -5,8 +5,8 @@ import graphql.schema.DataFetchingEnvironment;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.graphql.Context;
 
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Map;
 import java.util.Objects;
@@ -37,9 +37,8 @@ public class PersistenceFetcher implements DataFetcher<Map<String, Object>> {
 
     @Override
     public Map<String, Object> get(DataFetchingEnvironment environment) throws Exception {
-        // TODO get snapshot timestamp from client through data-fetching-environment
-        ZonedDateTime snapshot = ZonedDateTime.now(ZoneId.of("Etc/UTC"));
-        JsonDocument document = readDocument(environment.getArgument("id"), snapshot);
+        Context context = environment.getContext();
+        JsonDocument document = readDocument(environment.getArgument("id"), context.getSnapshot());
         return document != null ? document.document().toMap() : null;
     }
 
