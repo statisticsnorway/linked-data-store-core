@@ -78,15 +78,17 @@ public class GraphqlHttpHandler implements HttpHandler {
         return Optional.empty();
     }
 
-    public JSONObject toJson(HttpServerExchange exchange) {
-        JSONTokener tokener = new JSONTokener(new InputStreamReader(
-                exchange.getInputStream(),
-                Charset.forName(exchange.getRequestCharset())
-        ));
-        return new JSONObject(tokener);
+    private static JSONObject toJson(HttpServerExchange exchange) throws IOException {
+        try (InputStream bi = new BufferedInputStream(exchange.getInputStream())) {
+            JSONTokener tokener = new JSONTokener(new InputStreamReader(
+                    bi,
+                    Charset.forName(exchange.getRequestCharset())
+            ));
+            return new JSONObject(tokener);
+        }
     }
 
-    public String toString(HttpServerExchange exchange) throws IOException {
+    private static String toString(HttpServerExchange exchange) throws IOException {
         try (InputStream i = new BufferedInputStream(exchange.getInputStream())) {
             Scanner scanner = new Scanner(i, Charset.forName(exchange.getRequestCharset())).useDelimiter("\\A");
             return scanner.hasNext() ? scanner.next() : "";
