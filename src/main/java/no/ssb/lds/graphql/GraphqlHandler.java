@@ -6,18 +6,14 @@ import graphql.GraphQL;
 import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.predicate.Predicate;
 import io.undertow.predicate.Predicates;
-import io.undertow.server.BlockingHttpExchange;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
-import no.ssb.lds.core.linkeddata.JsonElementType;
 import org.json.JSONObject;
 
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.Deque;
 import java.util.Map;
 import java.util.Objects;
@@ -64,8 +60,8 @@ public class GraphqlHandler implements HttpHandler {
 
     private static Optional<String> extractParam(Map<String, Deque<String>> parameters, String name) {
         Deque<String> parameter = parameters.get(name);
-        if (!parameter.isEmpty()) {
-            String first = parameter.getFirst();
+        if (parameter != null && !parameter.isEmpty()) {
+            String first = parameter.removeFirst();
             if (!parameter.isEmpty()) {
                 throw new IllegalArgumentException(
                         String.format("more than one \"%s\" parameter", name)
@@ -126,9 +122,9 @@ public class GraphqlHandler implements HttpHandler {
             Optional<String> operationName = extractParam(parameters, "operationName");
             operationName.ifPresent(executionInput::operationName);
 
-            // TODO: Handle variables.
-            //Optional<String> variables = extractParam(parameters, "variables");
-            //query.ifPresent(executionInput::variables);
+            Optional<String> variables = extractParam(parameters, "variables");
+            variables.map(JSONObject::new).map(JSONObject::toMap)
+                    .ifPresent(executionInput::variables);
 
         } else {
             exchange.setStatusCode(StatusCodes.METHOD_NOT_ALLOWED);
