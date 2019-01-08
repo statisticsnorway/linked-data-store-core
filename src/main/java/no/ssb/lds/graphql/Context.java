@@ -16,6 +16,8 @@ public class Context {
 
     public Context(HttpServerExchange exchange) {
         this.exchange = Objects.requireNonNull(exchange);
+        // Init in own method.
+        getSnapshot();
     }
 
     public HttpServerExchange getExchange() {
