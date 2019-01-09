@@ -5,7 +5,7 @@ import graphql.schema.DataFetchingEnvironment;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
-import no.ssb.lds.graphql.Context;
+import no.ssb.lds.graphql.GraphqlContext;
 
 import java.time.ZonedDateTime;
 import java.util.Map;
@@ -36,7 +36,7 @@ public class PersistenceLinkFetcher implements DataFetcher<Map<String, Object>> 
         Matcher matcher = pattern.matcher(link);
         if (matcher.matches()) {
             String id = matcher.group("id");
-            Context context = environment.getContext();
+            GraphqlContext context = environment.getContext();
             JsonDocument document = readDocument(id, context.getSnapshot());
             return document != null ? document.document().toMap() : null;
         } else {

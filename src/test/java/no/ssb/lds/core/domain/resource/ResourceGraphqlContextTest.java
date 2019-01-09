@@ -7,7 +7,7 @@ import org.testng.annotations.Test;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 
-public class ResourceContextTest {
+public class ResourceGraphqlContextTest {
 
     private Specification specification() {
         return JsonSchemaBasedSpecification.create(

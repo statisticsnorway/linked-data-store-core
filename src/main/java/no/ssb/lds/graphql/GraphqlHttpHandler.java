@@ -150,7 +150,7 @@ public class GraphqlHttpHandler implements HttpHandler {
         }
 
         // Add context.
-        executionInput.context(new Context(exchange));
+        executionInput.context(new GraphqlContext(exchange, executionInput.build()));
 
         // Execute
         ExecutionResult result = graphQl.execute(executionInput);
