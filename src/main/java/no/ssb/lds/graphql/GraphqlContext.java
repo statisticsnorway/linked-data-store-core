@@ -36,16 +36,32 @@ public class GraphqlContext {
         this.snapshot = getSnapshot(exchange.getQueryParameters(), executionInput.getVariables());
     }
 
-    static ZonedDateTime getSnapshot(Map<String, Deque<String>> queryParameters, Map<String, Object> variables) {
+    /**
+     * Gets the snapshot from server exchange query parameters or variables.
+     * <p>
+     * If both the queryParameters and variable did not contain snapshot value, the current time is used.
+     * The value found in the queryParameters take precedence over the value found in the variables.
+     *
+     * @throws IllegalArgumentException if the query parameter SNAPSHOT_QUERY_NAME contains more than one value
+     *                                  or if variable SNAPSHOT_VARIABLE_NAME is mapped is not a string.
+     */
+    static ZonedDateTime getSnapshot(Map<String, Deque<String>> queryParameters, Map<String, Object> variables)
+            throws IllegalArgumentException {
         return getSnapshotFromQuery(queryParameters)
                 .or(() -> getSnapshotFromVariables(variables))
                 .orElse(ZonedDateTime.now(CLOCK));
     }
 
     /**
-     * Gets the snapshot from server exchange query parameters.
+     * /**
+     * Parses the one parameter that is mapped with the key SNAPSHOT_QUERY_NAME to a {@link ZonedDateTime}.
+     * <p>
+     * Is the map is empty or the parameter mapped with the key SNAPSHOT_QUERY_NAME is null then the result is empty.
+     *
+     * @throws IllegalArgumentException if the value to which the key SNAPSHOT_QUERY_NAME contains more than one value.
      */
-    private static Optional<ZonedDateTime> getSnapshotFromQuery(Map<String, Deque<String>> queryParameters) {
+    private static Optional<ZonedDateTime> getSnapshotFromQuery(Map<String, Deque<String>> queryParameters)
+            throws IllegalArgumentException {
         try {
             if (!queryParameters.containsKey(SNAPSHOT_QUERY_NAME)) {
                 return Optional.empty();
@@ -64,7 +80,15 @@ public class GraphqlContext {
         }
     }
 
-    private static Optional<ZonedDateTime> getSnapshotFromVariables(Map<String, Object> variables) {
+    /**
+     * Parses the value that is mapped with the key SNAPSHOT_VARIABLE_NAME to a {@link ZonedDateTime}.
+     * <p>
+     * Is the map or the value mapped with the key SNAPSHOT_VARIABLE_NAME is null then the result is empty.
+     *
+     * @throws IllegalArgumentException if the value to which the key SNAPSHOT_VARIABLE_NAME is mapped is not a string.
+     */
+    private static Optional<ZonedDateTime> getSnapshotFromVariables(Map<String, Object> variables)
+            throws IllegalArgumentException {
         try {
             if (!variables.containsKey(SNAPSHOT_VARIABLE_NAME)) {
                 return Optional.empty();
@@ -90,7 +114,7 @@ public class GraphqlContext {
         return this.exchange;
     }
 
-    public synchronized ZonedDateTime getSnapshot() {
+    public ZonedDateTime getSnapshot() {
         return this.snapshot;
     }
 
