@@ -3,7 +3,7 @@ package no.ssb.lds.graphql;
 import graphql.ExecutionInput;
 import io.undertow.server.HttpServerExchange;
 
-import java.time.ZoneId;
+import java.time.Clock;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.Deque;
@@ -16,17 +16,14 @@ import java.util.Optional;
  */
 public class GraphqlContext {
 
-    /**
-     * Name of the snapshot query variable
-     */
-    private static final String SNAPSHOT_QUERY_NAME = "snapshot";
+    // Name of the snapshot query variable
+    static final String SNAPSHOT_QUERY_NAME = "snapshot";
 
-    /**
-     * Name of the snapshot graphql variable
-     */
-    private static final String SNAPSHOT_VARIABLE_NAME = "__" + SNAPSHOT_QUERY_NAME;
+    // Name of the snapshot graphql variable
+    static final String SNAPSHOT_VARIABLE_NAME = "__" + SNAPSHOT_QUERY_NAME;
 
-    private static final ZoneId UTC = ZoneId.of("Etc/UTC");
+    // Clock so we can test.
+    static Clock CLOCK = Clock.systemUTC();
 
     private final HttpServerExchange exchange;
     private final ZonedDateTime snapshot;
@@ -35,22 +32,21 @@ public class GraphqlContext {
     GraphqlContext(HttpServerExchange exchange, ExecutionInput executionInput) {
         this.exchange = Objects.requireNonNull(exchange);
         this.executionInput = executionInput;
-        // Init in own method.
+        // Init snapshot.
+        this.snapshot = getSnapshot(exchange.getQueryParameters(), executionInput.getVariables());
+    }
 
-        this.snapshot = getSnapshot(exchange).or(() -> getSnapshot(executionInput))
-                .orElse(ZonedDateTime.now(UTC));
+    static ZonedDateTime getSnapshot(Map<String, Deque<String>> queryParameters, Map<String, Object> variables) {
+        return getSnapshotFromQuery(queryParameters)
+                .or(() -> getSnapshotFromVariables(variables))
+                .orElse(ZonedDateTime.now(CLOCK));
     }
 
     /**
-     * Returns the undertow server exchange that triggered the execution.
+     * Gets the snapshot from server exchange query parameters.
      */
-    public HttpServerExchange getExchange() {
-        return this.exchange;
-    }
-
-    Optional<ZonedDateTime> getSnapshot(HttpServerExchange exchange) {
+    private static Optional<ZonedDateTime> getSnapshotFromQuery(Map<String, Deque<String>> queryParameters) {
         try {
-            Map<String, Deque<String>> queryParameters = exchange.getQueryParameters();
             if (!queryParameters.containsKey(SNAPSHOT_QUERY_NAME)) {
                 return Optional.empty();
             }
@@ -68,13 +64,15 @@ public class GraphqlContext {
         }
     }
 
-    Optional<ZonedDateTime> getSnapshot(ExecutionInput executionInput) {
+    private static Optional<ZonedDateTime> getSnapshotFromVariables(Map<String, Object> variables) {
         try {
-            Map<String, Object> variables = executionInput.getVariables();
             if (!variables.containsKey(SNAPSHOT_VARIABLE_NAME)) {
                 return Optional.empty();
             }
             Object snapshotObject = variables.get(SNAPSHOT_VARIABLE_NAME);
+            if (snapshotObject == null) {
+                return Optional.empty();
+            }
             if (snapshotObject instanceof CharSequence) {
                 return Optional.of(ZonedDateTime.parse((CharSequence) snapshotObject));
             } else {
@@ -83,6 +81,13 @@ public class GraphqlContext {
         } catch (DateTimeParseException e) {
             return Optional.empty();
         }
+    }
+
+    /**
+     * Returns the undertow server exchange that triggered the execution.
+     */
+    public HttpServerExchange getExchange() {
+        return this.exchange;
     }
 
     public synchronized ZonedDateTime getSnapshot() {
