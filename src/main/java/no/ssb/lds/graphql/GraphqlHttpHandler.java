@@ -13,13 +13,19 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.Deque;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Scanner;
 
-import static io.undertow.util.FileUtils.readFile;
 import static io.undertow.util.Headers.ALLOW;
 import static io.undertow.util.Methods.GET;
 import static io.undertow.util.Methods.GET_STRING;
@@ -34,7 +40,7 @@ import static io.undertow.util.Methods.POST_STRING;
  * Supports GET and POST requests as described on the
  * <a href="https://graphql.org/learn/serving-over-http/">GraphQL website</a>
  */
-public class GraphqlHandler implements HttpHandler {
+public class GraphqlHttpHandler implements HttpHandler {
 
     private static final Predicate IS_JSON = Predicates.regex(
             ExchangeAttributes.requestHeader(Headers.CONTENT_TYPE),
@@ -54,7 +60,7 @@ public class GraphqlHandler implements HttpHandler {
      * @param graphQl the instance that will execute the queries.
      * @throws NullPointerException if the graphQl was null.
      */
-    public GraphqlHandler(GraphQL graphQl) {
+    public GraphqlHttpHandler(GraphQL graphQl) {
         this.graphQl = Objects.requireNonNull(graphQl);
     }
 
@@ -70,6 +76,23 @@ public class GraphqlHandler implements HttpHandler {
             return Optional.of(first);
         }
         return Optional.empty();
+    }
+
+    private static JSONObject toJson(HttpServerExchange exchange) throws IOException {
+        try (InputStream bi = new BufferedInputStream(exchange.getInputStream())) {
+            JSONTokener tokener = new JSONTokener(new InputStreamReader(
+                    bi,
+                    Charset.forName(exchange.getRequestCharset())
+            ));
+            return new JSONObject(tokener);
+        }
+    }
+
+    private static String toString(HttpServerExchange exchange) throws IOException {
+        try (InputStream i = new BufferedInputStream(exchange.getInputStream())) {
+            Scanner scanner = new Scanner(i, Charset.forName(exchange.getRequestCharset())).useDelimiter("\\A");
+            return scanner.hasNext() ? scanner.next() : "";
+        }
     }
 
     @Override
@@ -93,14 +116,9 @@ public class GraphqlHandler implements HttpHandler {
         ExecutionInput.Builder executionInput = ExecutionInput.newExecutionInput();
         if (method.equals(POST)) {
             if (IS_GRAPHQL.resolve(exchange)) {
-                // TODO: handle charset: exchange.getRequestCharset()
-
-                String query = readFile(exchange.getInputStream());
-                executionInput.query(query);
+                executionInput.query(toString(exchange));
             } else if (IS_JSON.resolve(exchange)) {
-                // TODO: handle charset: exchange.getRequestCharset()
-                String query = readFile(exchange.getInputStream());
-                JSONObject json = new JSONObject(query);
+                JSONObject json = toJson(exchange);
                 executionInput.query(json.getString("query"));
                 if (json.has("variables") && !json.isNull("variables")) {
                     executionInput.variables(json.getJSONObject("variables").toMap());
@@ -130,6 +148,9 @@ public class GraphqlHandler implements HttpHandler {
             exchange.setStatusCode(StatusCodes.METHOD_NOT_ALLOWED);
             return;
         }
+
+        // Add context.
+        executionInput.context(new GraphqlContext(exchange, executionInput.build()));
 
         // Execute
         ExecutionResult result = graphQl.execute(executionInput);

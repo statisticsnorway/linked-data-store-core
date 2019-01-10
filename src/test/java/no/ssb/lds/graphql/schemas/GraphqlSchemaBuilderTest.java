@@ -1,4 +1,4 @@
-package no.ssb.lds.graphql;
+package no.ssb.lds.graphql.schemas;
 
 import graphql.schema.GraphQLSchema;
 import graphql.schema.idl.SchemaPrinter;
@@ -10,13 +10,13 @@ import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
+import no.ssb.lds.graphql.schemas.GraphqlSchemaBuilder;
 import org.testng.annotations.Test;
 
 import java.time.ZonedDateTime;
 import java.util.concurrent.CompletableFuture;
 
 public class GraphqlSchemaBuilderTest {
-
 
     @Test
     public void testSchemaConversion() {
@@ -55,17 +55,12 @@ public class GraphqlSchemaBuilderTest {
 
         );
         JsonPersistence fakePersistence = new MockPersistence();
-        no.ssb.lds.graphql.GraphqlSchemaBuilder builder = new GraphqlSchemaBuilder(specification, fakePersistence,
+        GraphqlSchemaBuilder builder = new GraphqlSchemaBuilder(specification, fakePersistence,
                 "/ns");
         GraphQLSchema schema = builder.getSchema();
 
         SchemaPrinter printer = new SchemaPrinter();
         System.err.println(printer.print(schema));
-
-        //GraphQL gql = GraphQL.newGraphQL(schema).build();
-        //ExecutionResult result = gql.execute("{ contact(id: \"test\") { name } }");
-        //List<GraphQLError> errors = result.getErrors();
-        //System.err.println(errors);
 
     }
 

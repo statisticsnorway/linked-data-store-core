@@ -19,8 +19,8 @@ import no.ssb.lds.core.saga.SagaLogInitializer;
 import no.ssb.lds.core.saga.SagaRepository;
 import no.ssb.lds.core.saga.SagasObserver;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
-import no.ssb.lds.graphql.GraphqlHandler;
-import no.ssb.lds.graphql.GraphqlSchemaBuilder;
+import no.ssb.lds.graphql.GraphqlHttpHandler;
+import no.ssb.lds.graphql.schemas.GraphqlSchemaBuilder;
 import no.ssb.saga.execution.sagalog.SagaLog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -137,7 +137,7 @@ public class UndertowApplication {
                                     Thread.currentThread().getContextClassLoader(), "no/ssb/lds/graphql"
                             )).setDirectoryListingEnabled(true).addWelcomeFiles("graphiql.html")
                     )
-                    .post("graphql", new GraphqlHandler(graphQL));
+                    .post("graphql", new GraphqlHttpHandler(graphQL));
         }
 
         HttpHandler httpHandler = routingHandler
