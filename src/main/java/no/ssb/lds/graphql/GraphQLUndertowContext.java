@@ -12,9 +12,9 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * A context object passed around in the graphql executions.
+ * Implementation of {@link GraphQLContext}
  */
-public class GraphqlContext {
+public class GraphQLUndertowContext implements GraphQLContext {
 
     // Name of the snapshot query variable
     static final String SNAPSHOT_QUERY_NAME = "snapshot";
@@ -29,7 +29,7 @@ public class GraphqlContext {
     private final ZonedDateTime snapshot;
     private final ExecutionInput executionInput;
 
-    GraphqlContext(HttpServerExchange exchange, ExecutionInput executionInput) {
+    GraphQLUndertowContext(HttpServerExchange exchange, ExecutionInput executionInput) {
         this.exchange = Objects.requireNonNull(exchange);
         this.executionInput = executionInput;
         // Init snapshot.
@@ -107,13 +107,12 @@ public class GraphqlContext {
         }
     }
 
-    /**
-     * Returns the undertow server exchange that triggered the execution.
-     */
+    @Override
     public HttpServerExchange getExchange() {
         return this.exchange;
     }
 
+    @Override
     public ZonedDateTime getSnapshot() {
         return this.snapshot;
     }
