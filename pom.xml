@@ -73,28 +73,29 @@
     </repositories>
 
     <dependencies>
-
-        <dependency>
-            <groupId>com.graphql-java</groupId>
-            <artifactId>graphql-java</artifactId>
-            <version>11.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>no.ssb.lds</groupId>
-            <artifactId>linked-data-store-persistence-provider-api</artifactId>
-            <version>0.4-SNAPSHOT</version>
-        </dependency>
         <dependency>
             <groupId>no.ssb.config</groupId>
             <artifactId>dynamic-configuration</artifactId>
             <version>0.4</version>
         </dependency>
+
+        <dependency>
+            <groupId>no.ssb.lds</groupId>
+            <artifactId>linked-data-store-persistence-provider-api</artifactId>
+            <version>0.4</version>
+        </dependency>
+
         <dependency>
             <groupId>no.ssb.lds</groupId>
             <artifactId>linked-data-store-persistence-provider-memory</artifactId>
-            <version>0.2</version>
+            <version>0.3</version>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.graphql-java</groupId>
+            <artifactId>graphql-java</artifactId>
+            <version>11.0</version>
         </dependency>
 
         <dependency>
