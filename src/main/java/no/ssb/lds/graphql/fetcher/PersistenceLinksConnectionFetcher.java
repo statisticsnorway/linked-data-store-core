@@ -12,8 +12,6 @@ import java.util.Objects;
 
 /**
  * A wrapper around {@link PersistenceLinksFetcher} that support relay style connections.
- *
- *
  */
 public class PersistenceLinksConnectionFetcher implements DataFetcher<Connection<Map<String, Object>>> {
 

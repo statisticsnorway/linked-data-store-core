@@ -33,10 +33,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import static no.ssb.lds.graphql.fetcher.PersistenceLinksConnectionFetcherTest.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class PersistenceLinksConnectionFetcherTest {
-    private PersistenceLinksConnectionFetcher connectionFetcher;
+public class PersistenceRootConnectionFetcherTest {
+
+    private PersistenceRootConnectionFetcher connectionFetcher;
     private ZonedDateTime snapshot;
     private LinkedHashMap<String, Object> source = new LinkedHashMap<>();
     private Map<String, JSONObject> data = new LinkedHashMap<>();
@@ -58,8 +60,7 @@ public class PersistenceLinksConnectionFetcherTest {
                 Map.of("persistence.mem.wait.min", "0",
                         "persistence.mem.wait.max", "0"),
                 Set.of("Source", "Target"));
-        PersistenceLinksFetcher linksFetcher = new PersistenceLinksFetcher(persistence, "ns", "targetIds", "Target");
-        connectionFetcher = new PersistenceLinksConnectionFetcher(linksFetcher);
+        connectionFetcher = new PersistenceRootConnectionFetcher(persistence, "ns", "Target");
         snapshot = ZonedDateTime.now();
 
         // Populate persistence with fake data.
@@ -124,128 +125,32 @@ public class PersistenceLinksConnectionFetcherTest {
         );
     }
 
+    @Test
+    public void testAfter() throws Exception {
+        Connection<Map<String, Object>> firstFiveAfter = connectionFetcher.get(
+                withArguments(Map.of("first", 5, "after", "target-2")));
+
+        assertThat(firstFiveAfter.getPageInfo().isHasPreviousPage()).isTrue();
+        assertThat(firstFiveAfter.getPageInfo().isHasNextPage()).isTrue();
+        assertThat(firstFiveAfter.getEdges()).extracting(Edge::getNode).containsExactlyElementsOf(
+                () -> data.values().stream().map(JSONObject::toMap).skip(3).limit(5).iterator()
+        );
+    }
+
+    @Test
+    public void testBefore() throws Exception {
+        Connection<Map<String, Object>> lastFiveBefore = connectionFetcher.get(
+                withArguments(Map.of("last", 5, "before", "target-7")));
+
+        assertThat(lastFiveBefore.getPageInfo().isHasPreviousPage()).isTrue();
+        assertThat(lastFiveBefore.getPageInfo().isHasNextPage()).isTrue();
+        assertThat(lastFiveBefore.getEdges()).extracting(Edge::getNode).containsExactlyElementsOf(
+                () -> data.values().stream().map(JSONObject::toMap).skip(2).limit(5).iterator()
+        );
+    }
+
     private TestEnvironment withArguments(Map<String, Object> arguments) {
         return new TestEnvironment(arguments, source, snapshot);
     }
 
-    /**
-     * For test. Only the interface is marked public.
-     */
-    public static final class TestEnvironment implements DataFetchingEnvironment {
-
-        private final Map<String, Object> arguments;
-        private final Object source;
-        private final ZonedDateTime snapshot;
-
-        public TestEnvironment(
-                Map<String, Object> arguments,
-                Map<String, Object> source,
-                ZonedDateTime snapshot
-        ) {
-            this.arguments = Objects.requireNonNull(arguments);
-            this.source = Objects.requireNonNull(source);
-            this.snapshot = Objects.requireNonNull(snapshot);
-        }
-
-        @Override
-        public <T> T getSource() {
-            return (T) source;
-        }
-
-        @Override
-        public Map<String, Object> getArguments() {
-            return arguments;
-        }
-
-        @Override
-        public boolean containsArgument(String name) {
-            return arguments.containsKey(name);
-        }
-
-        @Override
-        public <T> T getArgument(String name) {
-            return (T) arguments.get(name);
-        }
-
-        @Override
-        public <T> T getContext() {
-            return (T) new GraphQLContext() {
-
-                @Override
-                public HttpServerExchange getExchange() {
-                    return null;
-                }
-
-                @Override
-                public ZonedDateTime getSnapshot() {
-                    return snapshot;
-                }
-            };
-        }
-
-        @Override
-        public <T> T getRoot() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public GraphQLFieldDefinition getFieldDefinition() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public List<Field> getFields() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Field getField() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public GraphQLOutputType getFieldType() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ExecutionStepInfo getExecutionStepInfo() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public GraphQLType getParentType() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public GraphQLSchema getGraphQLSchema() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Map<String, FragmentDefinition> getFragmentsByName() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ExecutionId getExecutionId() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public DataFetchingFieldSelectionSet getSelectionSet() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ExecutionContext getExecutionContext() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <K, V> DataLoader<K, V> getDataLoader(String dataLoaderName) {
-            throw new UnsupportedOperationException();
-        }
-    }
 }
