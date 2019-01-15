@@ -86,9 +86,11 @@ public class PersistenceRootConnectionFetcher implements DataFetcher<Connection<
 
         try (Transaction tx = persistence.createTransaction(true)) {
 
+            String after = getAfterFrom(environment);
+            String before = getBeforeFrom(environment);
             Range range = Range.between(
-                    getAfterFrom(environment),
-                    getBeforeFrom(environment)
+                    after,
+                    before
             );
 
             Flow.Publisher<JsonDocument> documents = persistence.readDocuments(tx, snapshot, nameSpace, entityName, range);
@@ -97,29 +99,6 @@ public class PersistenceRootConnectionFetcher implements DataFetcher<Connection<
                     fromFlowPublisher(documents).blockingIterable().spliterator(),
                     false
             );
-
-            // Reactive stream API
-            //Flowable<JsonDocument> flowable = findAllFlowable(tx, snapshot, nameSpace, entityName, null, Integer.MAX_VALUE);
-            //Stream<JsonDocument> stream = StreamSupport.stream(() -> flowable.blockingIterable().spliterator(), 0, false);
-
-
-            //// TODO: Persistence should support this.
-            //AtomicReference<JsonDocument> firstSeen = new AtomicReference<>(null);
-            //AtomicReference<JsonDocument> lastSeen = new AtomicReference<>(null);
-            //stream = stream.peek(document -> {
-            //    if (!firstSeen.compareAndSet(null, document)) {
-            //        lastSeen.set(document);
-            //    }
-            //});
-
-            //String after = getAfterFrom(environment);
-            //if (after != null) {
-            //    stream = stream.dropWhile(jsonDocument -> jsonDocument.key().id().compareTo(after) <= 0);
-            //}
-            //String before = getBeforeFrom(environment);
-            //if (before != null) {
-            //    stream = stream.takeWhile(jsonDocument -> jsonDocument.key().id().compareTo(before) < 0);
-            //}
 
             List<Edge<Map<String, Object>>> edges = stream.map(document -> toEdge(document))
                     .collect(Collectors.toList());
@@ -145,11 +124,27 @@ public class PersistenceRootConnectionFetcher implements DataFetcher<Connection<
             Edge<Map<String, Object>> firstEdge = edges.get(0);
             Edge<Map<String, Object>> lastEdge = edges.get(edges.size() - 1);
 
+            boolean hasPrevious;
+            if (after != null) {
+                hasPrevious = persistence.hasPrevious(tx, snapshot, nameSpace, entityName, after);
+            } else {
+                hasPrevious = persistence.hasPrevious(tx, snapshot, nameSpace, entityName,
+                        firstEdge.getCursor().getValue());
+            }
+
+            boolean hasNext;
+            if (before != null) {
+                hasNext = persistence.hasNext(tx, snapshot, nameSpace, entityName, before);
+            } else {
+                hasNext = persistence.hasNext(tx, snapshot, nameSpace, entityName,
+                        lastEdge.getCursor().getValue());
+            }
+
             PageInfo pageInfo = new DefaultPageInfo(
                     firstEdge.getCursor(),
                     lastEdge.getCursor(),
-                    true, //!firstEdge.getCursor().equals(toEdge(firstSeen.get()).getCursor()),
-                    true //!lastEdge.getCursor().equals(toEdge(lastSeen.get()).getCursor())
+                    hasPrevious,
+                    hasNext
             );
 
             return new DefaultConnection<>(
