@@ -18,6 +18,7 @@ import no.ssb.lds.api.specification.SpecificationElementType;
 import no.ssb.lds.graphql.fetcher.PersistenceFetcher;
 import no.ssb.lds.graphql.fetcher.PersistenceLinkFetcher;
 import no.ssb.lds.graphql.fetcher.PersistenceLinksFetcher;
+import no.ssb.lds.graphql.fetcher.PersistenceRootConnectionFetcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,6 +30,7 @@ import java.util.Set;
 import static graphql.Scalars.GraphQLBoolean;
 import static graphql.Scalars.GraphQLFloat;
 import static graphql.Scalars.GraphQLID;
+import static graphql.Scalars.GraphQLInt;
 import static graphql.Scalars.GraphQLLong;
 import static graphql.Scalars.GraphQLString;
 import static java.lang.String.format;
@@ -126,6 +128,10 @@ public class GraphqlSchemaBuilder {
                 GraphQLFieldDefinition.Builder rootQueryField = createRootQueryField(element);
                 DataFetcher rootQueryFetcher = createRootQueryFetcher(element);
                 queryBuilder.field(rootQueryField.dataFetcher(rootQueryFetcher).build());
+
+                // Create root field with connection.
+                queryBuilder.field(createRootQueryConnectionField(element));
+
                 log.debug("Converted {} to GraphQL type {}", element.getName(), buildType);
 
                 additionalTypes.add(buildType);
@@ -135,11 +141,54 @@ public class GraphqlSchemaBuilder {
             }
         }
 
+        additionalTypes.add(GraphQLNonNull.nonNull(
+                GraphQLObjectType.newObject()
+                        .name("PageInfo")
+                        .field(GraphQLFieldDefinition.newFieldDefinition().name("hasNextPage").type(GraphQLNonNull.nonNull(GraphQLBoolean)))
+                        .field(GraphQLFieldDefinition.newFieldDefinition().name("hasPreviousPage").type(GraphQLNonNull.nonNull(GraphQLBoolean)))
+                        .build()
+        ));
+
         return GraphQLSchema.newSchema().query(queryBuilder.build()).additionalTypes(additionalTypes).build();
     }
 
     private DataFetcher createRootQueryFetcher(SpecificationElement element) {
         return new PersistenceFetcher(persistence, this.nameSpace, element.getName());
+    }
+
+    private GraphQLFieldDefinition.Builder createRootQueryConnectionField(SpecificationElement element) {
+        GraphQLFieldDefinition.Builder pageInfoField = GraphQLFieldDefinition.newFieldDefinition()
+                .name("pageInfo").type(GraphQLTypeReference.typeRef("PageInfo"));
+
+        // Create root connection
+        GraphQLFieldDefinition.Builder cursorField = GraphQLFieldDefinition.newFieldDefinition()
+                .type(GraphQLString).name("cursor");
+
+        GraphQLFieldDefinition.Builder nodeField = GraphQLFieldDefinition.newFieldDefinition()
+                .type(GraphQLTypeReference.typeRef(element.getName())).name("node");
+
+        GraphQLObjectType.Builder edgeType = GraphQLObjectType.newObject()
+                .name(element.getName() + "Edge")
+                .field(cursorField)
+                .field(nodeField);
+
+        GraphQLFieldDefinition.Builder edgesField = GraphQLFieldDefinition.newFieldDefinition()
+                .name("edges")
+                .type(GraphQLList.list(edgeType.build()));
+
+
+        GraphQLObjectType.Builder connectionType = GraphQLObjectType.newObject()
+                .name(element.getName() + "Connection")
+                .field(edgesField)
+                .field(pageInfoField);
+        return GraphQLFieldDefinition.newFieldDefinition()
+                .name(element.getName())
+                .argument(GraphQLArgument.newArgument().name("first").type(GraphQLInt).build())
+                .argument(GraphQLArgument.newArgument().name("after").type(GraphQLString).build())
+                .argument(GraphQLArgument.newArgument().name("last").type(GraphQLInt).build())
+                .argument(GraphQLArgument.newArgument().name("before").type(GraphQLString).build())
+                .type(connectionType.build())
+                .dataFetcher(new PersistenceRootConnectionFetcher(persistence, nameSpace, element.getName()));
     }
 
     /**

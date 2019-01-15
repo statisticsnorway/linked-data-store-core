@@ -31,7 +31,7 @@ import static java.lang.String.format;
  */
 public class PersistenceRootConnectionFetcher implements DataFetcher<Connection<Map<String, Object>>> {
 
-    public static final String AFTER_ARG_NAME = "after";
+    private static final String AFTER_ARG_NAME = "after";
     private static final String BEFORE_ARG_NAME = "before";
     private static final String FIRST_ARG_NAME = "first";
     private static final String LAST_ARG_NAME = "last";
