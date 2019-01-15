@@ -9,6 +9,7 @@ import graphql.relay.Edge;
 import graphql.relay.PageInfo;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
+import io.reactivex.Flowable;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
@@ -93,52 +94,38 @@ public class PersistenceRootConnectionFetcher implements DataFetcher<Connection<
                     before
             );
 
-            Flow.Publisher<JsonDocument> documents = persistence.readDocuments(tx, snapshot, nameSpace, entityName, range);
-            // TODO: Should probably be included in the API.
-            Stream<JsonDocument> stream = StreamSupport.stream(
-                    fromFlowPublisher(documents).blockingIterable().spliterator(),
-                    false
+            Flowable<JsonDocument> documentFlowable = fromFlowPublisher(
+                    persistence.readDocuments(tx, snapshot, nameSpace, entityName, range)
             );
 
-            List<Edge<Map<String, Object>>> edges = stream.map(document -> toEdge(document))
-                    .collect(Collectors.toList());
+            if (first != null) {
+                if (first < 0) {
+                    throw new IllegalArgumentException(format("The page size must not be negative: 'first'=%s", first));
+                }
+                documentFlowable = documentFlowable.limit(first);
+            }
+            if (last != null) {
+                if (last < 0) {
+                    throw new IllegalArgumentException(format("The page size must not be negative: 'last'=%s", last));
+                }
+                documentFlowable = documentFlowable.takeLast(last);
+            }
+
+            List<Edge<Map<String, Object>>> edges = documentFlowable.map(document -> toEdge(document)).toList().blockingGet();
 
             if (edges.isEmpty()) {
                 PageInfo pageInfo = new DefaultPageInfo(null, null, false, false);
                 return new DefaultConnection<>(Collections.emptyList(), pageInfo);
             }
 
-            if (first != null) {
-                if (first < 0) {
-                    throw new IllegalArgumentException(format("The page size must not be negative: 'first'=%s", first));
-                }
-                edges = edges.subList(0, first <= edges.size() ? first : edges.size());
-            }
-            if (last != null) {
-                if (last < 0) {
-                    throw new IllegalArgumentException(format("The page size must not be negative: 'last'=%s", last));
-                }
-                edges = edges.subList(last > edges.size() ? 0 : edges.size() - last, edges.size());
-            }
-
             Edge<Map<String, Object>> firstEdge = edges.get(0);
             Edge<Map<String, Object>> lastEdge = edges.get(edges.size() - 1);
 
-            boolean hasPrevious;
-            if (after != null) {
-                hasPrevious = persistence.hasPrevious(tx, snapshot, nameSpace, entityName, after);
-            } else {
-                hasPrevious = persistence.hasPrevious(tx, snapshot, nameSpace, entityName,
+            boolean hasPrevious = persistence.hasPrevious(tx, snapshot, nameSpace, entityName,
                         firstEdge.getCursor().getValue());
-            }
 
-            boolean hasNext;
-            if (before != null) {
-                hasNext = persistence.hasNext(tx, snapshot, nameSpace, entityName, before);
-            } else {
-                hasNext = persistence.hasNext(tx, snapshot, nameSpace, entityName,
+            boolean hasNext = persistence.hasNext(tx, snapshot, nameSpace, entityName,
                         lastEdge.getCursor().getValue());
-            }
 
             PageInfo pageInfo = new DefaultPageInfo(
                     firstEdge.getCursor(),
