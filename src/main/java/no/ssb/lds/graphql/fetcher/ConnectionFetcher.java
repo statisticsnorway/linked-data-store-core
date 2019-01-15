@@ -59,14 +59,46 @@ public abstract class ConnectionFetcher<T> implements DataFetcher<Connection<T>>
 
     @Override
     public Connection<T> get(DataFetchingEnvironment environment) throws Exception {
-        return getConnection(
-                getSnapshotFrom(environment),
-                getAfterFrom(environment),
-                getBeforeFrom(environment),
-                getLastFrom(environment),
-                getFirstFrom(environment)
-        );
+        ConnectionParameters parameters = new ConnectionParameters(getSnapshotFrom(environment), getAfterFrom(environment),
+                getBeforeFrom(environment), getLastFrom(environment), getFirstFrom(environment));
+        return getConnection(environment, parameters);
     }
 
-    abstract Connection<T> getConnection(ZonedDateTime snapshot, String after, String before, Integer last, Integer first);
+    abstract Connection<T> getConnection(DataFetchingEnvironment environment, ConnectionParameters connectionParameters);
+
+    public static class ConnectionParameters {
+        private final ZonedDateTime snapshot;
+        private final String after;
+        private final String before;
+        private final Integer last;
+        private final Integer first;
+
+        private ConnectionParameters(ZonedDateTime snapshot, String after, String before, Integer last, Integer first) {
+            this.snapshot = snapshot;
+            this.after = after;
+            this.before = before;
+            this.last = last;
+            this.first = first;
+        }
+
+        public ZonedDateTime getSnapshot() {
+            return snapshot;
+        }
+
+        public String getAfter() {
+            return after;
+        }
+
+        public String getBefore() {
+            return before;
+        }
+
+        public Integer getLast() {
+            return last;
+        }
+
+        public Integer getFirst() {
+            return first;
+        }
+    }
 }

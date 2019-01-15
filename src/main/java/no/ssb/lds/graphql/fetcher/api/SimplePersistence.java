@@ -7,7 +7,6 @@ import no.ssb.lds.api.persistence.streaming.Fragment;
 
 import java.time.ZonedDateTime;
 import java.util.concurrent.Flow;
-import java.util.stream.Stream;
 
 /**
  * API proposal.
@@ -23,7 +22,7 @@ public interface SimplePersistence {
     Flow.Publisher<Fragment> readFragments(Transaction tx, ZonedDateTime snapshot, String nameSpace, String entityName, String id)
             throws PersistenceException;
 
-    Flow.Publisher<JsonDocument> readDocuments(Transaction tx, ZonedDateTime snapshot, String nameSpace, String entityName, String id)
+    Flow.Publisher<JsonDocument> readDocument(Transaction tx, ZonedDateTime snapshot, String nameSpace, String entityName, String id)
             throws PersistenceException;
 
     /**

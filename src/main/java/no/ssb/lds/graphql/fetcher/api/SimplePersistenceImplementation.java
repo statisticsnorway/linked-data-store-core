@@ -45,11 +45,17 @@ public class SimplePersistenceImplementation implements SimplePersistence {
         Objects.requireNonNull(snapshot);
         Objects.requireNonNull(tx);
 
-        return persistence.read(tx, snapshot, nameSpace, entityName, id);
+        Flowable<Fragment> fragmentFlowable = fromFlowPublisher(persistence.read(tx, snapshot, nameSpace, entityName, id));
+        fragmentFlowable = fragmentFlowable.filter(fragment -> {
+            return !fragment.isStreamingControl();
+        }).filter(fragment -> {
+            return !fragment.deleteMarker();
+        });
+        return toFlowPublisher(fragmentFlowable);
     }
 
     @Override
-    public Flow.Publisher<JsonDocument> readDocuments(Transaction tx, ZonedDateTime snapshot, String nameSpace,
+    public Flow.Publisher<JsonDocument> readDocument(Transaction tx, ZonedDateTime snapshot, String nameSpace,
                                                       String entityName, String id) throws PersistenceException {
         Flow.Publisher<Fragment> fragmentPublisher = readFragments(tx, snapshot, nameSpace, entityName, id);
         Flowable<Fragment> fragmentFlowable = fromFlowPublisher(fragmentPublisher);
@@ -91,7 +97,12 @@ public class SimplePersistenceImplementation implements SimplePersistence {
 
         Flow.Publisher<Fragment> fragmentPublisher = persistence.findAll(tx, snapshot, nameSpace, entityName,
                 range.getAfter(), Integer.MAX_VALUE);
-        Flowable<Fragment> fragmentFlowable = fromFlowPublisher(fragmentPublisher);
+        Flowable<Fragment> fragmentFlowable = fromFlowPublisher(fragmentPublisher)
+                .filter(fragment -> {
+                    return !fragment.isStreamingControl();
+                }).filter(fragment -> {
+                    return !fragment.deleteMarker();
+                });
         fragmentFlowable = limitFragments(fragmentFlowable, range);
         return toFlowPublisher(fragmentFlowable);
     }
