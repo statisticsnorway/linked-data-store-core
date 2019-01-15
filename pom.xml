@@ -78,7 +78,33 @@
             <groupId>com.graphql-java</groupId>
             <artifactId>graphql-java</artifactId>
             <version>11.0</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>reactive-streams</artifactId>
+                    <groupId>org.reactivestreams</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
+
+        <dependency>
+            <groupId>io.reactivex.rxjava2</groupId>
+            <artifactId>rxjava</artifactId>
+            <version>2.2.5</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.akarnokd</groupId>
+            <artifactId>rxjava2-jdk9-interop</artifactId>
+            <version>0.2.3</version>
+        </dependency>
+
+        <!-- Will work with version 1.0.3. -->
+        <!-- See https://github.com/reactive-streams/reactive-streams-jvm/issues/424 -->
+        <!--<dependency>-->
+            <!--<groupId>org.reactivestreams</groupId>-->
+            <!--<artifactId>reactive-streams-flow-adapters</artifactId>-->
+            <!--<version>1.0.2</version>-->
+        <!--</dependency>-->
 
         <dependency>
             <groupId>no.ssb.lds</groupId>
@@ -93,7 +119,7 @@
         <dependency>
             <groupId>no.ssb.lds</groupId>
             <artifactId>linked-data-store-persistence-provider-memory</artifactId>
-            <version>0.2</version>
+            <version>0.3-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
 
@@ -154,6 +180,10 @@
             <artifactId>hystrix-core</artifactId>
             <version>1.5.12</version>
             <exclusions>
+                <exclusion>
+                    <artifactId>reactive-streams</artifactId>
+                    <groupId>org.reactivestreams</groupId>
+                </exclusion>
                 <exclusion>
                     <groupId>commons-logging</groupId>
                     <artifactId>commons-logging</artifactId>

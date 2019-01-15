@@ -8,6 +8,7 @@ import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.TransactionFactory;
 import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.persistence.streaming.Persistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import no.ssb.lds.graphql.schemas.GraphqlSchemaBuilder;
@@ -65,6 +66,11 @@ public class GraphqlSchemaBuilderTest {
     }
 
     private class MockPersistence implements JsonPersistence {
+        @Override
+        public Persistence getPersistence() {
+            return null;
+        }
+
         @Override
         public TransactionFactory transactionFactory() throws PersistenceException {
             return null;
