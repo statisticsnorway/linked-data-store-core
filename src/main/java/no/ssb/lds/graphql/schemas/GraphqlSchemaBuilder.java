@@ -17,7 +17,7 @@ import no.ssb.lds.api.specification.SpecificationElement;
 import no.ssb.lds.api.specification.SpecificationElementType;
 import no.ssb.lds.graphql.fetcher.PersistenceFetcher;
 import no.ssb.lds.graphql.fetcher.PersistenceLinkFetcher;
-import no.ssb.lds.graphql.fetcher.PersistenceLinksFetcher;
+import no.ssb.lds.graphql.fetcher.PersistenceLinksConnectionFetcher;
 import no.ssb.lds.graphql.fetcher.PersistenceRootConnectionFetcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,8 +43,9 @@ public class GraphqlSchemaBuilder {
     private static final Logger log = LoggerFactory.getLogger(GraphqlSchemaBuilder.class);
     private final Specification specification;
 
-    // Keep track of the union types we registered.
+    // Keep track of the types we registered.
     private final Set<String> unionTypes = new HashSet<>();
+    private final Set<String> connectionTypes = new HashSet<>();
 
     private final JsonPersistence persistence;
     private final String nameSpace;
@@ -254,26 +255,72 @@ public class GraphqlSchemaBuilder {
         }
     }
 
+    GraphQLFieldDefinition.Builder createConnectionField(SpecificationElement property) {
+
+        GraphQLOutputType graphQLOutputType = buildReferenceTargetType(property);
+        String targetName = graphQLOutputType.getName();
+        String sourceName = property.getParent().getName();
+
+        String connectionName = sourceName + targetName + "Connection";
+
+        GraphQLOutputType connectionType;
+        if (!connectionTypes.contains(connectionName)) {
+            GraphQLFieldDefinition.Builder pageInfoField = GraphQLFieldDefinition.newFieldDefinition()
+                    .name("pageInfo").type(GraphQLTypeReference.typeRef("PageInfo"));
+
+            GraphQLFieldDefinition.Builder cursorField = GraphQLFieldDefinition.newFieldDefinition()
+                    .type(GraphQLString).name("cursor");
+
+
+            GraphQLFieldDefinition.Builder nodeField = GraphQLFieldDefinition.newFieldDefinition()
+                    .type(graphQLOutputType).name("node");
+
+            GraphQLObjectType.Builder edgeType = GraphQLObjectType.newObject()
+                    .name(sourceName + targetName + "Edge")
+                    .field(cursorField)
+                    .field(nodeField);
+
+            GraphQLFieldDefinition.Builder edgesField = GraphQLFieldDefinition.newFieldDefinition()
+                    .name("edges")
+                    .type(GraphQLList.list(edgeType.build()));
+
+
+            connectionType = GraphQLObjectType.newObject()
+                    .name(connectionName)
+                    .field(edgesField)
+                    .field(pageInfoField).build();
+            connectionTypes.add(connectionName);
+        } else {
+            connectionType = GraphQLTypeReference.typeRef(connectionName);
+        }
+
+
+        return GraphQLFieldDefinition.newFieldDefinition()
+                .name(property.getName())
+                .argument(GraphQLArgument.newArgument().name("first").type(GraphQLInt).build())
+                .argument(GraphQLArgument.newArgument().name("after").type(GraphQLString).build())
+                .argument(GraphQLArgument.newArgument().name("last").type(GraphQLInt).build())
+                .argument(GraphQLArgument.newArgument().name("before").type(GraphQLString).build())
+                .type(connectionType)
+                .dataFetcher(new PersistenceLinksConnectionFetcher(
+                        persistence, nameSpace, sourceName, property.getName(), targetName
+                ));
+    }
+
     /**
      * Create a {@link GraphQLFieldDefinition.Builder} that is a reference (linked) {@link SpecificationElement}.
      */
     private GraphQLFieldDefinition.Builder buildReferenceField(SpecificationElement property) {
 
-        GraphQLFieldDefinition.Builder field = createFieldDefinition(property);
-
-        GraphQLOutputType graphQLOutputType = buildReferenceTargetType(property);
         String propertyName = property.getName();
         JsonType propertyType = elementJsonType(property);
         switch (propertyType) {
             case ARRAY:
-                field.type(GraphQLList.list(graphQLOutputType));
-                field.dataFetcher(new PersistenceLinksFetcher(
-                        persistence,
-                        this.nameSpace,
-                        propertyName, graphQLOutputType.getName()
-                ));
-                return field;
+                // Create connection for relation.
+                return createConnectionField(property);
             case STRING:
+                GraphQLFieldDefinition.Builder field = createFieldDefinition(property);
+                GraphQLOutputType graphQLOutputType = buildReferenceTargetType(property);
                 field.type(graphQLOutputType);
                 field.dataFetcher(new PersistenceLinkFetcher(
                         persistence,

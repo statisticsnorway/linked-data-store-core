@@ -8,6 +8,7 @@ import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.TransactionFactory;
 import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.persistence.streaming.Fragment;
 import no.ssb.lds.api.persistence.streaming.Persistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
@@ -16,6 +17,7 @@ import org.testng.annotations.Test;
 
 import java.time.ZonedDateTime;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Flow;
 
 public class GraphqlSchemaBuilderTest {
 
@@ -68,7 +70,67 @@ public class GraphqlSchemaBuilderTest {
     private class MockPersistence implements JsonPersistence {
         @Override
         public Persistence getPersistence() {
-            return null;
+            return new Persistence() {
+                @Override
+                public TransactionFactory transactionFactory() throws PersistenceException {
+                    return null;
+                }
+
+                @Override
+                public Transaction createTransaction(boolean readOnly) throws PersistenceException {
+                    return null;
+                }
+
+                @Override
+                public CompletableFuture<Void> createOrOverwrite(Transaction transaction, Flow.Publisher<Fragment> publisher) throws PersistenceException {
+                    return null;
+                }
+
+                @Override
+                public Flow.Publisher<Fragment> read(Transaction transaction, ZonedDateTime snapshot, String namespace, String entity, String id) throws PersistenceException {
+                    return null;
+                }
+
+                @Override
+                public Flow.Publisher<Fragment> readVersions(Transaction transaction, ZonedDateTime snapshotFrom, ZonedDateTime snapshotTo, String namespace, String entity, String id, ZonedDateTime firstVersion, int limit) throws PersistenceException {
+                    return null;
+                }
+
+                @Override
+                public Flow.Publisher<Fragment> readAllVersions(Transaction transaction, String namespace, String entity, String id, ZonedDateTime firstVersion, int limit) throws PersistenceException {
+                    return null;
+                }
+
+                @Override
+                public CompletableFuture<Void> delete(Transaction transaction, String namespace, String entity, String id, ZonedDateTime version, PersistenceDeletePolicy policy) throws PersistenceException {
+                    return null;
+                }
+
+                @Override
+                public CompletableFuture<Void> deleteAllVersions(Transaction transaction, String namespace, String entity, String id, PersistenceDeletePolicy policy) throws PersistenceException {
+                    return null;
+                }
+
+                @Override
+                public CompletableFuture<Void> markDeleted(Transaction transaction, String namespace, String entity, String id, ZonedDateTime version, PersistenceDeletePolicy policy) throws PersistenceException {
+                    return null;
+                }
+
+                @Override
+                public Flow.Publisher<Fragment> findAll(Transaction transaction, ZonedDateTime snapshot, String namespace, String entity, String firstId, int limit) throws PersistenceException {
+                    return null;
+                }
+
+                @Override
+                public Flow.Publisher<Fragment> find(Transaction transaction, ZonedDateTime snapshot, String namespace, String entity, String path, byte[] value, String firstId, int limit) throws PersistenceException {
+                    return null;
+                }
+
+                @Override
+                public void close() throws PersistenceException {
+
+                }
+            };
         }
 
         @Override
