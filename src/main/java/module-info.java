@@ -18,6 +18,10 @@ module no.ssb.lds.core {
     requires java.xml; // TODO this should be in test-scope only!
 
     requires graphql.java;
+    requires io.reactivex.rxjava2;
+    requires org.reactivestreams;
+    requires com.github.akarnokd.rxjava2jdk9interop;
+  
     opens no.ssb.lds.graphql.graphiql;
 
     uses PersistenceInitializer;

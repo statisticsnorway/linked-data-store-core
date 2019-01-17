@@ -11,26 +11,26 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
-import static no.ssb.lds.graphql.GraphqlContext.SNAPSHOT_QUERY_NAME;
-import static no.ssb.lds.graphql.GraphqlContext.SNAPSHOT_VARIABLE_NAME;
+import static no.ssb.lds.graphql.GraphQLUndertowContext.SNAPSHOT_QUERY_NAME;
+import static no.ssb.lds.graphql.GraphQLUndertowContext.SNAPSHOT_VARIABLE_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class GraphqlContextTest {
+public class GraphQLUndettowContextTest {
 
     private ZonedDateTime defaultSnapshot;
 
     @BeforeMethod
     public void setUp() {
         defaultSnapshot = ZonedDateTime.parse("2000-01-01T00:00:00Z");
-        GraphqlContext.CLOCK = Clock.fixed(defaultSnapshot.toInstant(), defaultSnapshot.getZone());
+        GraphQLUndertowContext.CLOCK = Clock.fixed(defaultSnapshot.toInstant(), defaultSnapshot.getZone());
     }
 
     @Test
     public void testVariable() {
         ZonedDateTime givenSnapshot = ZonedDateTime.parse("1999-01-01T00:00:00Z");
         Map<String, Object> variables = Map.of(SNAPSHOT_VARIABLE_NAME, givenSnapshot.toString());
-        ZonedDateTime snapshot = GraphqlContext.getSnapshot(Collections.emptyMap(), variables);
+        ZonedDateTime snapshot = GraphQLUndertowContext.getSnapshot(Collections.emptyMap(), variables);
 
         assertThat(snapshot).isEqualTo(givenSnapshot);
     }
@@ -39,7 +39,7 @@ public class GraphqlContextTest {
     public void testNullVariable() {
         LinkedHashMap<String, Object> variables = new LinkedHashMap<>();
         variables.put(SNAPSHOT_VARIABLE_NAME, null);
-        ZonedDateTime snapshot = GraphqlContext.getSnapshot(Collections.emptyMap(), variables);
+        ZonedDateTime snapshot = GraphQLUndertowContext.getSnapshot(Collections.emptyMap(), variables);
 
         assertThat(snapshot).isEqualTo(defaultSnapshot);
     }
@@ -48,7 +48,7 @@ public class GraphqlContextTest {
     public void testInvalidFormatVariable() {
         Map<String, Object> variables = Map.of(SNAPSHOT_VARIABLE_NAME, "not-a-date-time");
 
-        ZonedDateTime snapshot = GraphqlContext.getSnapshot(Collections.emptyMap(), variables);
+        ZonedDateTime snapshot = GraphQLUndertowContext.getSnapshot(Collections.emptyMap(), variables);
         assertThat(snapshot).isEqualTo(defaultSnapshot);
     }
 
@@ -57,7 +57,7 @@ public class GraphqlContextTest {
         Map<String, Object> variables = Map.of(SNAPSHOT_VARIABLE_NAME, false);
 
         assertThatThrownBy(() -> {
-            GraphqlContext.getSnapshot(Collections.emptyMap(), variables);
+            GraphQLUndertowContext.getSnapshot(Collections.emptyMap(), variables);
         }).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -67,7 +67,7 @@ public class GraphqlContextTest {
         LinkedList<String> parameters = new LinkedList<>();
         parameters.add(givenSnapshot.toString());
         Map<String, Deque<String>> queryParameters = Map.of(SNAPSHOT_QUERY_NAME, parameters);
-        ZonedDateTime snapshot = GraphqlContext.getSnapshot(queryParameters, Collections.emptyMap());
+        ZonedDateTime snapshot = GraphQLUndertowContext.getSnapshot(queryParameters, Collections.emptyMap());
 
         assertThat(snapshot).isEqualTo(givenSnapshot);
     }
@@ -80,7 +80,7 @@ public class GraphqlContextTest {
         Map<String, Deque<String>> queryParameters = Map.of(SNAPSHOT_QUERY_NAME, parameters);
 
         assertThatThrownBy(() -> {
-            GraphqlContext.getSnapshot(queryParameters, Collections.emptyMap());
+            GraphQLUndertowContext.getSnapshot(queryParameters, Collections.emptyMap());
         }).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -89,7 +89,7 @@ public class GraphqlContextTest {
         LinkedList<String> parameters = new LinkedList<>();
         parameters.add(null);
         Map<String, Deque<String>> queryParameters = Map.of(SNAPSHOT_QUERY_NAME, parameters);
-        ZonedDateTime snapshot = GraphqlContext.getSnapshot(queryParameters, Collections.emptyMap());
+        ZonedDateTime snapshot = GraphQLUndertowContext.getSnapshot(queryParameters, Collections.emptyMap());
 
         assertThat(snapshot).isEqualTo(defaultSnapshot);
     }
@@ -99,7 +99,7 @@ public class GraphqlContextTest {
         LinkedList<String> parameters = new LinkedList<>();
         parameters.add("not-a-variable");
         Map<String, Deque<String>> queryParameters = Map.of(SNAPSHOT_QUERY_NAME, parameters);
-        ZonedDateTime snapshot = GraphqlContext.getSnapshot(queryParameters, Collections.emptyMap());
+        ZonedDateTime snapshot = GraphQLUndertowContext.getSnapshot(queryParameters, Collections.emptyMap());
 
         assertThat(snapshot).isEqualTo(defaultSnapshot);
     }
@@ -107,7 +107,7 @@ public class GraphqlContextTest {
     @Test
     public void testNoQueryParameterNoVariable() {
         ZonedDateTime snapshot =
-                GraphqlContext.getSnapshot(Collections.emptyMap(), Collections.emptyMap());
+                GraphQLUndertowContext.getSnapshot(Collections.emptyMap(), Collections.emptyMap());
 
         assertThat(snapshot).isEqualTo(defaultSnapshot);
     }
@@ -122,7 +122,7 @@ public class GraphqlContextTest {
         Map<String, Object> variables = Map.of(SNAPSHOT_VARIABLE_NAME, variable.toString());
 
         ZonedDateTime snapshot =
-                GraphqlContext.getSnapshot(queryParameters, variables);
+                GraphQLUndertowContext.getSnapshot(queryParameters, variables);
 
         assertThat(snapshot).isEqualTo(parameter);
     }

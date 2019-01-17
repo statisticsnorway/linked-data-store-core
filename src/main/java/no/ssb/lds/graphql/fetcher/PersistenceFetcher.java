@@ -5,7 +5,7 @@ import graphql.schema.DataFetchingEnvironment;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
-import no.ssb.lds.graphql.GraphqlContext;
+import no.ssb.lds.graphql.GraphQLContext;
 
 import java.time.ZonedDateTime;
 import java.util.Map;
@@ -37,7 +37,7 @@ public class PersistenceFetcher implements DataFetcher<Map<String, Object>> {
 
     @Override
     public Map<String, Object> get(DataFetchingEnvironment environment) throws Exception {
-        GraphqlContext context = environment.getContext();
+        GraphQLContext context = environment.getContext();
         JsonDocument document = readDocument(environment.getArgument("id"), context.getSnapshot());
         return document != null ? document.document().toMap() : null;
     }
