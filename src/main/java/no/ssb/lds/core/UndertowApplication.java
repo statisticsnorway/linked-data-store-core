@@ -93,10 +93,11 @@ public class UndertowApplication {
                 port
         );
 
+        boolean enableRequestDump = configuration.evaluateToBoolean("http.request.dump");
         boolean graphqlEnabled = configuration.evaluateToBoolean("graphql.enabled");
 
         // TODO: Pass configuration instead to avoid so many parameters. Undertow has a nice builder pattern.
-        return new UndertowApplication(specification, persistence, sec, sagaRepository, sagasObserver, host, port,
+        return new UndertowApplication(specification, persistence, sec, sagaRepository, sagasObserver, host, port, enableRequestDump,
                 sagaLog, sagaThreadPool, namespaceController, graphqlEnabled,
                 configuration.evaluateToString("namespace.default"));
     }
@@ -114,7 +115,7 @@ public class UndertowApplication {
 
     UndertowApplication(Specification specification, JsonPersistence persistence, SagaExecutionCoordinator sec,
                         SagaRepository sagaRepository, SagasObserver sagasObserver, String host, int port,
-                        SagaLog sagaLog, SelectableThreadPoolExectutor sagaThreadPool,
+                        boolean enableRequestDump, SagaLog sagaLog, SelectableThreadPoolExectutor sagaThreadPool,
                         NamespaceController namespaceController, boolean graphqlEnabled, String nameSpace) {
         this.specification = specification;
         this.host = host;
@@ -143,7 +144,9 @@ public class UndertowApplication {
         HttpHandler httpHandler = routingHandler
                 .setFallbackHandler(namespaceController);
 
-        httpHandler = Handlers.requestDump(httpHandler);
+        if (enableRequestDump) {
+            httpHandler = Handlers.requestDump(httpHandler);
+        }
 
         this.server = Undertow.builder()
                 .addHttpListener(port, host)
