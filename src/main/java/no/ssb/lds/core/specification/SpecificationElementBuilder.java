@@ -22,7 +22,6 @@ class SpecificationElementBuilder {
     private String description;
     private SpecificationElement parent;
     private SpecificationElementType specificationElementType;
-    private SpecificationElementType parentSpecificationElementType;
     private Set<String> refTypes;
     private Set<String> jsonTypes;
 
@@ -76,25 +75,7 @@ class SpecificationElementBuilder {
     }
 
     SpecificationElementType specificationElementType() {
-        if (specificationElementType != null) {
-            return specificationElementType;
-        }
-        if (parentSpecificationElementType == null) {
-            return SpecificationElementType.ROOT;
-        }
-        if (SpecificationElementType.ROOT == parentSpecificationElementType) {
-            return SpecificationElementType.MANAGED;
-        }
-        return SpecificationElementType.EMBEDDED;
-    }
-
-    SpecificationElementBuilder parentSpecificationElementType(SpecificationElementType parentSpecificationElementType) {
-        this.parentSpecificationElementType = parentSpecificationElementType;
-        return this;
-    }
-
-    SpecificationElementType parentSpecificationElementType() {
-        return parentSpecificationElementType;
+        return specificationElementType;
     }
 
     SpecificationElementBuilder jsonSchema(JsonSchema jsonSchema) {
@@ -163,10 +144,16 @@ class SpecificationElementBuilder {
                 return map;
             }
             for (Map.Entry<String, JsonSchemaDefinitionElement> entry : jsonSchema.getDefinitions().entrySet()) {
+                SpecificationElementType specificationElementType;
+                if (jsonSchema.getSchemaNames().contains(entry.getKey())) {
+                    specificationElementType = SpecificationElementType.MANAGED;
+                } else {
+                    specificationElementType = SpecificationElementType.EMBEDDED;
+                }
                 SpecificationElement managed = new SpecificationElementBuilder(entry.getValue())
                         .name(entry.getKey())
                         .parent(specificationElement)
-                        .specificationElementType(SpecificationElementType.MANAGED)
+                        .specificationElementType(specificationElementType)
                         .build();
                 map.put(entry.getKey(), managed);
             }
@@ -184,7 +171,7 @@ class SpecificationElementBuilder {
                     .name(e.getKey())
                     .description(e.getValue().description)
                     .parent(specificationElement)
-                    .parentSpecificationElementType(specificationElementType())
+                    .specificationElementType(SpecificationElementType.EMBEDDED)
                     .refTypes(refTypes);
             if (refTypes != null) {
                 childBuilder.specificationElementType(SpecificationElementType.REF);

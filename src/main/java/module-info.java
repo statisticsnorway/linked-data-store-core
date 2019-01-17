@@ -21,6 +21,8 @@ module no.ssb.lds.core {
     requires io.reactivex.rxjava2;
     requires org.reactivestreams;
     requires com.github.akarnokd.rxjava2jdk9interop;
+  
+    opens no.ssb.lds.graphql.graphiql;
 
     uses PersistenceInitializer;
 
