@@ -135,7 +135,7 @@ public class UndertowApplication {
             routingHandler = routingHandler
                     .get("graphiql**", Handlers.resource(new ClassPathResourceManager(
                                     Thread.currentThread().getContextClassLoader(), "no/ssb/lds/graphql"
-                            )).setDirectoryListingEnabled(true).addWelcomeFiles("graphiql.html")
+                            )).setDirectoryListingEnabled(false).addWelcomeFiles("graphiql.html")
                     )
                     .post("graphql", new GraphqlHttpHandler(graphQL));
         }
