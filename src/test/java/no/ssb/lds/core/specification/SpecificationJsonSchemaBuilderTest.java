@@ -24,6 +24,10 @@ public class SpecificationJsonSchemaBuilderTest {
         new JsonSchema04Builder(
                 jsonSchema, "contact", paJson).build();
         Specification specification = SpecificationJsonSchemaBuilder.createBuilder(jsonSchema).build();
+        print(specification);
+    }
+
+    private void print(Specification specification) {
         SpecificationTraverals.depthFirstPreOrderFullTraversal(specification.getRootElement(), (ancestors, te) -> {
             if (te.getRefTypes() == null) {
                 System.out.printf("%s%-10s %s  %s\n", spaces(ancestors.size()), te.getSpecificationElementType().name(), te.getName(), te.getJsonTypes());
@@ -69,7 +73,8 @@ public class SpecificationJsonSchemaBuilderTest {
         });
         assertEquals(rootCounter.get(), 1);
         assertEquals(managedCounter.get(), 1);
-        assertEquals(embeddedCounter.get(), 15); // TODO determine correct expected count
-        assertEquals(referenceCounter.get(), 2); // TODO determine correct expected count
+        assertEquals(embeddedCounter.get(), 26);
+        assertEquals(referenceCounter.get(), 2);
+        // print(specification);
     }
 }
