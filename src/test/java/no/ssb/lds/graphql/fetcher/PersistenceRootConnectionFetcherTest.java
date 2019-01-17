@@ -125,6 +125,7 @@ public class PersistenceRootConnectionFetcherTest {
         );
     }
 
+    @Ignore
     @Test
     public void testBefore() throws Exception {
         Connection<Map<String, Object>> lastFiveBefore = connectionFetcher.get(
