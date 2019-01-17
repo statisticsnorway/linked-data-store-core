@@ -1,0 +1,255 @@
+{
+  "$ref": "#/definitions/Agent",
+  "definitions": {
+    "MultilingualText": {
+      "type": "object",
+      "properties": {
+        "languageCode": {
+          "type": "string",
+          "description": "The language code. Use only ISO 639-1 codes.",
+          "displayName": "Language code",
+          "enum": [
+            "nb",
+            "nn",
+            "en"
+          ]
+        },
+        "languageText": {
+          "type": "string",
+          "description": "The text (e.g. label, title, description)",
+          "displayName": "Language text"
+        }
+      },
+      "required": [
+        "languageCode",
+        "languageText"
+      ]
+    },
+    "AdministrativeDetails": {
+      "type": "object",
+      "properties": {
+        "administrativeDetailType": {
+          "type": "string",
+          "description": "The type (key) of the AdministrativeDetails-attribute.",
+          "displayName": "Administrative detail type",
+          "enum": [
+            "DEFAULTLANGUAGE",
+            "ANNOTATION",
+            "ALIAS",
+            "URL",
+            "DOCUMENTATION",
+            "LIFECYCLESTATUS",
+            "LOCALID"
+          ]
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "One or more values (a list) for this administrativeDetailType.",
+          "displayName": "Values"
+        }
+      },
+      "required": [
+        "administrativeDetailType",
+        "values"
+      ]
+    },
+    "AgentDetails": {
+      "type": "object",
+      "properties": {
+        "agentDetailType": {
+          "type": "string",
+          "description": "The type (key) of the AgentDetails-attribute.",
+          "displayName": "Agent detail type",
+          "enum": [
+            "CONTACT_EMAIL",
+            "CONTACT_MOBILE",
+            "CONTACT_PHONE",
+            "CONTACT_ADDRESS"
+          ]
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "One or more values (a list) for this agentDetailType.",
+          "displayName": "Values"
+        }
+      },
+      "required": [
+        "agentDetailType",
+        "values"
+      ]
+    },
+    "Agent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The global unique identifier (GUID) of the information object assigned by the owner agency.",
+          "displayName": "Id"
+        },
+        "name": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/MultilingualText"
+          },
+          "description": "A term which designates a concept, in this case an information object. The identifying name will be the preferred designation. There will be many terms to designate the same information object, such as synonyms and terms in other languages.",
+          "displayName": "Name"
+        },
+        "description": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/MultilingualText"
+          },
+          "description": "The description of the information object",
+          "displayName": "Description"
+        },
+        "administrativeStatus": {
+          "type": "string",
+          "description": "Indicator for access to an item.",
+          "displayName": "Administrative status",
+          "enum": [
+            "DRAFT",
+            "INTERNAL",
+            "OPEN",
+            "DEPRECATED"
+          ]
+        },
+        "createdDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date on which the information object was created",
+          "displayName": "Created date"
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "Information object created by.",
+          "displayName": "Created by"
+        },
+        "version": {
+          "type": "string",
+          "description": "Formal versioning of the information object. The version designator of the information object assigned by the owner agency. \"major.minor.patch\", e.g. \"1.12.5\".",
+          "displayName": "Version"
+        },
+        "versionValidFrom": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date on which the current version of the infomation object is effective or valid.",
+          "displayName": "Version valid from"
+        },
+        "versionRationale": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/MultilingualText"
+          },
+          "description": "The reason for making this version of the information object.",
+          "displayName": "Version rationale"
+        },
+        "lastUpdatedDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date on which the object was last updated.",
+          "displayName": "Last updated date"
+        },
+        "lastUpdatedBy": {
+          "type": "string",
+          "description": "Last updated by.",
+          "displayName": "Last updated by"
+        },
+        "validFrom": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date on which the information object is effective or valid. Set this date only once (constant). The same date for all versions of this information object.",
+          "displayName": "Valid from"
+        },
+        "validUntil": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date on which the information object is no longer effective or valid.",
+          "displayName": "Valid until"
+        },
+        "administrativeDetails": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AdministrativeDetails"
+          },
+          "description": "Administrative details (e.g. default language, documentation, localID, ...).",
+          "displayName": "Administrative details"
+        },
+        "agentInRoles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "displayName": "Agent in roles",
+          "description": "Agent(s) acting in the Role(s) for this information object."
+        },
+        "agentType": {
+          "type": "string",
+          "description": "The type of agent.",
+          "displayName": "Agent type",
+          "enum": [
+            "INDIVIDUAL",
+            "ORGANIZATION",
+            "SYSTEM"
+          ]
+        },
+        "parentAgents": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "displayName": "Parent agents"
+        },
+        "isExternal": {
+          "type": "boolean",
+          "default": false,
+          "description": "Is this an external agent?",
+          "displayName": "Is external"
+        },
+        "agentDetails": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AgentDetails"
+          },
+          "description": "Agent details (e.g. contackt adress, email, phone, mobile ...).",
+          "displayName": "Agent details"
+        },
+        "_link_property_agentInRoles": {
+          "type": "object",
+          "properties": {
+            "AgentInRole": {
+              "type": "null"
+            }
+          }
+        },
+        "_link_property_parentAgents": {
+          "type": "object",
+          "properties": {
+            "Agent": {
+              "type": "null"
+            }
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "createdDate",
+        "createdBy",
+        "versionValidFrom",
+        "validFrom",
+        "agentType",
+        "isExternal"
+      ],
+      "description": "An actor that performs a role in relation to the statistical Business Process.",
+      "displayName": "Agent"
+    }
+  },
+  "$schema": "http://json-schema.org/draft-04/schema#"
+}
