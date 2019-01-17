@@ -10,6 +10,9 @@ import java.util.concurrent.Flow;
 
 /**
  * API proposal.
+ *
+ * TODO: Add reverse order in API.
+ * TODO: Maybe support several ranges.
  */
 public interface SimplePersistence {
 

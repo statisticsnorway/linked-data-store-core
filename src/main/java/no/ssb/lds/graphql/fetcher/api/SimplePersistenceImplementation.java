@@ -47,9 +47,8 @@ public class SimplePersistenceImplementation implements SimplePersistence {
 
         Flowable<Fragment> fragmentFlowable = fromFlowPublisher(persistence.read(tx, snapshot, nameSpace, entityName, id));
         fragmentFlowable = fragmentFlowable.filter(fragment -> {
+            // Remove the fragment that indicates end of stream.
             return !fragment.isStreamingControl();
-        }).filter(fragment -> {
-            return !fragment.deleteMarker();
         });
         return toFlowPublisher(fragmentFlowable);
     }
@@ -67,10 +66,10 @@ public class SimplePersistenceImplementation implements SimplePersistence {
         return fragmentFlowable.groupBy(fragment -> {
             // Fragments by id.
             return DocumentKey.from(fragment);
-        }).concatMapSingle(fragments -> {
+        }).flatMapSingle(fragments -> {
             // For each group, create a FlattenedDocument.
             DocumentKey key = fragments.getKey();
-            // Note that we return a Single<FlattenedDocument>. We use concat to "unwrap" them.
+            // Note that we return a Single<FlattenedDocument> so we use flatMap.
             return fragments.toMultimap(Fragment::path).map(map -> {
                 return FlattenedDocument.decodeDocument(key, map, capacityBytes);
             });
@@ -99,9 +98,8 @@ public class SimplePersistenceImplementation implements SimplePersistence {
                 range.getAfter(), Integer.MAX_VALUE);
         Flowable<Fragment> fragmentFlowable = fromFlowPublisher(fragmentPublisher)
                 .filter(fragment -> {
+                    // Remove the fragment that indicates end of stream.
                     return !fragment.isStreamingControl();
-                }).filter(fragment -> {
-                    return !fragment.deleteMarker();
                 });
         fragmentFlowable = limitFragments(fragmentFlowable, range);
         return toFlowPublisher(fragmentFlowable);
