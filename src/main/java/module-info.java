@@ -18,6 +18,7 @@ module no.ssb.lds.core {
     requires java.xml; // TODO this should be in test-scope only!
 
     requires graphql.java;
+    opens no.ssb.lds.graphql.graphiql;
 
     uses PersistenceInitializer;
 
