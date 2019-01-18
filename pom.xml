@@ -86,6 +86,19 @@
         </dependency>
 
         <dependency>
+            <groupId>no.ssb.lds</groupId>
+            <artifactId>linked-data-store-persistence-provider-api</artifactId>
+            <version>0.8</version>
+        </dependency>
+
+        <dependency>
+            <groupId>no.ssb.lds</groupId>
+            <artifactId>linked-data-store-persistence-provider-memory</artifactId>
+            <version>0.4</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>io.reactivex.rxjava2</groupId>
             <artifactId>rxjava</artifactId>
             <version>2.2.5</version>
@@ -100,23 +113,10 @@
         <!-- Will work with version 1.0.3. -->
         <!-- See https://github.com/reactive-streams/reactive-streams-jvm/issues/424 -->
         <!--<dependency>-->
-            <!--<groupId>org.reactivestreams</groupId>-->
-            <!--<artifactId>reactive-streams-flow-adapters</artifactId>-->
-            <!--<version>1.0.2</version>-->
+        <!--<groupId>org.reactivestreams</groupId>-->
+        <!--<artifactId>reactive-streams-flow-adapters</artifactId>-->
+        <!--<version>1.0.2</version>-->
         <!--</dependency>-->
-
-        <dependency>
-            <groupId>no.ssb.lds</groupId>
-            <artifactId>linked-data-store-persistence-provider-api</artifactId>
-            <version>0.5-SNAPSHOT</version>
-        </dependency>
-
-        <dependency>
-            <groupId>no.ssb.lds</groupId>
-            <artifactId>linked-data-store-persistence-provider-memory</artifactId>
-            <version>0.4-SNAPSHOT</version>
-            <scope>test</scope>
-        </dependency>
 
         <dependency>
             <groupId>com.graphql-java</groupId>
@@ -400,7 +400,7 @@
                 <configuration>
                     <serverId>ossrh</serverId>
                     <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-                    <autoReleaseAfterClose>false</autoReleaseAfterClose>
+                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
                 </configuration>
             </plugin>
             <plugin>
