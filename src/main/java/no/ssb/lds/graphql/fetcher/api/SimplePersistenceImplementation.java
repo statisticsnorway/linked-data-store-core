@@ -73,7 +73,7 @@ public class SimplePersistenceImplementation implements SimplePersistence {
             return fragments.toMultimap(Fragment::path).map(map -> {
                 return FlattenedDocument.decodeDocument(key, map, capacityBytes);
             }).toFlowable();
-        }, Integer.MAX_VALUE, 1).filter(flattenedDocument -> {
+        }).filter(flattenedDocument -> {
             // Filter out the deleted documents.
             return !flattenedDocument.deleted();
         }).map(flattenedDocument -> {

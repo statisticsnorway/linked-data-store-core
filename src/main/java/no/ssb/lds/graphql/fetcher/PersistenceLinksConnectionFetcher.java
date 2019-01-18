@@ -127,7 +127,7 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
             Flowable<JsonDocument> documentFlowable = idFlowable.concatMapEager(tardetId -> {
                 return fromFlowPublisher(persistence.readDocument(tx, parameters.getSnapshot(), nameSpace,
                         targetEntityName, tardetId));
-            }, Integer.MAX_VALUE, 1);
+            });
 
             List<Edge<Map<String, Object>>> edges = documentFlowable.map(document -> toEdge(document)).toList()
                     .blockingGet();
