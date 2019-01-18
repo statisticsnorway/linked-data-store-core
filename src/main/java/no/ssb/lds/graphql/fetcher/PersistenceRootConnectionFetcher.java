@@ -50,7 +50,8 @@ public class PersistenceRootConnectionFetcher extends ConnectionFetcher<Map<Stri
             );
 
             if (parameters.getFirst() != null) {
-                documentFlowable = documentFlowable.limit(parameters.getFirst());
+                // Note: using limit here prevents upstream to receive all requests.
+                documentFlowable = documentFlowable.take(parameters.getFirst());
             }
             if (parameters.getLast() != null) {
                 documentFlowable = documentFlowable.takeLast(parameters.getLast());

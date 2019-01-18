@@ -116,18 +116,18 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
             }
 
             if (parameters.getFirst() != null) {
-                idFlowable = idFlowable.limit(parameters.getFirst() + 1);
+                // Note: using limit here prevents upstream to receive all requests.
+                idFlowable = idFlowable.take(parameters.getFirst());
             }
             if (parameters.getLast() != null) {
                 idFlowable = idFlowable.takeLast(parameters.getLast());
             }
 
             // TODO: Find out why we need to use concatMapEager here to avoid "Previous fragment was not published!"
-            // from PrimaryIterator.
             Flowable<JsonDocument> documentFlowable = idFlowable.concatMapEager(tardetId -> {
                 return fromFlowPublisher(persistence.readDocument(tx, parameters.getSnapshot(), nameSpace,
                         targetEntityName, tardetId));
-            });
+            }, Integer.MAX_VALUE, 1);
 
             List<Edge<Map<String, Object>>> edges = documentFlowable.map(document -> toEdge(document)).toList()
                     .blockingGet();
