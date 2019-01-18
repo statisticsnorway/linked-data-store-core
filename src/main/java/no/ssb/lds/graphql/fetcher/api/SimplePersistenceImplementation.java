@@ -66,14 +66,14 @@ public class SimplePersistenceImplementation implements SimplePersistence {
         return fragmentFlowable.groupBy(fragment -> {
             // Fragments by id.
             return DocumentKey.from(fragment);
-        }).flatMapSingle(fragments -> {
+        }).concatMapEager(fragments -> {
             // For each group, create a FlattenedDocument.
             DocumentKey key = fragments.getKey();
             // Note that we return a Single<FlattenedDocument> so we use flatMap.
             return fragments.toMultimap(Fragment::path).map(map -> {
                 return FlattenedDocument.decodeDocument(key, map, capacityBytes);
-            });
-        }).filter(flattenedDocument -> {
+            }).toFlowable();
+        }, Integer.MAX_VALUE, 2).filter(flattenedDocument -> {
             // Filter out the deleted documents.
             return !flattenedDocument.deleted();
         }).map(flattenedDocument -> {

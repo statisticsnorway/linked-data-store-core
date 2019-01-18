@@ -72,7 +72,6 @@ public class PersistenceRootConnectionFetcherTest {
 
     }
 
-    @Ignore
     @Test
     public void testForwardPagination() throws Exception {
         Connection<Map<String, Object>> firstFive = connectionFetcher.get(withArguments(Map.of("first", 5)));
@@ -92,7 +91,6 @@ public class PersistenceRootConnectionFetcherTest {
         );
     }
 
-    @Ignore
     @Test
     public void testBackwardPagination() throws Exception {
         Connection<Map<String, Object>> lastFive = connectionFetcher.get(withArguments(Map.of("last", 5)));
@@ -112,7 +110,6 @@ public class PersistenceRootConnectionFetcherTest {
         );
     }
 
-    @Ignore
     @Test
     public void testAfter() throws Exception {
         Connection<Map<String, Object>> firstFiveAfter = connectionFetcher.get(
@@ -125,7 +122,6 @@ public class PersistenceRootConnectionFetcherTest {
         );
     }
 
-    @Ignore
     @Test
     public void testBefore() throws Exception {
         Connection<Map<String, Object>> lastFiveBefore = connectionFetcher.get(
