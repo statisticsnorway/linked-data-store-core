@@ -6,6 +6,7 @@ import io.undertow.Handlers;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.RoutingHandler;
+import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.resource.ClassPathResourceManager;
 import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
 import no.ssb.config.DynamicConfiguration;
@@ -127,25 +128,26 @@ public class UndertowApplication {
         this.sagaLog = sagaLog;
         this.sagaThreadPool = sagaThreadPool;
 
-        // TODO: Clean up.
-        RoutingHandler routingHandler = Handlers.routing();
-
+        PathHandler pathHandler = Handlers.path();
         if (graphqlEnabled) {
             GraphQL graphQL = GraphQL.newGraphQL(new GraphqlSchemaBuilder(specification, persistence, nameSpace)
                     .getSchema()).build();
-            routingHandler = routingHandler
-                    .get("graphiql**", Handlers.resource(new ClassPathResourceManager(
-                                    Thread.currentThread().getContextClassLoader(), "no/ssb/lds/graphql"
-                            )).setDirectoryListingEnabled(false).addWelcomeFiles("graphiql.html")
-                    )
-                    .post("graphql", new GraphqlHttpHandler(graphQL));
+
+            pathHandler.addExactPath("/graphiql", Handlers.resource(new ClassPathResourceManager(
+                    Thread.currentThread().getContextClassLoader(), "no/ssb/lds/graphql/graphiql"
+            )).setDirectoryListingEnabled(false).addWelcomeFiles("graphiql.html"));
+
+            GraphqlHttpHandler graphqlHttpHandler = new GraphqlHttpHandler(graphQL);
+            pathHandler.addExactPath("/graphql", graphqlHttpHandler);
         }
 
-        HttpHandler httpHandler = routingHandler
-                .setFallbackHandler(namespaceController);
+        pathHandler.addPrefixPath("/", namespaceController);
 
+        HttpHandler httpHandler;
         if (enableRequestDump) {
-            httpHandler = Handlers.requestDump(httpHandler);
+            httpHandler = Handlers.requestDump(pathHandler);
+        } else {
+            httpHandler = pathHandler;
         }
 
         this.server = Undertow.builder()
