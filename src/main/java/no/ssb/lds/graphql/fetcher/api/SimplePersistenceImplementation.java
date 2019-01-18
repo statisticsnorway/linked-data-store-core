@@ -149,14 +149,14 @@ public class SimplePersistenceImplementation implements SimplePersistence {
     @Override
     public boolean hasPrevious(Transaction tx, ZonedDateTime snapshot, String nameSpace, String entityName, String id) {
         Flow.Publisher<Fragment> fragmentPublisher = readFragments(tx, snapshot, nameSpace, entityName, Range.before(id));
-        Flowable<Fragment> fragmentFlowable = fromFlowPublisher(fragmentPublisher);
+        Flowable<Fragment> fragmentFlowable = fromFlowPublisher(fragmentPublisher).take(1);
         return !fragmentFlowable.isEmpty().blockingGet();
     }
 
     @Override
     public boolean hasNext(Transaction tx, ZonedDateTime snapshot, String nameSpace, String entityName, String id) {
         Flow.Publisher<Fragment> fragmentPublisher = readFragments(tx, snapshot, nameSpace, entityName, Range.after(id));
-        Flowable<Fragment> fragmentFlowable = fromFlowPublisher(fragmentPublisher);
+        Flowable<Fragment> fragmentFlowable = fromFlowPublisher(fragmentPublisher).take(1);
         return !fragmentFlowable.isEmpty().blockingGet();
     }
 
