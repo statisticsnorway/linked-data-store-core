@@ -98,15 +98,18 @@ public class PersistenceLinksConnectionFetcherTest {
     public void testForwardPagination() throws Exception {
         Connection<Map<String, Object>> firstFive = connectionFetcher.get(withArguments(Map.of("first", 5)));
 
-        assertThat(firstFive.getPageInfo().isHasPreviousPage()).isFalse();
-        assertThat(firstFive.getPageInfo().isHasNextPage()).isTrue();
-        assertThat(firstFive.getEdges()).extracting(Edge::getNode).containsExactlyElementsOf(
+        assertThat(firstFive.getPageInfo().isHasPreviousPage())
+                .as("hasPreviousPage").isFalse();
+        assertThat(firstFive.getPageInfo().isHasNextPage())
+                .as("hasNextPage").isTrue();
+        assertThat(firstFive.getEdges()).extracting(Edge::getNode)
+                .as("returned nodes").containsExactlyElementsOf(
                 () -> data.values().stream().map(JSONObject::toMap).limit(5).iterator()
         );
 
         Connection<Map<String, Object>> lastFive = connectionFetcher.get(withArguments(Map.of("first", 5, "after", firstFive.getPageInfo().getEndCursor().getValue())));
 
-        assertThat(lastFive.getPageInfo().isHasPreviousPage()).isTrue();
+        assertThat(lastFive.getPageInfo().isHasPreviousPage()).as("hasPreviousPage").isTrue();
         assertThat(lastFive.getPageInfo().isHasNextPage()).isFalse();
         assertThat(lastFive.getEdges()).extracting(Edge::getNode).containsExactlyElementsOf(
                 () -> data.values().stream().map(JSONObject::toMap).skip(5).iterator()
@@ -117,16 +120,20 @@ public class PersistenceLinksConnectionFetcherTest {
     public void testBackwardPagination() throws Exception {
         Connection<Map<String, Object>> lastFive = connectionFetcher.get(withArguments(Map.of("last", 5)));
 
-        assertThat(lastFive.getPageInfo().isHasPreviousPage()).isTrue();
-        assertThat(lastFive.getPageInfo().isHasNextPage()).isFalse();
+        assertThat(lastFive.getPageInfo().isHasPreviousPage())
+                .as("hasPreviousPage").isTrue();
+        assertThat(lastFive.getPageInfo().isHasNextPage())
+                .as("hasNextPage").isFalse();
         assertThat(lastFive.getEdges()).extracting(Edge::getNode).containsExactlyElementsOf(
                 () -> data.values().stream().map(JSONObject::toMap).skip(5).iterator()
         );
 
         Connection<Map<String, Object>> firstFive = connectionFetcher.get(withArguments(Map.of("last", 5, "before", lastFive.getPageInfo().getStartCursor().getValue())));
 
-        assertThat(firstFive.getPageInfo().isHasPreviousPage()).isFalse();
-        assertThat(firstFive.getPageInfo().isHasNextPage()).isTrue();
+        assertThat(firstFive.getPageInfo().isHasPreviousPage())
+                .as("hasPreviousPage").isFalse();
+        assertThat(firstFive.getPageInfo().isHasNextPage())
+                .as("hasNextPage").isTrue();
         assertThat(firstFive.getEdges()).extracting(Edge::getNode).containsExactlyElementsOf(
                 () -> data.values().stream().map(JSONObject::toMap).limit(5).iterator()
         );

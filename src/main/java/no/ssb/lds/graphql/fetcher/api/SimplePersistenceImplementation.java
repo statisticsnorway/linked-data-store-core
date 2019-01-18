@@ -107,7 +107,7 @@ public class SimplePersistenceImplementation implements SimplePersistence {
 
     private Flowable<Fragment> limitFragments(Flowable<Fragment> fragmentFlowable, Range range) {
         if (range.getAfter() != null) {
-            fragmentFlowable = fragmentFlowable.skipWhile(fragment -> fragment.id().compareTo(range.getAfter()) > 0);
+            fragmentFlowable = fragmentFlowable.skipWhile(fragment -> fragment.id().compareTo(range.getAfter()) <= 0);
         }
         if (range.getBefore() != null) {
             fragmentFlowable = fragmentFlowable.takeWhile(fragment -> fragment.id().compareTo(range.getBefore()) < 0);

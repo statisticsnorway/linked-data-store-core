@@ -103,8 +103,8 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
 
             String after = parameters.getAfter();
             if (after != null) {
-                idFlowable = idFlowable.filter(id -> {
-                    return id.compareTo(after) > 0;
+                idFlowable = idFlowable.skipWhile(id -> {
+                    return id.compareTo(after) <= 0;
                 });
             }
 
@@ -117,7 +117,7 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
 
             if (parameters.getFirst() != null) {
                 // Note: using limit here prevents upstream to receive all requests.
-                idFlowable = idFlowable.take(parameters.getFirst());
+                idFlowable = idFlowable.take(parameters.getFirst() + 1);
             }
             if (parameters.getLast() != null) {
                 idFlowable = idFlowable.takeLast(parameters.getLast());
