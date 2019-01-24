@@ -40,8 +40,6 @@ public class PersistenceConfiguratorTest {
             PersistenceConfigurator.configurePersistence(configuration, specification);
             Assert.fail("Test should have failed because configurations are missing");
         } catch (IllegalArgumentException e) {
-            Assert.assertTrue(e.getMessage().contains("persistence.mem.wait.min"));
-            Assert.assertTrue(e.getMessage().contains("persistence.mem.wait.max"));
             Assert.assertTrue(e.getMessage().contains("persistence.fragment.capacity"));
         }
     }
