@@ -1,6 +1,7 @@
 package no.ssb.lds.core.saga;
 
 import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.persistence.PersistenceCreateOrOverwriteSagaAdapter;
 import no.ssb.lds.core.persistence.PersistenceDeleteSagaAdapter;
@@ -19,7 +20,7 @@ public class SagaRepository {
 
     final AdapterLoader adapterLoader;
 
-    public SagaRepository(Specification specification, JsonPersistence persistence) {
+    public SagaRepository(Specification specification, RxJsonPersistence persistence) {
         register(Saga
                 .start(SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE).linkTo("persistence")
                 .id("persistence").adapter(PersistenceCreateOrOverwriteSagaAdapter.NAME).linkToEnd()

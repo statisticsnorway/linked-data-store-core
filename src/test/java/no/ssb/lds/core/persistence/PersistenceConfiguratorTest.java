@@ -5,6 +5,7 @@ import no.ssb.config.StoreBasedDynamicConfiguration;
 import no.ssb.lds.api.persistence.PersistenceInitializer;
 import no.ssb.lds.api.persistence.ProviderName;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import org.testng.Assert;
@@ -26,7 +27,7 @@ public class PersistenceConfiguratorTest {
                         "persistence.fragment.capacity", "1024")
                 .build();
         Specification specification = JsonSchemaBasedSpecification.create("spec/schemas/contact.json", "spec/schemas/provisionagreement.json");
-        JsonPersistence persistence = PersistenceConfigurator.configurePersistence(configuration, specification);
+        RxJsonPersistence persistence = PersistenceConfigurator.configurePersistence(configuration, specification);
         Assert.assertNotNull(persistence);
     }
 

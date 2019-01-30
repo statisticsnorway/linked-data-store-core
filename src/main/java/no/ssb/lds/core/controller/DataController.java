@@ -4,6 +4,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.domain.embedded.EmbeddedResourceHandler;
 import no.ssb.lds.core.domain.managed.ManagedResourceHandler;
@@ -29,11 +30,11 @@ class DataController implements HttpHandler {
 
     final Specification specification;
     final SchemaRepository schemaRepository;
-    final JsonPersistence persistence;
+    final RxJsonPersistence persistence;
     final SagaExecutionCoordinator sec;
     final SagaRepository sagaRepository;
 
-    DataController(Specification specification, SchemaRepository schemaRepository, JsonPersistence persistence, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
+    DataController(Specification specification, SchemaRepository schemaRepository, RxJsonPersistence persistence, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
         this.specification = specification;
         this.schemaRepository = schemaRepository;
         this.persistence = persistence;

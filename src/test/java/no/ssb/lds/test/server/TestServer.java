@@ -2,6 +2,7 @@ package no.ssb.lds.test.server;
 
 import no.ssb.config.DynamicConfiguration;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.UndertowApplication;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
@@ -49,7 +50,7 @@ public class TestServer implements TestUriResolver {
         }
     }
 
-    public JsonPersistence getPersistence() {
+    public RxJsonPersistence getPersistence() {
         return application.getPersistence();
     }
 

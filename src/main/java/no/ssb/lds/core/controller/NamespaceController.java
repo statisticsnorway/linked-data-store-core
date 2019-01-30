@@ -4,6 +4,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
 import no.ssb.lds.core.saga.SagaRepository;
@@ -19,7 +20,7 @@ public class NamespaceController implements HttpHandler {
 
     private final Specification specification;
     private final SchemaRepository schemaRepository;
-    private final JsonPersistence persistence;
+    private final RxJsonPersistence persistence;
     private final SagaExecutionCoordinator sec;
     private final SagaRepository sagaRepository;
     private String corsAllowOrigin;
@@ -27,7 +28,7 @@ public class NamespaceController implements HttpHandler {
     private boolean corsAllowOriginTest;
     private int undertowPort;
 
-    public NamespaceController(String namespaceDefault, Specification specification, SchemaRepository schemaRepository, JsonPersistence persistence, String corsAllowOrigin, String corsAllowHeaders, boolean corsAllowOriginTest, SagaExecutionCoordinator sec, SagaRepository sagaRepository, int undertowPort) {
+    public NamespaceController(String namespaceDefault, Specification specification, SchemaRepository schemaRepository, RxJsonPersistence persistence, String corsAllowOrigin, String corsAllowHeaders, boolean corsAllowOriginTest, SagaExecutionCoordinator sec, SagaRepository sagaRepository, int undertowPort) {
         this.specification = specification;
         this.schemaRepository = schemaRepository;
         this.persistence = persistence;

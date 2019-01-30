@@ -9,11 +9,8 @@ import graphql.schema.DataFetchingEnvironment;
 import io.reactivex.Flowable;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
-import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.persistence.streaming.Fragment;
-import no.ssb.lds.api.persistence.streaming.Persistence;
-import no.ssb.lds.graphql.fetcher.api.SimplePersistence;
-import no.ssb.lds.graphql.fetcher.api.SimplePersistenceImplementation;
 
 import java.util.Collections;
 import java.util.List;
@@ -32,7 +29,7 @@ import static hu.akarnokd.rxjava2.interop.FlowInterop.fromFlowPublisher;
 public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<String, Object>> {
 
     // Field name containing the ids of the target.
-    private final String path;
+    private final String relationField;
 
     private final String sourceEntityName;
 
@@ -42,22 +39,14 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
     // Name space
     private final String nameSpace;
 
-    private final SimplePersistence persistence;
+    private final RxJsonPersistence persistence;
     private final Pattern pattern;
 
-    public PersistenceLinksConnectionFetcher(JsonPersistence persistence, String nameSpace, String sourceEntityName, String field, String targetEntityName) {
-        this(persistence.getPersistence(), nameSpace, sourceEntityName, field, targetEntityName);
-    }
-
-    public PersistenceLinksConnectionFetcher(Persistence persistence, String nameSpace, String sourceEntityName, String field, String targetEntityName) {
-        this(new SimplePersistenceImplementation(persistence), nameSpace, sourceEntityName, field, targetEntityName);
-    }
-
-    public PersistenceLinksConnectionFetcher(SimplePersistence persistence, String nameSpace, String sourceEntityName, String field, String targetEntityName) {
+    public PersistenceLinksConnectionFetcher(RxJsonPersistence persistence, String nameSpace, String sourceEntityName, String field, String targetEntityName) {
         this.persistence = Objects.requireNonNull(persistence);
         this.nameSpace = Objects.requireNonNull(nameSpace);
         this.sourceEntityName = Objects.requireNonNull(sourceEntityName);
-        this.path = "$." + Objects.requireNonNull(field);
+        this.relationField = Objects.requireNonNull(field);
         this.targetEntityName = Objects.requireNonNull(targetEntityName);
         this.pattern = Pattern.compile("/" + targetEntityName + "/(?<id>.*)");
     }
@@ -76,60 +65,10 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
 
             String sourceId = getIdFromSource(environment);
 
-            Flow.Publisher<Fragment> fragmentPublisher = persistence.readFragments(tx, parameters.getSnapshot(),
-                    nameSpace, sourceEntityName, sourceId);
+            Flowable<JsonDocument> documents = persistence.readLinkedDocuments(tx, parameters.getSnapshot(), nameSpace, sourceEntityName, sourceId,
+                    relationField, parameters.getRange());
 
-            // TODO: Refactor the API so that we can ask for a particular path with id.
-            AtomicReference<String> first = new AtomicReference<>(null);
-            AtomicReference<String> last = new AtomicReference<>(null);
-
-            Flowable<String> idFlowable = fromFlowPublisher(fragmentPublisher)
-                    .filter(fragment -> {
-                        // Keep fragments of relation field.
-                        return fragment.path().startsWith(path);
-                    }).map(fragment -> {
-                        String id = new String(fragment.value());
-                        Matcher matcher = pattern.matcher(id);
-                        if (matcher.matches()) {
-                            return matcher.group("id");
-                        } else {
-                            throw new IllegalStateException("invalid relation value: " + id);
-                        }
-                    }).doOnNext(id -> {
-                        if (!first.compareAndSet(null, id)) {
-                            last.set(id);
-                        }
-                    });
-
-            String after = parameters.getAfter();
-            if (after != null) {
-                idFlowable = idFlowable.skipWhile(id -> {
-                    return id.compareTo(after) <= 0;
-                });
-            }
-
-            String before = parameters.getBefore();
-            if (before != null) {
-                idFlowable = idFlowable.takeWhile(id -> {
-                    return id.compareTo(before) < 0;
-                });
-            }
-
-            if (parameters.getFirst() != null) {
-                // Note: using limit here prevents upstream to receive all requests.
-                idFlowable = idFlowable.take(parameters.getFirst() + 1);
-            }
-            if (parameters.getLast() != null) {
-                idFlowable = idFlowable.takeLast(parameters.getLast());
-            }
-
-            // TODO: Find out why we need to use concatMapEager here to avoid "Previous fragment was not published!"
-            Flowable<JsonDocument> documentFlowable = idFlowable.concatMapEager(tardetId -> {
-                return fromFlowPublisher(persistence.readDocument(tx, parameters.getSnapshot(), nameSpace,
-                        targetEntityName, tardetId));
-            });
-
-            List<Edge<Map<String, Object>>> edges = documentFlowable.map(document -> toEdge(document)).toList()
+            List<Edge<Map<String, Object>>> edges = documents.map(document -> toEdge(document)).toList()
                     .blockingGet();
 
             if (edges.isEmpty()) {
@@ -145,8 +84,8 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
             Edge<Map<String, Object>> firstEdge = edges.get(0);
             Edge<Map<String, Object>> lastEdge = edges.get(edges.size() - 1);
 
-            boolean hasPrevious = !firstEdge.getCursor().getValue().equals(first.get());
-            boolean hasNext = !lastEdge.getCursor().getValue().equals(last.get());
+            boolean hasPrevious = true; // !firstEdge.getCursor().getValue().equals(first.get());
+            boolean hasNext = true; // !lastEdge.getCursor().getValue().equals(last.get());
 
             PageInfo pageInfo = new DefaultPageInfo(
                     firstEdge.getCursor(),

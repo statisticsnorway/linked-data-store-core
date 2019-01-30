@@ -11,6 +11,7 @@ import io.undertow.server.handlers.resource.ClassPathResourceManager;
 import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
 import no.ssb.config.DynamicConfiguration;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.controller.NamespaceController;
 import no.ssb.lds.core.persistence.PersistenceConfigurator;
@@ -45,12 +46,65 @@ public class UndertowApplication {
         return initializeUndertowApplication(configuration, port);
     }
 
+    private final RxJsonPersistence persistence;
+
+    private final Specification specification;
+    private final Undertow server;
+    private final String host;
+    private final int port;
+    UndertowApplication(Specification specification, RxJsonPersistence persistence, SagaExecutionCoordinator sec,
+                        SagaRepository sagaRepository, SagasObserver sagasObserver, String host, int port,
+                        boolean enableRequestDump, SagaLog sagaLog, SelectableThreadPoolExectutor sagaThreadPool,
+                        NamespaceController namespaceController, boolean graphqlEnabled, String nameSpace) {
+        this.specification = specification;
+        this.host = host;
+        this.port = port;
+        this.persistence = persistence;
+        this.sec = sec;
+        this.sagaRepository = sagaRepository;
+        this.sagasObserver = sagasObserver;
+        this.sagaLog = sagaLog;
+        this.sagaThreadPool = sagaThreadPool;
+
+        PathHandler pathHandler = Handlers.path();
+        if (graphqlEnabled) {
+            GraphQL graphQL = GraphQL.newGraphQL(new GraphqlSchemaBuilder(specification, persistence, nameSpace)
+                    .getSchema()).build();
+
+            pathHandler.addExactPath("/graphiql", Handlers.resource(new ClassPathResourceManager(
+                    Thread.currentThread().getContextClassLoader(), "no/ssb/lds/graphql/graphiql"
+            )).setDirectoryListingEnabled(false).addWelcomeFiles("graphiql.html"));
+
+            GraphqlHttpHandler graphqlHttpHandler = new GraphqlHttpHandler(graphQL);
+            pathHandler.addExactPath("/graphql", graphqlHttpHandler);
+        }
+
+        pathHandler.addPrefixPath("/", namespaceController);
+
+        HttpHandler httpHandler;
+        if (enableRequestDump) {
+            httpHandler = Handlers.requestDump(pathHandler);
+        } else {
+            httpHandler = pathHandler;
+        }
+
+        this.server = Undertow.builder()
+                .addHttpListener(port, host)
+                .setHandler(httpHandler)
+                .build();
+    }
+    private final SagaExecutionCoordinator sec;
+    private final SagaRepository sagaRepository;
+    private final SagasObserver sagasObserver;
+    private final SagaLog sagaLog;
+    private final SelectableThreadPoolExectutor sagaThreadPool;
+
     public static UndertowApplication initializeUndertowApplication(DynamicConfiguration configuration, int port) {
         LOG.info("Initializing Linked Data Store (LDS) server ...");
         String schemaConfigStr = configuration.evaluateToString("specification.schema");
         String[] specificationSchema = ("".equals(schemaConfigStr) ? new String[0] : schemaConfigStr.split(","));
         JsonSchemaBasedSpecification specification = JsonSchemaBasedSpecification.create(specificationSchema);
-        JsonPersistence persistence = PersistenceConfigurator.configurePersistence(configuration, specification);
+        RxJsonPersistence persistence = PersistenceConfigurator.configurePersistence(configuration, specification);
         SagaLog sagaLog = SagaLogInitializer.initializeSagaLog(configuration.evaluateToString("saga.log.type"), configuration.evaluateToString("saga.log.type.file.path"));
         String host = configuration.evaluateToString("http.host");
         SagaRepository sagaRepository = new SagaRepository(specification, persistence);
@@ -101,59 +155,6 @@ public class UndertowApplication {
         return new UndertowApplication(specification, persistence, sec, sagaRepository, sagasObserver, host, port, enableRequestDump,
                 sagaLog, sagaThreadPool, namespaceController, graphqlEnabled,
                 configuration.evaluateToString("namespace.default"));
-    }
-
-    private final Specification specification;
-    private final Undertow server;
-    private final String host;
-    private final int port;
-    private final JsonPersistence persistence;
-    private final SagaExecutionCoordinator sec;
-    private final SagaRepository sagaRepository;
-    private final SagasObserver sagasObserver;
-    private final SagaLog sagaLog;
-    private final SelectableThreadPoolExectutor sagaThreadPool;
-
-    UndertowApplication(Specification specification, JsonPersistence persistence, SagaExecutionCoordinator sec,
-                        SagaRepository sagaRepository, SagasObserver sagasObserver, String host, int port,
-                        boolean enableRequestDump, SagaLog sagaLog, SelectableThreadPoolExectutor sagaThreadPool,
-                        NamespaceController namespaceController, boolean graphqlEnabled, String nameSpace) {
-        this.specification = specification;
-        this.host = host;
-        this.port = port;
-        this.persistence = persistence;
-        this.sec = sec;
-        this.sagaRepository = sagaRepository;
-        this.sagasObserver = sagasObserver;
-        this.sagaLog = sagaLog;
-        this.sagaThreadPool = sagaThreadPool;
-
-        PathHandler pathHandler = Handlers.path();
-        if (graphqlEnabled) {
-            GraphQL graphQL = GraphQL.newGraphQL(new GraphqlSchemaBuilder(specification, persistence, nameSpace)
-                    .getSchema()).build();
-
-            pathHandler.addExactPath("/graphiql", Handlers.resource(new ClassPathResourceManager(
-                    Thread.currentThread().getContextClassLoader(), "no/ssb/lds/graphql/graphiql"
-            )).setDirectoryListingEnabled(false).addWelcomeFiles("graphiql.html"));
-
-            GraphqlHttpHandler graphqlHttpHandler = new GraphqlHttpHandler(graphQL);
-            pathHandler.addExactPath("/graphql", graphqlHttpHandler);
-        }
-
-        pathHandler.addPrefixPath("/", namespaceController);
-
-        HttpHandler httpHandler;
-        if (enableRequestDump) {
-            httpHandler = Handlers.requestDump(pathHandler);
-        } else {
-            httpHandler = pathHandler;
-        }
-
-        this.server = Undertow.builder()
-                .addHttpListener(port, host)
-                .setHandler(httpHandler)
-                .build();
     }
 
     public void enableSagaExecutionAutomaticDeadlockDetectionAndResolution() {
@@ -209,7 +210,7 @@ public class UndertowApplication {
         return server;
     }
 
-    public JsonPersistence getPersistence() {
+    public RxJsonPersistence getPersistence() {
         return persistence;
     }
 

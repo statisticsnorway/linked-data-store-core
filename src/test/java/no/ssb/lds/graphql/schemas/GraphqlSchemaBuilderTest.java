@@ -2,12 +2,18 @@ package no.ssb.lds.graphql.schemas;
 
 import graphql.schema.GraphQLSchema;
 import graphql.schema.idl.SchemaPrinter;
+import io.reactivex.Completable;
+import io.reactivex.Flowable;
+import io.reactivex.Maybe;
+import io.reactivex.Single;
 import no.ssb.lds.api.persistence.PersistenceDeletePolicy;
 import no.ssb.lds.api.persistence.PersistenceException;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.TransactionFactory;
 import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.persistence.reactivex.Range;
+import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.persistence.streaming.Fragment;
 import no.ssb.lds.api.persistence.streaming.Persistence;
 import no.ssb.lds.api.specification.Specification;
@@ -57,7 +63,7 @@ public class GraphqlSchemaBuilderTest {
                 "no/ssb/lds/graphql/schemas/Role.json"
 
         );
-        JsonPersistence fakePersistence = new MockPersistence();
+        RxJsonPersistence fakePersistence = new MockPersistence();
         GraphqlSchemaBuilder builder = new GraphqlSchemaBuilder(specification, fakePersistence,
                 "/ns");
         GraphQLSchema schema = builder.getSchema();
@@ -67,74 +73,54 @@ public class GraphqlSchemaBuilderTest {
 
     }
 
-    private class MockPersistence implements JsonPersistence {
+    private class MockPersistence implements RxJsonPersistence {
         @Override
-        public Persistence getPersistence() {
-            return new Persistence() {
-                @Override
-                public TransactionFactory transactionFactory() throws PersistenceException {
-                    return null;
-                }
-
-                @Override
-                public Transaction createTransaction(boolean readOnly) throws PersistenceException {
-                    return null;
-                }
-
-                @Override
-                public CompletableFuture<Void> createOrOverwrite(Transaction transaction, Flow.Publisher<Fragment> publisher) throws PersistenceException {
-                    return null;
-                }
-
-                @Override
-                public Flow.Publisher<Fragment> read(Transaction transaction, ZonedDateTime snapshot, String namespace, String entity, String id) throws PersistenceException {
-                    return null;
-                }
-
-                @Override
-                public Flow.Publisher<Fragment> readVersions(Transaction transaction, ZonedDateTime snapshotFrom, ZonedDateTime snapshotTo, String namespace, String entity, String id, ZonedDateTime firstVersion, int limit) throws PersistenceException {
-                    return null;
-                }
-
-                @Override
-                public Flow.Publisher<Fragment> readAllVersions(Transaction transaction, String namespace, String entity, String id, ZonedDateTime firstVersion, int limit) throws PersistenceException {
-                    return null;
-                }
-
-                @Override
-                public CompletableFuture<Void> delete(Transaction transaction, String namespace, String entity, String id, ZonedDateTime version, PersistenceDeletePolicy policy) throws PersistenceException {
-                    return null;
-                }
-
-                @Override
-                public CompletableFuture<Void> deleteAllVersions(Transaction transaction, String namespace, String entity, String id, PersistenceDeletePolicy policy) throws PersistenceException {
-                    return null;
-                }
-
-                @Override
-                public CompletableFuture<Void> markDeleted(Transaction transaction, String namespace, String entity, String id, ZonedDateTime version, PersistenceDeletePolicy policy) throws PersistenceException {
-                    return null;
-                }
-
-                @Override
-                public Flow.Publisher<Fragment> findAll(Transaction transaction, ZonedDateTime snapshot, String namespace, String entity, String firstId, int limit) throws PersistenceException {
-                    return null;
-                }
-
-                @Override
-                public Flow.Publisher<Fragment> find(Transaction transaction, ZonedDateTime snapshot, String namespace, String entity, String path, byte[] value, String firstId, int limit) throws PersistenceException {
-                    return null;
-                }
-
-                @Override
-                public void close() throws PersistenceException {
-
-                }
-            };
+        public Maybe<JsonDocument> readDocument(Transaction tx, ZonedDateTime snapshot, String ns, String entityName, String id) {
+            return null;
         }
 
         @Override
-        public TransactionFactory transactionFactory() throws PersistenceException {
+        public Flowable<JsonDocument> readDocuments(Transaction tx, ZonedDateTime snapshot, String ns, String entityName, Range<String> range) {
+            return null;
+        }
+
+        @Override
+        public Flowable<JsonDocument> readDocumentVersions(Transaction tx, String ns, String entityName, String id, Range<ZonedDateTime> range) {
+            return null;
+        }
+
+        @Override
+        public Flowable<JsonDocument> readLinkedDocuments(Transaction tx, ZonedDateTime snapshot, String ns, String entityName, String id, String relationName, Range<String> range) {
+            return null;
+        }
+
+        @Override
+        public Completable createOrOverwrite(Transaction tx, JsonDocument document, Specification specification) {
+            return null;
+        }
+
+        @Override
+        public Completable deleteDocument(Transaction tx, String ns, String entityName, String id, ZonedDateTime version, PersistenceDeletePolicy policy) {
+            return null;
+        }
+
+        @Override
+        public Completable deleteAllDocumentVersions(Transaction tx, String ns, String entity, String id, PersistenceDeletePolicy policy) {
+            return null;
+        }
+
+        @Override
+        public Completable markDocumentDeleted(Transaction transaction, String ns, String entityName, String id, ZonedDateTime version, PersistenceDeletePolicy policy) {
+            return null;
+        }
+
+        @Override
+        public Single<Boolean> hasPrevious(Transaction tx, ZonedDateTime snapshot, String ns, String entityName, String id) {
+            return null;
+        }
+
+        @Override
+        public Single<Boolean> hasNext(Transaction tx, ZonedDateTime snapshot, String ns, String entityName, String id) {
             return null;
         }
 
@@ -144,47 +130,7 @@ public class GraphqlSchemaBuilderTest {
         }
 
         @Override
-        public CompletableFuture<Void> createOrOverwrite(Transaction transaction, JsonDocument document, Specification specification) throws PersistenceException {
-            return null;
-        }
-
-        @Override
-        public CompletableFuture<JsonDocument> read(Transaction transaction, ZonedDateTime snapshot, String namespace, String entity, String id) throws PersistenceException {
-            return null;
-        }
-
-        @Override
-        public CompletableFuture<Iterable<JsonDocument>> readVersions(Transaction transaction, ZonedDateTime snapshotFrom, ZonedDateTime snapshotTo, String namespace, String entity, String id, ZonedDateTime firstVersion, int limit) throws PersistenceException {
-            return null;
-        }
-
-        @Override
-        public CompletableFuture<Iterable<JsonDocument>> readAllVersions(Transaction transaction, String namespace, String entity, String id, ZonedDateTime firstVersion, int limit) throws PersistenceException {
-            return null;
-        }
-
-        @Override
-        public CompletableFuture<Void> delete(Transaction transaction, String namespace, String entity, String id, ZonedDateTime version, PersistenceDeletePolicy policy) throws PersistenceException {
-            return null;
-        }
-
-        @Override
-        public CompletableFuture<Void> deleteAllVersions(Transaction transaction, String namespace, String entity, String id, PersistenceDeletePolicy policy) throws PersistenceException {
-            return null;
-        }
-
-        @Override
-        public CompletableFuture<Void> markDeleted(Transaction transaction, String namespace, String entity, String id, ZonedDateTime version, PersistenceDeletePolicy policy) throws PersistenceException {
-            return null;
-        }
-
-        @Override
-        public CompletableFuture<Iterable<JsonDocument>> findAll(Transaction transaction, ZonedDateTime snapshot, String namespace, String entity, String firstId, int limit) throws PersistenceException {
-            return null;
-        }
-
-        @Override
-        public CompletableFuture<Iterable<JsonDocument>> find(Transaction transaction, ZonedDateTime snapshot, String namespace, String entity, String path, Object value, String firstId, int limit) throws PersistenceException {
+        public Flowable<JsonDocument> findDocument(Transaction tx, ZonedDateTime snapshot, String namespace, String entityName, String path, String value, Range<String> range) {
             return null;
         }
 

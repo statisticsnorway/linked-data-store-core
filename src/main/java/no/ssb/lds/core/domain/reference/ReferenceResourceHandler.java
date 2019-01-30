@@ -7,6 +7,7 @@ import no.ssb.concurrent.futureselector.SelectableFuture;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.domain.resource.ResourceContext;
 import no.ssb.lds.core.domain.resource.ResourceElement;
@@ -27,13 +28,13 @@ public class ReferenceResourceHandler implements HttpHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(ReferenceResourceHandler.class);
 
-    final JsonPersistence persistence;
+    final RxJsonPersistence persistence;
     final Specification specification;
     final ResourceContext resourceContext;
     final SagaExecutionCoordinator sec;
     final SagaRepository sagaRepository;
 
-    public ReferenceResourceHandler(JsonPersistence persistence, Specification specification, ResourceContext resourceContext, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
+    public ReferenceResourceHandler(RxJsonPersistence persistence, Specification specification, ResourceContext resourceContext, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
         this.persistence = persistence;
         this.specification = specification;
         this.resourceContext = resourceContext;
@@ -63,7 +64,7 @@ public class ReferenceResourceHandler implements HttpHandler {
 
         JSONObject jsonObject;
         try (Transaction tx = persistence.createTransaction(true)) {
-            JsonDocument jsonDocument = persistence.read(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).join();
+            JsonDocument jsonDocument = persistence.readDocument(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).blockingGet();
             if (jsonDocument == null || jsonDocument.deleted()) {
                 exchange.setStatusCode(404);
                 return;
@@ -90,7 +91,7 @@ public class ReferenceResourceHandler implements HttpHandler {
                 (httpServerExchange, message) -> {
                     JsonDocument jsonDocument;
                     try (Transaction tx = persistence.createTransaction(true)) {
-                        jsonDocument = persistence.read(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).join();
+                        jsonDocument = persistence.readDocument(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).blockingGet();
                     }
                     boolean referenceToExists = false;
                     if (jsonDocument != null && !jsonDocument.deleted()) {
@@ -130,7 +131,7 @@ public class ReferenceResourceHandler implements HttpHandler {
 
         JSONArray output = new JSONArray();
         try (Transaction tx = persistence.createTransaction(true)) {
-            JsonDocument jsonDocument = persistence.read(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).join();
+            JsonDocument jsonDocument = persistence.readDocument(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).blockingGet();
             if (jsonDocument != null && !jsonDocument.deleted()) {
                 output.put(jsonDocument.document());
 

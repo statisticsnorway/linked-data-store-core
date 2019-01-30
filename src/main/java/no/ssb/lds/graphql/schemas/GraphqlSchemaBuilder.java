@@ -12,6 +12,7 @@ import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeReference;
 import graphql.schema.GraphQLUnionType;
 import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.api.specification.SpecificationElement;
 import no.ssb.lds.api.specification.SpecificationElementType;
@@ -47,10 +48,10 @@ public class GraphqlSchemaBuilder {
     private final Set<String> unionTypes = new HashSet<>();
     private final Set<String> connectionTypes = new HashSet<>();
 
-    private final JsonPersistence persistence;
+    private final RxJsonPersistence persistence;
     private final String nameSpace;
 
-    public GraphqlSchemaBuilder(Specification specification, JsonPersistence persistence, String nameSpace) {
+    public GraphqlSchemaBuilder(Specification specification, RxJsonPersistence persistence, String nameSpace) {
         this.specification = Objects.requireNonNull(specification);
         this.persistence = Objects.requireNonNull(persistence);
         this.nameSpace = Objects.requireNonNull(nameSpace);
