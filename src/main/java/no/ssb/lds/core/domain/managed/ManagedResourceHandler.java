@@ -80,7 +80,7 @@ public class ManagedResourceHandler implements HttpHandler {
         JSONArray output = new JSONArray();
         try (Transaction tx = persistence.createTransaction(true)) {
             if (isManagedList) {
-                Iterable<JsonDocument> documents = persistence.findDocument(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), null, null, Range.unbounded()).blockingIterable();
+                Iterable<JsonDocument> documents = persistence.readDocuments(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), Range.unbounded()).blockingIterable();
                 for (JsonDocument jsonDocument : documents) {
                     if (jsonDocument.deleted()) {
                         continue;
