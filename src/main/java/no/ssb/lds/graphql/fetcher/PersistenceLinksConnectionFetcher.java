@@ -10,18 +10,11 @@ import io.reactivex.Flowable;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
-import no.ssb.lds.api.persistence.streaming.Fragment;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.Flow;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import static hu.akarnokd.rxjava2.interop.FlowInterop.fromFlowPublisher;
 
 /**
  * A wrapper around {@link PersistenceLinksFetcher} that support relay style connections.
@@ -29,7 +22,7 @@ import static hu.akarnokd.rxjava2.interop.FlowInterop.fromFlowPublisher;
 public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<String, Object>> {
 
     // Field name containing the ids of the target.
-    private final String relationField;
+    private final String relationPath;
 
     private final String sourceEntityName;
 
@@ -40,15 +33,13 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
     private final String nameSpace;
 
     private final RxJsonPersistence persistence;
-    private final Pattern pattern;
 
-    public PersistenceLinksConnectionFetcher(RxJsonPersistence persistence, String nameSpace, String sourceEntityName, String field, String targetEntityName) {
+    public PersistenceLinksConnectionFetcher(RxJsonPersistence persistence, String nameSpace, String sourceEntityName, String path, String targetEntityName) {
         this.persistence = Objects.requireNonNull(persistence);
         this.nameSpace = Objects.requireNonNull(nameSpace);
         this.sourceEntityName = Objects.requireNonNull(sourceEntityName);
-        this.relationField = Objects.requireNonNull(field);
+        this.relationPath = Objects.requireNonNull(path);
         this.targetEntityName = Objects.requireNonNull(targetEntityName);
-        this.pattern = Pattern.compile("/" + targetEntityName + "/(?<id>.*)");
     }
 
     /**
@@ -65,8 +56,8 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
 
             String sourceId = getIdFromSource(environment);
 
-            Flowable<JsonDocument> documents = persistence.readLinkedDocuments(tx, parameters.getSnapshot(), nameSpace, sourceEntityName, sourceId,
-                    relationField, parameters.getRange());
+            Flowable<JsonDocument> documents = persistence.readLinkedDocuments(tx, parameters.getSnapshot(), nameSpace,
+                    sourceEntityName, sourceId, relationPath, targetEntityName, parameters.getRange());
 
             List<Edge<Map<String, Object>>> edges = documents.map(document -> toEdge(document)).toList()
                     .blockingGet();

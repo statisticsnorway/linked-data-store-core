@@ -9,21 +9,14 @@ import io.reactivex.Single;
 import no.ssb.lds.api.persistence.PersistenceDeletePolicy;
 import no.ssb.lds.api.persistence.PersistenceException;
 import no.ssb.lds.api.persistence.Transaction;
-import no.ssb.lds.api.persistence.TransactionFactory;
 import no.ssb.lds.api.persistence.json.JsonDocument;
-import no.ssb.lds.api.persistence.json.JsonPersistence;
 import no.ssb.lds.api.persistence.reactivex.Range;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
-import no.ssb.lds.api.persistence.streaming.Fragment;
-import no.ssb.lds.api.persistence.streaming.Persistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
-import no.ssb.lds.graphql.schemas.GraphqlSchemaBuilder;
 import org.testng.annotations.Test;
 
 import java.time.ZonedDateTime;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Flow;
 
 public class GraphqlSchemaBuilderTest {
 
@@ -90,7 +83,7 @@ public class GraphqlSchemaBuilderTest {
         }
 
         @Override
-        public Flowable<JsonDocument> readLinkedDocuments(Transaction tx, ZonedDateTime snapshot, String ns, String entityName, String id, String relationName, Range<String> range) {
+        public Flowable<JsonDocument> readLinkedDocuments(Transaction tx, ZonedDateTime snapshot, String ns, String entityName, String id, String relationName, String targetEntityName, Range<String> range) {
             return null;
         }
 

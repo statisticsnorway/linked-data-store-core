@@ -11,7 +11,6 @@ import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeReference;
 import graphql.schema.GraphQLUnionType;
-import no.ssb.lds.api.persistence.json.JsonPersistence;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.api.specification.SpecificationElement;
@@ -23,6 +22,8 @@ import no.ssb.lds.graphql.fetcher.PersistenceRootConnectionFetcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Objects;
@@ -295,6 +296,15 @@ public class GraphqlSchemaBuilder {
             connectionType = GraphQLTypeReference.typeRef(connectionName);
         }
 
+        ArrayList<String> path = new ArrayList<>();
+        SpecificationElement node = property;
+        do {
+            if (node.getSpecificationElementType() != SpecificationElementType.MANAGED)
+                path.add(node.getName());
+        } while ((node = node.getParent()).getSpecificationElementType() != SpecificationElementType.ROOT);
+        path.add("$");
+        Collections.reverse(path);
+        String jsonPath = String.join(".", path);
 
         return GraphQLFieldDefinition.newFieldDefinition()
                 .name(property.getName())
@@ -304,7 +314,7 @@ public class GraphqlSchemaBuilder {
                 .argument(GraphQLArgument.newArgument().name("before").type(GraphQLString).build())
                 .type(connectionType)
                 .dataFetcher(new PersistenceLinksConnectionFetcher(
-                        persistence, nameSpace, sourceName, property.getName(), targetName
+                        persistence, nameSpace, sourceName, jsonPath, targetName
                 ));
     }
 
