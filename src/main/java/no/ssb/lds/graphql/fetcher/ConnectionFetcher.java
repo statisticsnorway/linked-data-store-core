@@ -7,6 +7,7 @@ import graphql.relay.Edge;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import no.ssb.lds.api.persistence.json.JsonDocument;
+import no.ssb.lds.api.persistence.reactivex.Range;
 import no.ssb.lds.graphql.GraphQLContext;
 
 import java.time.ZonedDateTime;
@@ -99,6 +100,16 @@ public abstract class ConnectionFetcher<T> implements DataFetcher<Connection<T>>
 
         public Integer getFirst() {
             return first;
+        }
+
+        public Range<String> getRange() {
+            if (first != null) {
+                return Range.firstBetween(first, after, before);
+            } else if (last != null) {
+                return Range.lastBetween(last, after, before);
+            } else {
+                return Range.between(after, before);
+            }
         }
     }
 }

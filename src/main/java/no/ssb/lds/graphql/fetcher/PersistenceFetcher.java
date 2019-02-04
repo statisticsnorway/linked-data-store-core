@@ -4,21 +4,20 @@ import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
-import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.graphql.GraphQLContext;
 
 import java.time.ZonedDateTime;
 import java.util.Map;
 import java.util.Objects;
 import java.util.StringJoiner;
-import java.util.concurrent.CompletableFuture;
 
 /**
- * DataFetcher that gets the data from {@link JsonPersistence}.
+ * DataFetcher that gets the data from {@link RxJsonPersistence}.
  */
 public class PersistenceFetcher implements DataFetcher<Map<String, Object>> {
 
-    private final JsonPersistence backend;
+    private final RxJsonPersistence backend;
     private final String nameSpace;
     private final String entity;
 
@@ -29,7 +28,7 @@ public class PersistenceFetcher implements DataFetcher<Map<String, Object>> {
      * @param nameSpace the namespace.
      * @param entity    the entity name.
      */
-    public PersistenceFetcher(JsonPersistence backend, String nameSpace, String entity) {
+    public PersistenceFetcher(RxJsonPersistence backend, String nameSpace, String entity) {
         this.backend = Objects.requireNonNull(backend);
         this.nameSpace = Objects.requireNonNull(nameSpace);
         this.entity = Objects.requireNonNull(entity);
@@ -44,8 +43,7 @@ public class PersistenceFetcher implements DataFetcher<Map<String, Object>> {
 
     private JsonDocument readDocument(String id, ZonedDateTime snapshot) {
         try (Transaction tx = backend.createTransaction(true)) {
-            CompletableFuture<JsonDocument> future = backend.read(tx, snapshot, nameSpace, this.entity, id);
-            return future.join();
+            return backend.readDocument(tx, snapshot, nameSpace, this.entity, id).blockingGet();
         }
     }
 

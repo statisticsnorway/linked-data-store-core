@@ -9,17 +9,12 @@ import graphql.schema.DataFetchingEnvironment;
 import io.reactivex.Flowable;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
-import no.ssb.lds.api.persistence.json.JsonPersistence;
-import no.ssb.lds.graphql.fetcher.api.SimplePersistence;
-import no.ssb.lds.graphql.fetcher.api.SimplePersistenceImplementation;
+import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
-import static hu.akarnokd.rxjava2.interop.FlowInterop.fromFlowPublisher;
-import static no.ssb.lds.graphql.fetcher.api.SimplePersistence.Range;
 
 /**
  * Root fetcher that supports relay style connections.
@@ -27,12 +22,12 @@ import static no.ssb.lds.graphql.fetcher.api.SimplePersistence.Range;
 public class PersistenceRootConnectionFetcher extends ConnectionFetcher<Map<String, Object>> {
 
 
-    private final SimplePersistence persistence;
+    private final RxJsonPersistence persistence;
     private String nameSpace;
     private String entityName;
 
-    public PersistenceRootConnectionFetcher(JsonPersistence persistence, String nameSpace, String entityName) {
-        this.persistence = new SimplePersistenceImplementation(Objects.requireNonNull(persistence.getPersistence()));
+    public PersistenceRootConnectionFetcher(RxJsonPersistence persistence, String nameSpace, String entityName) {
+        this.persistence = Objects.requireNonNull(persistence);
         this.nameSpace = Objects.requireNonNull(nameSpace);
         this.entityName = Objects.requireNonNull(entityName);
     }
@@ -42,20 +37,8 @@ public class PersistenceRootConnectionFetcher extends ConnectionFetcher<Map<Stri
                                                   ConnectionParameters parameters) {
         try (Transaction tx = persistence.createTransaction(true)) {
 
-            Flowable<JsonDocument> documentFlowable = fromFlowPublisher(
-                    persistence.readDocuments(tx, parameters.getSnapshot(), nameSpace, entityName, Range.between(
-                            parameters.getAfter(),
-                            parameters.getBefore()
-                    ))
-            );
-
-            if (parameters.getFirst() != null) {
-                // Note: using limit here prevents upstream to receive all requests.
-                documentFlowable = documentFlowable.take(parameters.getFirst());
-            }
-            if (parameters.getLast() != null) {
-                documentFlowable = documentFlowable.takeLast(parameters.getLast());
-            }
+            Flowable<JsonDocument> documentFlowable = persistence.readDocuments(
+                    tx, parameters.getSnapshot(), nameSpace, entityName, parameters.getRange());
 
             List<Edge<Map<String, Object>>> edges = documentFlowable.map(document -> toEdge(document)).toList().blockingGet();
 
@@ -68,10 +51,10 @@ public class PersistenceRootConnectionFetcher extends ConnectionFetcher<Map<Stri
             Edge<Map<String, Object>> lastEdge = edges.get(edges.size() - 1);
 
             boolean hasPrevious = persistence.hasPrevious(tx, parameters.getSnapshot(), nameSpace, entityName,
-                    firstEdge.getCursor().getValue());
+                    firstEdge.getCursor().getValue()).blockingGet();
 
             boolean hasNext = persistence.hasNext(tx, parameters.getSnapshot(), nameSpace, entityName,
-                    lastEdge.getCursor().getValue());
+                    lastEdge.getCursor().getValue()).blockingGet();
 
             PageInfo pageInfo = new DefaultPageInfo(
                     firstEdge.getCursor(),

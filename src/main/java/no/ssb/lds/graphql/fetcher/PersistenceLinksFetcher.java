@@ -2,16 +2,16 @@ package no.ssb.lds.graphql.fetcher;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
+import io.reactivex.Maybe;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
-import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.graphql.GraphQLContext;
 
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -19,11 +19,11 @@ public class PersistenceLinksFetcher implements DataFetcher<List<Map<String, Obj
 
     private final String field;
     private final String target;
-    private final JsonPersistence persistence;
+    private final RxJsonPersistence persistence;
     private final Pattern pattern;
     private final String namespace;
 
-    public PersistenceLinksFetcher(JsonPersistence persistence, String namespace, String field, String target) {
+    public PersistenceLinksFetcher(RxJsonPersistence persistence, String namespace, String field, String target) {
         this.field = field;
         this.target = target;
         this.persistence = persistence;
@@ -55,8 +55,8 @@ public class PersistenceLinksFetcher implements DataFetcher<List<Map<String, Obj
 
     private JsonDocument readDocument(String id, ZonedDateTime snapshot) {
         try (Transaction tx = persistence.createTransaction(true)) {
-            CompletableFuture<JsonDocument> future = persistence.read(tx, snapshot, namespace, target, id);
-            return future.join();
+            Maybe<JsonDocument> jsonDocumentMaybe = persistence.readDocument(tx, snapshot, namespace, target, id);
+            return jsonDocumentMaybe.blockingGet();
         }
     }
 }

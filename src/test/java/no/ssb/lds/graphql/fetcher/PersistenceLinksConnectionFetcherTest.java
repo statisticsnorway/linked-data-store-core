@@ -17,11 +17,9 @@ import io.undertow.server.HttpServerExchange;
 import no.ssb.lds.api.persistence.DocumentKey;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
-import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.core.persistence.memory.MemoryInitializer;
 import no.ssb.lds.graphql.GraphQLContext;
-import no.ssb.lds.graphql.fetcher.api.SimplePersistence;
-import no.ssb.lds.graphql.fetcher.api.SimplePersistenceImplementation;
 import org.dataloader.DataLoader;
 import org.json.JSONObject;
 import org.testng.annotations.BeforeMethod;
@@ -57,12 +55,11 @@ public class PersistenceLinksConnectionFetcherTest {
 
     @BeforeMethod
     public void setUp() {
-        JsonPersistence persistence = new MemoryInitializer().initialize("ns",
+        RxJsonPersistence persistence = new MemoryInitializer().initialize("ns",
                 Map.of("persistence.mem.wait.min", "0",
                         "persistence.mem.wait.max", "0"),
                 Set.of("Source", "Target"));
-        SimplePersistence simplePersistence = new SimplePersistenceImplementation(persistence.getPersistence());
-        connectionFetcher = new PersistenceLinksConnectionFetcher(simplePersistence, "ns", "Source", "targetIds", "Target");
+        connectionFetcher = new PersistenceLinksConnectionFetcher(persistence, "ns", "Source", "$.targetIds", "Target");
         snapshot = ZonedDateTime.now();
 
         // Populate persistence with fake data.

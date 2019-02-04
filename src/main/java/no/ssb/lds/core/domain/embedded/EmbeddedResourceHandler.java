@@ -6,7 +6,7 @@ import io.undertow.util.Headers;
 import no.ssb.concurrent.futureselector.SelectableFuture;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
-import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.domain.resource.ResourceContext;
 import no.ssb.lds.core.domain.resource.ResourceElement;
@@ -37,10 +37,10 @@ public class EmbeddedResourceHandler implements HttpHandler {
     private final SchemaRepository schemaRepository;
     private final ResourceContext resourceContext;
     private final SagaExecutionCoordinator sec;
-    private final JsonPersistence persistence;
+    private final RxJsonPersistence persistence;
     private final SagaRepository sagaRepository;
 
-    public EmbeddedResourceHandler(JsonPersistence persistence, Specification specification, SchemaRepository schemaRepository, ResourceContext resourceContext, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
+    public EmbeddedResourceHandler(RxJsonPersistence persistence, Specification specification, SchemaRepository schemaRepository, ResourceContext resourceContext, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
         this.persistence = persistence;
         this.specification = specification;
         this.schemaRepository = schemaRepository;
@@ -71,7 +71,7 @@ public class EmbeddedResourceHandler implements HttpHandler {
 
         JSONObject jsonObject;
         try (Transaction tx = persistence.createTransaction(true)) {
-            JsonDocument jsonDocument = persistence.read(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).join();
+            JsonDocument jsonDocument = persistence.readDocument(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).blockingGet();
             jsonObject = ofNullable(jsonDocument).map(JsonDocument::document).orElse(null);
         }
 
@@ -104,7 +104,7 @@ public class EmbeddedResourceHandler implements HttpHandler {
 
                     JSONObject managedDocument;
                     try (Transaction tx = persistence.createTransaction(true)) {
-                        JsonDocument jsonDocument = persistence.read(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).join();
+                        JsonDocument jsonDocument = persistence.readDocument(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).blockingGet();
                         managedDocument = ofNullable(jsonDocument).map(JsonDocument::document).orElse(null);
                     }
 
@@ -160,7 +160,7 @@ public class EmbeddedResourceHandler implements HttpHandler {
 
                     JSONObject rootNode;
                     try (Transaction tx = persistence.createTransaction(true)) {
-                        JsonDocument jsonDocument = persistence.read(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).join();
+                        JsonDocument jsonDocument = persistence.readDocument(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).blockingGet();
                         rootNode = ofNullable(jsonDocument).map(JsonDocument::document).orElse(null);
                     }
 

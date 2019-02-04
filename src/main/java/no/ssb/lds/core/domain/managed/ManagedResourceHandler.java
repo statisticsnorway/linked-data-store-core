@@ -6,7 +6,8 @@ import io.undertow.util.Headers;
 import no.ssb.concurrent.futureselector.SelectableFuture;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
-import no.ssb.lds.api.persistence.json.JsonPersistence;
+import no.ssb.lds.api.persistence.reactivex.Range;
+import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.domain.resource.ResourceContext;
 import no.ssb.lds.core.domain.resource.ResourceElement;
@@ -30,14 +31,14 @@ public class ManagedResourceHandler implements HttpHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(ManagedResourceHandler.class);
 
-    private final JsonPersistence persistence;
+    private final RxJsonPersistence persistence;
     private final Specification specification;
     private final SchemaRepository schemaRepository;
     private final ResourceContext resourceContext;
     private final SagaExecutionCoordinator sec;
     private final SagaRepository sagaRepository;
 
-    public ManagedResourceHandler(JsonPersistence persistence, Specification specification, SchemaRepository schemaRepository, ResourceContext resourceContext, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
+    public ManagedResourceHandler(RxJsonPersistence persistence, Specification specification, SchemaRepository schemaRepository, ResourceContext resourceContext, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
         this.persistence = persistence;
         this.specification = specification;
         this.schemaRepository = schemaRepository;
@@ -78,14 +79,15 @@ public class ManagedResourceHandler implements HttpHandler {
         JSONArray output = new JSONArray();
         try (Transaction tx = persistence.createTransaction(true)) {
             if (isManagedList) {
-                for (JsonDocument jsonDocument : persistence.findAll(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), null, 100).join()) {
+                Iterable<JsonDocument> documents = persistence.readDocuments(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), Range.unbounded()).blockingIterable();
+                for (JsonDocument jsonDocument : documents) {
                     if (jsonDocument.deleted()) {
                         continue;
                     }
                     output.put(jsonDocument.document());
                 }
             } else {
-                JsonDocument jsonDocument = persistence.read(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).join();
+                JsonDocument jsonDocument = persistence.readDocument(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).blockingGet();
                 if (jsonDocument != null && !jsonDocument.deleted()) {
                     output.put(jsonDocument.document());
                 }
