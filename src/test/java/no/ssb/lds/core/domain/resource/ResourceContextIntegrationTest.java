@@ -3,7 +3,6 @@ package no.ssb.lds.core.domain.resource;
 import no.ssb.lds.api.persistence.DocumentKey;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
-import no.ssb.lds.api.persistence.json.JsonPersistence;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.test.client.TestClient;
 import no.ssb.lds.test.server.TestServer;

@@ -6,7 +6,6 @@ import io.undertow.util.Headers;
 import no.ssb.concurrent.futureselector.SelectableFuture;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
-import no.ssb.lds.api.persistence.json.JsonPersistence;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.domain.resource.ResourceContext;

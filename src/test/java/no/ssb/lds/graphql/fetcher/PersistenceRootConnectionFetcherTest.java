@@ -5,13 +5,10 @@ import graphql.relay.Edge;
 import no.ssb.lds.api.persistence.DocumentKey;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
-import no.ssb.lds.api.persistence.json.JsonPersistence;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
-import no.ssb.lds.api.persistence.reactivex.RxPersistence;
 import no.ssb.lds.core.persistence.memory.MemoryInitializer;
 import org.json.JSONObject;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Ignore;
 import org.testng.annotations.Test;
 
 import java.time.ZonedDateTime;
