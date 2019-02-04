@@ -103,6 +103,11 @@ public class GraphqlSchemaBuilderTest {
         }
 
         @Override
+        public Completable deleteAllEntities(Transaction tx, String namespace, String entity, Specification specification) {
+            return null;
+        }
+
+        @Override
         public Completable markDocumentDeleted(Transaction transaction, String ns, String entityName, String id, ZonedDateTime version, PersistenceDeletePolicy policy) {
             return null;
         }
