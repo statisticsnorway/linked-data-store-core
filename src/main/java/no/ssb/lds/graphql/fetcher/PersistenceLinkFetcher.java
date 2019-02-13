@@ -15,14 +15,12 @@ import java.util.regex.Pattern;
 public class PersistenceLinkFetcher implements DataFetcher<Map<String, Object>> {
 
     private final String field;
-    private final String target;
     private final RxJsonPersistence persistence;
     private final Pattern pattern;
     private final String namespace;
 
     public PersistenceLinkFetcher(RxJsonPersistence persistence, String namespace, String field, String target) {
         this.field = field;
-        this.target = target;
         this.persistence = persistence;
         this.pattern = Pattern.compile("/(?<type>" + target + ")/(?<id>.*)");
         this.namespace = namespace;
