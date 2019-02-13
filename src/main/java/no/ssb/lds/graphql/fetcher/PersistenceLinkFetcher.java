@@ -24,7 +24,7 @@ public class PersistenceLinkFetcher implements DataFetcher<Map<String, Object>> 
         this.field = field;
         this.target = target;
         this.persistence = persistence;
-        this.pattern = Pattern.compile("/" + target + "/(?<id>.*)");
+        this.pattern = Pattern.compile("/(?<type>" + target + ")/(?<id>.*)");
         this.namespace = namespace;
     }
 
@@ -35,9 +35,16 @@ public class PersistenceLinkFetcher implements DataFetcher<Map<String, Object>> 
         Matcher matcher = pattern.matcher(link);
         if (matcher.matches()) {
             String id = matcher.group("id");
+            String type = matcher.group("type");
             GraphQLContext context = environment.getContext();
-            JsonDocument document = readDocument(id, context.getSnapshot());
-            return document != null ? document.document().toMap() : null;
+            JsonDocument document = readDocument(type, id, context.getSnapshot());
+            if (document != null) {
+                Map<String, Object> asMap = document.document().toMap();
+                asMap.put("__typename", type);
+                return asMap;
+            } else  {
+                return null;
+            }
         } else {
             // TODO: Handle.
             return null;
@@ -45,9 +52,9 @@ public class PersistenceLinkFetcher implements DataFetcher<Map<String, Object>> 
 
     }
 
-    private JsonDocument readDocument(String id, ZonedDateTime snapshot) {
+    private JsonDocument readDocument(String entityName, String id, ZonedDateTime snapshot) {
         try (Transaction tx = persistence.createTransaction(true)) {
-            return persistence.readDocument(tx, snapshot, namespace, target, id).blockingGet();
+            return persistence.readDocument(tx, snapshot, namespace, entityName, id).blockingGet();
         }
     }
 }
