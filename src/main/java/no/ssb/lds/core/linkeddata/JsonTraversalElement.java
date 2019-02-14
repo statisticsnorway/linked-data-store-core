@@ -23,8 +23,9 @@ class JsonTraversalElement {
     }
 
     String[] uri(Deque<JsonTraversalElement> ancestors) {
-        String[] path = new String[ancestors.size() + 1];
-        int i = 0;
+        String[] path = new String[ancestors.size() + 2];
+        path[0] = "$";
+        int i = 1;
         for (JsonTraversalElement element : ancestors) {
             path[i++] = element.key;
         }

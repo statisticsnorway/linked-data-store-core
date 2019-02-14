@@ -11,6 +11,7 @@ import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeReference;
 import graphql.schema.GraphQLUnionType;
+import no.ssb.lds.api.json.JsonNavigationPath;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.api.specification.SpecificationElement;
@@ -22,8 +23,6 @@ import no.ssb.lds.graphql.fetcher.PersistenceRootConnectionFetcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -39,6 +38,7 @@ import static graphql.Scalars.GraphQLInt;
 import static graphql.Scalars.GraphQLLong;
 import static graphql.Scalars.GraphQLString;
 import static java.lang.String.format;
+import static java.util.Optional.ofNullable;
 
 /**
  * Converts a LDS specification to GraphQL schema.
@@ -299,15 +299,7 @@ public class GraphqlSchemaBuilder {
             connectionType = GraphQLTypeReference.typeRef(connectionName);
         }
 
-        ArrayList<String> path = new ArrayList<>();
-        SpecificationElement node = property;
-        do {
-            if (node.getSpecificationElementType() != SpecificationElementType.MANAGED)
-                path.add(node.getName());
-        } while ((node = node.getParent()).getSpecificationElementType() != SpecificationElementType.ROOT);
-        path.add("$");
-        Collections.reverse(path);
-        String jsonPath = String.join(".", path);
+        JsonNavigationPath jsonPath = JsonNavigationPath.from(ofNullable(property.getItems()).orElse(property));
 
         return GraphQLFieldDefinition.newFieldDefinition()
                 .name(property.getName())

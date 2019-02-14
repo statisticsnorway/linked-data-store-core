@@ -14,6 +14,7 @@ import graphql.schema.GraphQLOutputType;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
 import io.undertow.server.HttpServerExchange;
+import no.ssb.lds.api.json.JsonNavigationPath;
 import no.ssb.lds.api.persistence.DocumentKey;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
@@ -59,7 +60,7 @@ public class PersistenceLinksConnectionFetcherTest {
                 Map.of("persistence.mem.wait.min", "0",
                         "persistence.mem.wait.max", "0"),
                 Set.of("Source", "Target"));
-        connectionFetcher = new PersistenceLinksConnectionFetcher(persistence, "ns", "Source", "$.targetIds", "Target");
+        connectionFetcher = new PersistenceLinksConnectionFetcher(persistence, "ns", "Source", JsonNavigationPath.from("$.targetIds"), "Target");
         snapshot = ZonedDateTime.now();
 
         // Populate persistence with fake data.

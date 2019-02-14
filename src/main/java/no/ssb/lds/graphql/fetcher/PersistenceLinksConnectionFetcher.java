@@ -7,6 +7,7 @@ import graphql.relay.Edge;
 import graphql.relay.PageInfo;
 import graphql.schema.DataFetchingEnvironment;
 import io.reactivex.Flowable;
+import no.ssb.lds.api.json.JsonNavigationPath;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
@@ -22,7 +23,7 @@ import java.util.Objects;
 public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<String, Object>> {
 
     // Field name containing the ids of the target.
-    private final String relationPath;
+    private final JsonNavigationPath relationPath;
 
     private final String sourceEntityName;
 
@@ -34,7 +35,7 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
 
     private final RxJsonPersistence persistence;
 
-    public PersistenceLinksConnectionFetcher(RxJsonPersistence persistence, String nameSpace, String sourceEntityName, String path, String targetEntityName) {
+    public PersistenceLinksConnectionFetcher(RxJsonPersistence persistence, String nameSpace, String sourceEntityName, JsonNavigationPath path, String targetEntityName) {
         this.persistence = Objects.requireNonNull(persistence);
         this.nameSpace = Objects.requireNonNull(nameSpace);
         this.sourceEntityName = Objects.requireNonNull(sourceEntityName);

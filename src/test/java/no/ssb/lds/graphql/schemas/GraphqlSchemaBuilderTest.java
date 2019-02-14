@@ -6,6 +6,7 @@ import io.reactivex.Completable;
 import io.reactivex.Flowable;
 import io.reactivex.Maybe;
 import io.reactivex.Single;
+import no.ssb.lds.api.json.JsonNavigationPath;
 import no.ssb.lds.api.persistence.PersistenceDeletePolicy;
 import no.ssb.lds.api.persistence.PersistenceException;
 import no.ssb.lds.api.persistence.Transaction;
@@ -83,7 +84,7 @@ public class GraphqlSchemaBuilderTest {
         }
 
         @Override
-        public Flowable<JsonDocument> readLinkedDocuments(Transaction tx, ZonedDateTime snapshot, String ns, String entityName, String id, String relationName, String targetEntityName, Range<String> range) {
+        public Flowable<JsonDocument> readLinkedDocuments(Transaction tx, ZonedDateTime snapshot, String ns, String entityName, String id, JsonNavigationPath jsonNavigationPath, String targetEntityName, Range<String> range) {
             return null;
         }
 

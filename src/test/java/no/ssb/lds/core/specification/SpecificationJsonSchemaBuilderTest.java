@@ -1,5 +1,6 @@
 package no.ssb.lds.core.specification;
 
+import no.ssb.lds.api.json.JsonNavigationPath;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.api.specification.SpecificationElementType;
 import no.ssb.lds.api.specification.SpecificationTraverals;
@@ -50,7 +51,7 @@ public class SpecificationJsonSchemaBuilderTest {
         Specification specification = JsonSchemaBasedSpecification.create(
                 "spec/agent/Agent.json"
         );
-        assertEquals(specification.getElement("Agent", new String[]{}).getSpecificationElementType(), SpecificationElementType.MANAGED);
+        assertEquals(JsonNavigationPath.from("$").toSpecificationElement(specification, "Agent").getSpecificationElementType(), SpecificationElementType.MANAGED);
         AtomicInteger rootCounter = new AtomicInteger();
         AtomicInteger managedCounter = new AtomicInteger();
         AtomicInteger embeddedCounter = new AtomicInteger();

@@ -1,5 +1,6 @@
 package no.ssb.lds.core.linkeddata;
 
+import no.ssb.lds.api.json.JsonNavigationPath;
 import no.ssb.lds.api.specification.Specification;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -32,7 +33,7 @@ final class JsonDocumentTraversal {
 
             if (value instanceof JSONObject) {
                 JsonTraversalElement te = new JsonTraversalElement(key, value, JsonElementType.OBJECT);
-                te.setSpecificationElement(specification.getElement(entity, te.uri(ancestors)));
+                te.setSpecificationElement(JsonNavigationPath.from(te.uri(ancestors)).toSpecificationElement(specification, entity));
                 visitor.accept(ancestors, te);
                 ancestors.addLast(te);
                 walkJsonObject((JSONObject) value);
@@ -40,7 +41,7 @@ final class JsonDocumentTraversal {
 
             } else if (value instanceof JSONArray) {
                 JsonTraversalElement te = new JsonTraversalElement(key, value, JsonElementType.ARRAY);
-                te.setSpecificationElement(specification.getElement(entity, te.uri(ancestors)));
+                te.setSpecificationElement(JsonNavigationPath.from(te.uri(ancestors)).toSpecificationElement(specification, entity));
                 //visitor.accept(ancestors, te);
                 Integer pos = 0;
                 for (Iterator<Object> it = ((JSONArray) value).iterator(); it.hasNext(); ) {
@@ -61,7 +62,7 @@ final class JsonDocumentTraversal {
 
             } else {
                 JsonTraversalElement te = new JsonTraversalElement(key, value, JsonElementType.VALUE);
-                te.setSpecificationElement(specification.getElement(entity, te.uri(ancestors)));
+                te.setSpecificationElement(JsonNavigationPath.from(te.uri(ancestors)).toSpecificationElement(specification, entity));
                 visitor.accept(ancestors, te);
             }
         }
