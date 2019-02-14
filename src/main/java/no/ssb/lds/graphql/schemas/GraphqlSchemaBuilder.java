@@ -26,8 +26,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static graphql.Scalars.GraphQLBoolean;
 import static graphql.Scalars.GraphQLFloat;
@@ -333,10 +336,19 @@ public class GraphqlSchemaBuilder {
                 GraphQLFieldDefinition.Builder field = createFieldDefinition(property);
                 GraphQLOutputType graphQLOutputType = buildReferenceTargetType(property);
                 field.type(graphQLOutputType);
+                String name;
+                if (graphQLOutputType instanceof GraphQLUnionType) {
+                    // Make sure the fetcher recognize actual types.
+                    List<GraphQLOutputType> types = ((GraphQLUnionType) graphQLOutputType).getTypes();
+                    name = types.stream().map(GraphQLType::getName)
+                            .collect(Collectors.joining("|", "(", ")"));
+                } else {
+                    name = graphQLOutputType.getName();
+                }
                 field.dataFetcher(new PersistenceLinkFetcher(
                         persistence,
                         this.nameSpace,
-                        propertyName, graphQLOutputType.getName()
+                        propertyName, name
                 ));
                 return field;
             default:
@@ -362,9 +374,9 @@ public class GraphqlSchemaBuilder {
                 for (String refType : property.getRefTypes()) {
                     unionType.possibleType(GraphQLTypeReference.typeRef(refType));
                 }
-                // TODO: Handle abstract type.
                 unionType.typeResolver(env -> {
-                    throw new UnsupportedOperationException("Abstract type not supported yet");
+                    Map<String, Object> object = env.getObject();
+                    return (GraphQLObjectType) env.getSchema().getType((String) object.get("__typename"));
                 });
                 unionTypes.add(propertyName);
                 return unionType.build();
