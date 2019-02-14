@@ -374,7 +374,6 @@ public class GraphqlSchemaBuilder {
                 for (String refType : property.getRefTypes()) {
                     unionType.possibleType(GraphQLTypeReference.typeRef(refType));
                 }
-                // TODO: Handle abstract type.
                 unionType.typeResolver(env -> {
                     Map<String, Object> object = env.getObject();
                     return (GraphQLObjectType) env.getSchema().getType((String) object.get("__typename"));
