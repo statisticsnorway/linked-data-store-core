@@ -40,7 +40,7 @@ public class PersistenceLinkFetcher implements DataFetcher<Map<String, Object>> 
                 Map<String, Object> asMap = document.document().toMap();
                 asMap.put("__typename", type);
                 return asMap;
-            } else  {
+            } else {
                 return null;
             }
         } else {
