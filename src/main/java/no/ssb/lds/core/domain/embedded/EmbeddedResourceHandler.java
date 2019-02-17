@@ -1,5 +1,7 @@
 package no.ssb.lds.core.domain.embedded;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
@@ -18,14 +20,12 @@ import no.ssb.lds.core.validation.LinkedDocumentValidator;
 import no.ssb.saga.api.Saga;
 import no.ssb.saga.execution.SagaHandoffResult;
 import no.ssb.saga.execution.adapter.AdapterLoader;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
-import java.util.Set;
 
 import static java.util.Optional.ofNullable;
 
@@ -69,26 +69,36 @@ public class EmbeddedResourceHandler implements HttpHandler {
     private void getEmbedded(HttpServerExchange exchange) {
         ResourceElement topLevelElement = resourceContext.getFirstElement();
 
-        JSONObject jsonObject;
+        JsonNode jsonNode;
         try (Transaction tx = persistence.createTransaction(true)) {
             JsonDocument jsonDocument = persistence.readDocument(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).blockingGet();
-            jsonObject = ofNullable(jsonDocument).map(JsonDocument::document).orElse(null);
+            jsonNode = ofNullable(jsonDocument).map(JsonDocument::jackson).orElse(null);
         }
 
-        if (jsonObject == null) {
+        if (jsonNode == null) {
             exchange.setStatusCode(404);
             return;
         }
 
-        Object subTreeRoot = resourceContext.subTree(jsonObject);
+        // TODO consistent API independent of sub-tree json type. i.e. figure out whether we should always wrap
+        // TODO result in a json-array?
+        JsonNode subTreeRoot = resourceContext.subTree(jsonNode);
         String result;
-        if (subTreeRoot != null &&
-                (subTreeRoot instanceof JSONObject
-                        || subTreeRoot instanceof JSONArray)) {
-            result = subTreeRoot.toString();
+        if (subTreeRoot == null) {
+            result = "[null]";
+        } else if (subTreeRoot.isContainerNode()) {
+            try {
+                result = JsonDocument.mapper.writeValueAsString(subTreeRoot);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
         } else {
             // wrap simple values in json array.
-            result = new JSONArray().put(subTreeRoot).toString();
+            try {
+                result = JsonDocument.mapper.writeValueAsString(JsonDocument.mapper.createArrayNode().add(subTreeRoot));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
         }
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
         exchange.getResponseSender().send(result, StandardCharsets.UTF_8);
@@ -102,10 +112,10 @@ public class EmbeddedResourceHandler implements HttpHandler {
                     String managedDomain = topLevelElement.name();
                     String managedDocumentId = topLevelElement.id();
 
-                    JSONObject managedDocument;
+                    JsonNode managedDocument;
                     try (Transaction tx = persistence.createTransaction(true)) {
                         JsonDocument jsonDocument = persistence.readDocument(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).blockingGet();
-                        managedDocument = ofNullable(jsonDocument).map(JsonDocument::document).orElse(null);
+                        managedDocument = ofNullable(jsonDocument).map(JsonDocument::jackson).orElse(null);
                     }
 
                     if (managedDocument == null) {
@@ -113,21 +123,35 @@ public class EmbeddedResourceHandler implements HttpHandler {
                         return;
                     }
 
-                    if (LOG.isTraceEnabled()) {
-                        LOG.trace("{} {}\n{}", exchange.getRequestMethod(), exchange.getRequestPath(), managedDocument.toString(2));
+                    JsonNode embeddedJson;
+                    try {
+                        embeddedJson = JsonDocument.mapper.readTree(message);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
 
-                    createEmbeddedJson(resourceContext, managedDocument, message);
+                    if (LOG.isTraceEnabled()) {
+                        try {
+                            LOG.trace("{} {}\n{}", exchange.getRequestMethod(), exchange.getRequestPath(), JsonDocument.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(embeddedJson));
+                        } catch (JsonProcessingException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+
+                    mergeJson(resourceContext, managedDocument, embeddedJson);
 
                     try {
                         LinkedDocumentValidator validator = new LinkedDocumentValidator(specification, schemaRepository);
-                        validator.validate(managedDomain, managedDocument);
+                        // TODO avoid serialization and de-serialization due to using both jackson and org.json
+                        validator.validate(managedDomain, JsonDocument.mapper.writeValueAsString(managedDocument));
                     } catch (LinkedDocumentValidationException ve) {
                         LOG.debug("Schema validation error: {}", ve.getMessage());
                         exchange.setStatusCode(400);
                         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
                         exchange.getResponseSender().send("Schema validation error: " + ve.getMessage());
                         return;
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
                     }
 
                     boolean sync = exchange.getQueryParameters().getOrDefault("sync", new LinkedList()).stream().anyMatch(s -> "true".equalsIgnoreCase((String) s));
@@ -158,10 +182,10 @@ public class EmbeddedResourceHandler implements HttpHandler {
                     String managedDomain = topLevelElement.name();
                     String managedDocumentId = topLevelElement.id();
 
-                    JSONObject rootNode;
+                    JsonNode rootNode;
                     try (Transaction tx = persistence.createTransaction(true)) {
                         JsonDocument jsonDocument = persistence.readDocument(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).blockingGet();
-                        rootNode = ofNullable(jsonDocument).map(JsonDocument::document).orElse(null);
+                        rootNode = ofNullable(jsonDocument).map(JsonDocument::jackson).orElse(null);
                     }
 
                     if (rootNode == null) {
@@ -169,7 +193,7 @@ public class EmbeddedResourceHandler implements HttpHandler {
                         return;
                     }
 
-                    createEmbeddedJson(resourceContext, rootNode, null);
+                    mergeJson(resourceContext, rootNode, null);
 
                     boolean sync = exchange.getQueryParameters().getOrDefault("sync", new LinkedList()).stream().anyMatch(s -> "true".equalsIgnoreCase((String) s));
 
@@ -191,22 +215,19 @@ public class EmbeddedResourceHandler implements HttpHandler {
                 StandardCharsets.UTF_8);
     }
 
-    public boolean createEmbeddedJson(ResourceContext resourceContext, JSONObject rootNode, String subTreeJson) {
-        return resourceContext.navigateAndCreateJson(rootNode, t -> {
+    public boolean mergeJson(ResourceContext resourceContext, JsonNode documentRootNode, JsonNode subTree) {
+        return resourceContext.navigateAndCreateJson(documentRootNode, t -> {
             String embeddedPropertyName = t.resourceElement.name();
-            Set<String> jsonTypes = t.resourceElement.getSpecificationElement().getJsonTypes();
-            if (jsonTypes.contains("array")) {
-                t.jsonObject.put(embeddedPropertyName, subTreeJson == null ? new JSONArray() : new JSONArray(subTreeJson));
-                return true;
-            } else if (jsonTypes.contains("object")) {
-                t.jsonObject.put(embeddedPropertyName, subTreeJson == null ? null : new JSONObject(subTreeJson));
-                return true;
-            } else if (jsonTypes.contains("string")) {
-                t.jsonObject.put(embeddedPropertyName, subTreeJson);
-                return true;
-            } else {
-                throw new IllegalStateException("Unsupported jsonTypes: " + jsonTypes.toString());
+            if (t.jsonObject.isArray()) {
+                // TODO support array-navigation
+                throw new UnsupportedOperationException("array navigation not supported");
             }
+            if (subTree == null) {
+                t.jsonObject.remove(embeddedPropertyName);
+                return true;
+            }
+            t.jsonObject.set(embeddedPropertyName, subTree);
+            return true;
         });
     }
 

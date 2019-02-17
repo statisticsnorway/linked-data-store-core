@@ -1,5 +1,6 @@
 package no.ssb.lds.core.domain.embedded;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import no.ssb.lds.api.persistence.DocumentKey;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
@@ -7,13 +8,12 @@ import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.test.client.TestClient;
 import no.ssb.lds.test.server.TestServer;
 import no.ssb.lds.test.server.TestServerListener;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
+import java.io.IOException;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 
@@ -30,7 +30,12 @@ public class EmbeddedResourceHandlerTest {
 
     private void createTestResource(String entity, String id, String json) {
         ZonedDateTime timestamp = ZonedDateTime.now(ZoneId.of("Etc/UTC"));
-        JSONObject jsonObject = new JSONObject(json);
+        JsonNode jsonObject;
+        try {
+            jsonObject = JsonDocument.mapper.readTree(json);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         RxJsonPersistence persistence = server.getPersistence();
         try (Transaction tx = persistence.createTransaction(false)) {
             persistence.createOrOverwrite(tx, new JsonDocument(new DocumentKey("data", entity, id, timestamp), jsonObject), server.getSpecification()).blockingAwait();
@@ -41,7 +46,7 @@ public class EmbeddedResourceHandlerTest {
     public void thatGetEmbeddedResourceNavigatesDocumentToArray() {
         createTestResource("provisionagreement", "e1", "{\"id\":\"e1\",\"name\":\"pa-test-name\",\"contacts\":[\"/contact/c1\",\"/contact/c2\"]}");
         String response = client.get("/data/provisionagreement/e1/contacts").expect200Ok().body();
-        assertEquals(new JSONArray(response).toString(), "[\"/contact/c1\",\"/contact/c2\"]");
+        assertEquals(response, "[\"/contact/c1\",\"/contact/c2\"]");
     }
 
     @Test
@@ -80,7 +85,7 @@ public class EmbeddedResourceHandlerTest {
         createTestResource("provisionagreement", "e6", "{\"id\":\"e6\",\"name\":\"pa-test-name\",\"contacts\":[\"/contact/c1\",\"/contact/c2\"]}");
         client.delete("/data/provisionagreement/e6/contacts?sync=true").expect200Ok();
         String response = client.get("/data/provisionagreement/e6").expect200Ok().body();
-        JSONAssert.assertEquals("{\"id\":\"e6\",\"name\":\"pa-test-name\",\"contacts\":[]}", response, true);
+        JSONAssert.assertEquals("{\"id\":\"e6\",\"name\":\"pa-test-name\"}", response, true);
     }
 
     @Test
@@ -88,7 +93,7 @@ public class EmbeddedResourceHandlerTest {
         createTestResource("provisionagreement", "e7", "{\"id\":\"e7\",\"name\":\"pa-test-name\",\"support\":{\"technicalSupport\":[\"/contact/s1\",\"/contact/s2\"],\"businessSupport\":[\"/contact/b1\"]}}");
         client.delete("/data/provisionagreement/e7/support/technicalSupport?sync=true").expect200Ok();
         String response = client.get("/data/provisionagreement/e7/support").expect200Ok().body();
-        JSONAssert.assertEquals("{\"technicalSupport\":[],\"businessSupport\":[\"/contact/b1\"]}", response, true);
+        JSONAssert.assertEquals("{\"businessSupport\":[\"/contact/b1\"]}", response, true);
     }
 
     @Test

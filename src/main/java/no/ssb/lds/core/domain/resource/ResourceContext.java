@@ -1,10 +1,11 @@
 package no.ssb.lds.core.domain.resource;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.api.specification.SpecificationElement;
 import no.ssb.lds.api.specification.SpecificationElementType;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -12,6 +13,11 @@ import java.time.ZonedDateTime;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static java.util.Optional.ofNullable;
+
+/**
+ * TODO Support json array-navigation
+ */
 public class ResourceContext {
 
     public static ResourceContext createResourceContext(Specification specification, String requestPath, ZonedDateTime timestamp) throws ResourceException {
@@ -128,23 +134,24 @@ public class ResourceContext {
     }
 
     static class VisitContext {
-        final JSONObject object;
+        final JsonNode node;
         final ResourceElement element;
 
-        VisitContext(JSONObject object, ResourceElement element) {
-            this.object = object;
+        VisitContext(JsonNode node, ResourceElement element) {
+            this.node = node;
             this.element = element;
         }
     }
 
-    private <R> R navigateJson(JSONObject rootNode,
+    private <R> R navigateJson(JsonNode rootNode,
                                Function<VisitContext, R> objectTargetFunction,
                                Supplier<R> emptySupplier) {
-        JSONObject node = rootNode;
+        JsonNode node = rootNode;
         ResourceElement element = firstElement;
         element = element.next();
+        // TODO Support array-navigation
         while (element.hasNext()) {
-            node = node.getJSONObject(element.name());
+            node = node.get(element.name());
             if (node == null) {
                 return emptySupplier.get();
             }
@@ -153,64 +160,67 @@ public class ResourceContext {
         return objectTargetFunction.apply(new VisitContext(node, element));
     }
 
-    public boolean referenceToExists(JSONObject rootNode) {
+    public boolean referenceToExists(JsonNode rootNode) {
         return navigateJson(rootNode, (vc) -> {
-            if (vc.object == null) {
+            if (vc.node == null) {
                 return false;
             }
-            JSONArray jsonArray = vc.object.optJSONArray(vc.element.name());
-            if (jsonArray != null) {
+            JsonNode node = vc.node.get(vc.element.name());
+            if (node != null && node.isArray()) {
                 // scan array
-                for (int i = 0; i < jsonArray.length(); i++) {
-                    String idref = jsonArray.getString(i);
+                ArrayNode arrayNode = (ArrayNode) node;
+                for (int i = 0; i < arrayNode.size(); i++) {
+                    String idref = arrayNode.get(i).textValue();
                     if (vc.element.id().equals(idref)) {
                         return true;
                     }
                 }
                 return false;
             }
-            return vc.element.id().equals(vc.object.optString(vc.element.name()));
+            return vc.element.id().equals(ofNullable(vc.node.get(vc.element.name())).map(JsonNode::textValue).orElse(null));
         }, () -> false);
     }
 
     /**
      * @param rootNode
-     * @return null if content is empty, JSONObject or JSONArray otherwise.
+     * @return null if content is empty, the JsonNode instance representing the root of the sub-tree otherwise.
      */
-    public Object subTree(JSONObject rootNode) {
+    public JsonNode subTree(JsonNode rootNode) {
         return navigateJson(rootNode, (vc) -> {
-            if (vc.object == null) {
+            if (vc.node == null) {
                 return null;
             }
-            JSONArray jsonArray = vc.object.optJSONArray(vc.element.name());
-            if (jsonArray != null) {
-                return jsonArray;
+            if (!vc.node.isContainerNode()) {
+                throw new RuntimeException("");
             }
-            Object jsonObject = vc.object.opt(vc.element.name());
-            return jsonObject;
+            if (vc.node.isObject()) {
+                return vc.node.get(vc.element.name());
+            } else {
+                // array
+                throw new UnsupportedOperationException("array-navigation not supported"); // TODO
+            }
         }, () -> null);
     }
 
-    public <R> R navigateAndCreateJson(JSONObject jn, Function<ResourceJsonTraversalTuple, R> f) {
+    public <R> R navigateAndCreateJson(JsonNode jn, Function<ResourceJsonTraversalTuple, R> f) {
         return navigateAndCreateJson(firstElement, jn, f);
     }
 
-    private <R> R navigateAndCreateJson(ResourceElement re, JSONObject jn, Function<ResourceJsonTraversalTuple, R> f) {
+    private <R> R navigateAndCreateJson(ResourceElement re, JsonNode jn, Function<ResourceJsonTraversalTuple, R> f) {
+        // TODO support array-navigation
         ResourceElement nextResourceElement = re.next();
         if (!nextResourceElement.hasNext()) {
             return f.apply(new ResourceJsonTraversalTuple(nextResourceElement, jn));
         }
-        JSONObject nextJsonNode;
         if (!jn.has(nextResourceElement.name())) {
+            ObjectNode oj = (ObjectNode) jn;
             if (nextResourceElement.getSpecificationElement().getJsonTypes().contains("array")) {
-                JSONArray value = new JSONArray();
-                jn.put(nextResourceElement.name(), value);
+                oj.putArray(nextResourceElement.name());
             } else {
-                JSONObject value = new JSONObject();
-                jn.put(nextResourceElement.name(), value);
+                oj.putObject(nextResourceElement.name());
             }
         }
-        nextJsonNode = jn.getJSONObject(nextResourceElement.name()); // TODO support JSONArray also
+        JsonNode nextJsonNode = jn.get(nextResourceElement.name());
         return navigateAndCreateJson(nextResourceElement, nextJsonNode, f);
     }
 

@@ -1,5 +1,7 @@
 package no.ssb.lds.core.domain.reference;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
@@ -15,8 +17,6 @@ import no.ssb.lds.core.saga.SagaRepository;
 import no.ssb.saga.api.Saga;
 import no.ssb.saga.execution.SagaHandoffResult;
 import no.ssb.saga.execution.adapter.AdapterLoader;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,17 +61,17 @@ public class ReferenceResourceHandler implements HttpHandler {
     private void getReferenceTo(HttpServerExchange exchange) {
         ResourceElement topLevelElement = resourceContext.getFirstElement();
 
-        JSONObject jsonObject;
+        JsonNode jsonNode;
         try (Transaction tx = persistence.createTransaction(true)) {
             JsonDocument jsonDocument = persistence.readDocument(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).blockingGet();
             if (jsonDocument == null || jsonDocument.deleted()) {
                 exchange.setStatusCode(404);
                 return;
             }
-            jsonObject = jsonDocument.document();
+            jsonNode = jsonDocument.jackson();
         }
 
-        boolean referenceToExists = resourceContext.referenceToExists(jsonObject);
+        boolean referenceToExists = resourceContext.referenceToExists(jsonNode);
 
         if (referenceToExists) {
             exchange.setStatusCode(200);
@@ -94,19 +94,19 @@ public class ReferenceResourceHandler implements HttpHandler {
                     }
                     boolean referenceToExists = false;
                     if (jsonDocument != null && !jsonDocument.deleted()) {
-                        referenceToExists = resourceContext.referenceToExists(jsonDocument.document());
+                        referenceToExists = resourceContext.referenceToExists(jsonDocument.jackson());
                     }
                     if (referenceToExists) {
                         exchange.setStatusCode(200);
                     } else {
-                        new ReferenceJsonHelper(specification, topLevelElement).createReferenceJson(resourceContext, jsonDocument.document());
+                        new ReferenceJsonHelper(specification, topLevelElement).createReferenceJson(resourceContext, jsonDocument.jackson());
 
                         boolean sync = exchange.getQueryParameters().getOrDefault("sync", new LinkedList<>()).stream().anyMatch(s -> "true".equalsIgnoreCase(s));
 
                         Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
                         AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-                        SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), jsonDocument.document());
+                        SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), jsonDocument.jackson());
                         SagaHandoffResult sagaHandoffResult = handoff.join();
 
                         exchange.setStatusCode(200);
@@ -128,27 +128,28 @@ public class ReferenceResourceHandler implements HttpHandler {
         String managedDomain = topLevelElement.name();
         String managedDocumentId = topLevelElement.id();
 
-        JSONArray output = new JSONArray();
+        ArrayNode output = JsonDocument.mapper.createArrayNode();
         try (Transaction tx = persistence.createTransaction(true)) {
             JsonDocument jsonDocument = persistence.readDocument(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).blockingGet();
             if (jsonDocument != null && !jsonDocument.deleted()) {
-                output.put(jsonDocument.document());
+                output.add(jsonDocument.jackson());
 
             }
         }
-        if (output.length() == 0) {
+        if (output.size() == 0) {
             exchange.setStatusCode(200);
             exchange.endExchange();
             return;
         }
-        if (output.length() > 1) {
+        if (output.size() > 1) {
             throw new IllegalStateException("More than one document version match.");
         }
         // output.length() == 1
-        JSONObject rootNode = output.getJSONObject(0);
+        JsonNode rootNode = output.get(0);
         boolean referenceToExists = resourceContext.referenceToExists(rootNode);
         if (!referenceToExists) {
             exchange.setStatusCode(200);
+            exchange.endExchange();
             return;
         }
 
@@ -162,12 +163,14 @@ public class ReferenceResourceHandler implements HttpHandler {
         SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, resourceContext.getNamespace(), resourceContext.getFirstElement().name(), resourceContext.getFirstElement().id(), resourceContext.getTimestamp(), rootNode);
         SagaHandoffResult handoffResult = handoff.join();
 
-        exchange.setStatusCode(200);
-        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-        exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.executionId + "\"}");
-
-        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
-        exchange.getResponseSender().send(output.getJSONObject(0).toString(), StandardCharsets.UTF_8);
-        exchange.endExchange();
+        if (sync) {
+            exchange.setStatusCode(200);
+            exchange.endExchange();
+        } else {
+            exchange.setStatusCode(200);
+            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
+            exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.executionId + "\"}");
+            exchange.endExchange();
+        }
     }
 }

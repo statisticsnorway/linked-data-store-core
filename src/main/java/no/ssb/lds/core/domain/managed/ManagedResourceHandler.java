@@ -1,5 +1,8 @@
 package no.ssb.lds.core.domain.managed;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
@@ -19,11 +22,10 @@ import no.ssb.lds.core.validation.LinkedDocumentValidator;
 import no.ssb.saga.api.Saga;
 import no.ssb.saga.execution.SagaHandoffResult;
 import no.ssb.saga.execution.adapter.AdapterLoader;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 
@@ -76,7 +78,7 @@ public class ManagedResourceHandler implements HttpHandler {
             return;
         }
 
-        JSONArray output = new JSONArray();
+        ArrayNode output = JsonDocument.mapper.createArrayNode();
         try (Transaction tx = persistence.createTransaction(true)) {
             if (isManagedList) {
                 Iterable<JsonDocument> documents = persistence.readDocuments(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), Range.unbounded()).blockingIterable();
@@ -84,20 +86,24 @@ public class ManagedResourceHandler implements HttpHandler {
                     if (jsonDocument.deleted()) {
                         continue;
                     }
-                    output.put(jsonDocument.document());
+                    output.add(jsonDocument.jackson());
                 }
             } else {
                 JsonDocument jsonDocument = persistence.readDocument(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).blockingGet();
                 if (jsonDocument != null && !jsonDocument.deleted()) {
-                    output.put(jsonDocument.document());
+                    output.add(jsonDocument.jackson());
                 }
             }
         }
-        if (output.length() == 0) {
+        if (output.size() == 0) {
             exchange.setStatusCode(404);
-        } else if (output.length() == 1) {
+        } else if (output.size() == 1) {
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
-            exchange.getResponseSender().send(output.getJSONObject(0).toString(), StandardCharsets.UTF_8);
+            try {
+                exchange.getResponseSender().send(JsonDocument.mapper.writeValueAsString(output.get(0)), StandardCharsets.UTF_8);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException();
+            }
         } else {
             // (output.length() > 1
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
@@ -124,15 +130,24 @@ public class ManagedResourceHandler implements HttpHandler {
                     }
 
                     // deserialize request data
-                    JSONObject requestData = new JSONObject(requestBody);
+                    JsonNode requestData;
+                    try {
+                        requestData = JsonDocument.mapper.readTree(requestBody);
+                    } catch (IOException e) {
+                        throw new RuntimeException("Malformed json in request. Unable to deserialize.");
+                    }
 
                     if (LOG.isTraceEnabled()) {
-                        LOG.trace("{} {}\n{}", exchange.getRequestMethod(), exchange.getRequestPath(), requestData.toString(2));
+                        try {
+                            LOG.trace("{} {}\n{}", exchange.getRequestMethod(), exchange.getRequestPath(), JsonDocument.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(requestData));
+                        } catch (JsonProcessingException e) {
+                            throw new RuntimeException(e);
+                        }
                     }
 
                     try {
                         LinkedDocumentValidator validator = new LinkedDocumentValidator(specification, schemaRepository);
-                        validator.validate(managedDomain, requestData);
+                        validator.validate(managedDomain, requestBody);
                     } catch (LinkedDocumentValidationException ve) {
                         LOG.debug("Schema validation error: {}", ve.getMessage());
                         exchange.setStatusCode(400);

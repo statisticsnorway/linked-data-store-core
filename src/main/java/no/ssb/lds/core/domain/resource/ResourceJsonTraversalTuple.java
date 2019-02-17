@@ -1,14 +1,19 @@
 package no.ssb.lds.core.domain.resource;
 
-import org.json.JSONObject;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class ResourceJsonTraversalTuple {
 
     public final ResourceElement resourceElement;
-    public final JSONObject jsonObject;
+    public final ObjectNode jsonObject;
 
-    ResourceJsonTraversalTuple(ResourceElement resourceElement, JSONObject jsonObject) {
+    ResourceJsonTraversalTuple(ResourceElement resourceElement, JsonNode jsonObject) {
         this.resourceElement = resourceElement;
-        this.jsonObject = jsonObject;
+        // TODO Use JsonNode type and support array-navigation
+        if (!jsonObject.isObject()) {
+            throw new UnsupportedOperationException("array-navigation not supported");
+        }
+        this.jsonObject = (ObjectNode) jsonObject;
     }
 }

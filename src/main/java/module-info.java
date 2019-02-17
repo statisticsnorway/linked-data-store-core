@@ -16,12 +16,14 @@ module no.ssb.lds.core {
     requires hystrix.core;
     requires org.everit.json.schema;
     requires java.xml; // TODO this should be in test-scope only!
+    requires com.fasterxml.jackson.core;
+    requires com.fasterxml.jackson.databind;
 
     requires graphql.java;
     requires io.reactivex.rxjava2;
     requires org.reactivestreams;
     requires com.github.akarnokd.rxjava2jdk9interop;
-  
+
     opens no.ssb.lds.graphql.graphiql;
 
     uses PersistenceInitializer;

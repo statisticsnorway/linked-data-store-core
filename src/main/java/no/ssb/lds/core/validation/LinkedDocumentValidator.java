@@ -31,7 +31,11 @@ public class LinkedDocumentValidator {
         this.schemaRepository = schemaRepository;
     }
 
-    public void validate(String managedDomain, JSONObject linkedDocument) throws LinkedDocumentValidationException {
+    public void validate(String managedDomain, String document) throws LinkedDocumentValidationException {
+
+        // TODO Use already parsed Jackson instead of org.json. Requires a change of json-schema validation library
+        JSONObject linkedDocument = new JSONObject(document);
+
         Schema schema = schemaRepository.getJsonSchema().getSchema(managedDomain);
         try {
             schema.validate(linkedDocument);

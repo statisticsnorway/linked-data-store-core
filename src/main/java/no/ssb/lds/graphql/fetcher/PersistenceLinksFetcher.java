@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class PersistenceLinksFetcher implements DataFetcher<List<Map<String, Object>>> {
+public class PersistenceLinksFetcher implements DataFetcher<List<FetcherContext>> {
 
     private final String field;
     private final String target;
@@ -32,10 +32,10 @@ public class PersistenceLinksFetcher implements DataFetcher<List<Map<String, Obj
     }
 
     @Override
-    public List<Map<String, Object>> get(DataFetchingEnvironment environment) throws Exception {
+    public List<FetcherContext> get(DataFetchingEnvironment environment) throws Exception {
         Map<String, Object> source = environment.getSource();
         List<String> links = (List<String>) source.get(field);
-        List<Map<String, Object>> results = new ArrayList<>();
+        List<FetcherContext> results = new ArrayList<>();
         if (links == null) {
             return null;
         }
@@ -45,7 +45,7 @@ public class PersistenceLinksFetcher implements DataFetcher<List<Map<String, Obj
                 String id = matcher.group("id");
                 GraphQLContext context = environment.getContext();
                 JsonDocument document = readDocument(id, context.getSnapshot());
-                results.add(document != null ? document.document().toMap() : null);
+                results.add(new FetcherContext(null, document));
             } else {
                 // TODO: Handle.
             }

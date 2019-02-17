@@ -1,7 +1,6 @@
 package no.ssb.lds.core.validation;
 
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
-import org.json.JSONObject;
 import org.testng.annotations.Test;
 
 public class LinkedDocumentValidatorTest {
@@ -12,7 +11,7 @@ public class LinkedDocumentValidatorTest {
         LinkedDocumentValidator validator = new LinkedDocumentValidator(specification, specification);
 
         String linkedDocument = "{\"id\":\"r13\",\"name\":\"pa-test-name\",\"friend\":\"/contact/f1\",\"support\":{\"technicalSupport\":[\"/contact/s1\",\"/contact/s2\"],\"businessSupport\":[\"/contact/b1\"]}}";
-        validator.validate("provisionagreement", new JSONObject(linkedDocument));
+        validator.validate("provisionagreement", linkedDocument);
     }
 
     @Test(expectedExceptions = LinkedDocumentValidationException.class)
@@ -21,7 +20,7 @@ public class LinkedDocumentValidatorTest {
         LinkedDocumentValidator validator = new LinkedDocumentValidator(specification, specification);
 
         String linkedDocument = "{\"id\":\"r13\",\"name\":\"pa-test-name\",\"friend\":\"/baddomain/f1\",\"support\":{\"technicalSupport\":[\"/contact/s1\",\"/contact/s2\"],\"businessSupport\":[\"/contact/b1\"]}}";
-        validator.validate("provisionagreement", new JSONObject(linkedDocument));
+        validator.validate("provisionagreement", linkedDocument);
     }
 
     @Test(expectedExceptions = LinkedDocumentValidationException.class)
@@ -30,7 +29,7 @@ public class LinkedDocumentValidatorTest {
         LinkedDocumentValidator validator = new LinkedDocumentValidator(specification, specification);
 
         String linkedDocument = "{\"id\":\"r13\",\"name\":\"pa-test-name\",\"friend\":\"/contact/f1\",\"support\":{\"technicalSupport\":[\"/contact/s1\",\"/baddomain/s2\"],\"businessSupport\":[\"/contact/b1\"]}}";
-        validator.validate("provisionagreement", new JSONObject(linkedDocument));
+        validator.validate("provisionagreement", linkedDocument);
     }
 
     @Test(expectedExceptions = LinkedDocumentValidationException.class)
@@ -39,7 +38,7 @@ public class LinkedDocumentValidatorTest {
         LinkedDocumentValidator validator = new LinkedDocumentValidator(specification, specification);
 
         String linkedDocument = "{\"id\":\"r13\",\"name\":\"pa-test-name\",\"friend\":\"contact\",\"support\":{\"technicalSupport\":[\"/contact/s1\",\"/contact/s2\"],\"businessSupport\":[\"/contact/b1\"]}}";
-        validator.validate("provisionagreement", new JSONObject(linkedDocument));
+        validator.validate("provisionagreement", linkedDocument);
     }
 
     @Test(expectedExceptions = LinkedDocumentValidationException.class)
@@ -48,6 +47,6 @@ public class LinkedDocumentValidatorTest {
         LinkedDocumentValidator validator = new LinkedDocumentValidator(specification, specification);
 
         String linkedDocument = "{\"id\":\"r13\",\"name\":\"pa-test-name\",\"friend\":\"/contact/f1\",\"support\":{\"technicalSupport\":[\"/contact/s1\",\"contact\"],\"businessSupport\":[\"/contact/b1\"]}}";
-        validator.validate("provisionagreement", new JSONObject(linkedDocument));
+        validator.validate("provisionagreement", linkedDocument);
     }
 }

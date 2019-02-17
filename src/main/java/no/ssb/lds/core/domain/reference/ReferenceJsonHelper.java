@@ -1,11 +1,14 @@
 package no.ssb.lds.core.domain.reference;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.api.specification.SpecificationElement;
 import no.ssb.lds.core.domain.resource.ResourceContext;
 import no.ssb.lds.core.domain.resource.ResourceElement;
-import org.json.JSONArray;
-import org.json.JSONObject;
+
+import java.util.Iterator;
 
 public class ReferenceJsonHelper {
 
@@ -19,18 +22,19 @@ public class ReferenceJsonHelper {
         this.root = specification.getRootElement();
     }
 
-    public boolean deleteReferenceJson(ResourceContext resourceContext, JSONObject rootNode) {
+    public boolean deleteReferenceJson(ResourceContext resourceContext, JsonNode rootNode) {
+        // TODO Support array-navigation
         return resourceContext.navigateAndCreateJson(rootNode, t -> {
             String referencePropertyName = t.resourceElement.name();
             String referenceValue = t.resourceElement.id();
             if (t.resourceElement.getSpecificationElement().getJsonTypes().contains("array")) {
-                JSONObject refParentNode = t.jsonObject;
+                ObjectNode refParentNode = t.jsonObject;
                 if (!refParentNode.has(referencePropertyName)) {
                     return false;
                 }
-                JSONArray refNode = (JSONArray) refParentNode.get(referencePropertyName);
-                for (int i = 0; i < refNode.length(); i++) {
-                    String idref = refNode.getString(i);
+                ArrayNode refNode = (ArrayNode) refParentNode.get(referencePropertyName);
+                for (int i = 0; i < refNode.size(); i++) {
+                    String idref = refNode.get(i).textValue();
                     if (referenceValue.equals(idref)) {
                         refNode.remove(i);
                         return true;
@@ -38,8 +42,9 @@ public class ReferenceJsonHelper {
                 }
                 return false; // not found
             } else {
-                JSONObject refParentNode = t.jsonObject;
-                if (referenceValue.equals(refParentNode.getString(referencePropertyName))) {
+                ObjectNode refParentNode = t.jsonObject;
+                String existingValue = refParentNode.get(referencePropertyName).textValue();
+                if (referenceValue.equals(existingValue)) {
                     refParentNode.remove(referencePropertyName);
                     return true;
                 }
@@ -48,22 +53,45 @@ public class ReferenceJsonHelper {
         });
     }
 
-    public boolean createReferenceJson(ResourceContext resourceContext, JSONObject rootNode) {
+    public boolean createReferenceJson(ResourceContext resourceContext, JsonNode rootNode) {
+        // TODO Support array-navigation
         return resourceContext.navigateAndCreateJson(rootNode, t -> {
             String referencePropertyName = t.resourceElement.name();
             String referenceValue = t.resourceElement.id();
             if (t.resourceElement.getSpecificationElement().getJsonTypes().contains("array")) {
-                JSONObject refParentNode = t.jsonObject;
+                ObjectNode refParentNode = t.jsonObject;
                 if (!refParentNode.has(referencePropertyName)) {
-                    refParentNode.put(referencePropertyName, new JSONArray());
+                    refParentNode.putArray(referencePropertyName);
                 }
-                JSONArray refNode = (JSONArray) refParentNode.get(referencePropertyName);
-                refNode.put(referenceValue);
+                ArrayNode refNode = (ArrayNode) refParentNode.get(referencePropertyName);
+                // scan array for existing identical reference value
+                Iterator<JsonNode> it = refNode.elements();
+                while (it.hasNext()) {
+                    JsonNode next = it.next();
+                    if (next.isNull()) {
+                        continue;
+                    }
+                    if (referenceValue.equals(next.textValue())) {
+                        // value already in array
+                        return false;
+                    }
+                }
+                refNode.add(referenceValue);
                 return true;
             } else {
-                JSONObject refParentNode = t.jsonObject;
-                refParentNode.put(referencePropertyName, referenceValue);
-                return true;
+                ObjectNode refParentNode = t.jsonObject;
+                if (!refParentNode.has(referencePropertyName)
+                        || refParentNode.get(referencePropertyName).isNull()) {
+                    // not already set
+                    refParentNode.put(referencePropertyName, referenceValue);
+                    return true;
+                } else if (!refParentNode.get(referencePropertyName).textValue().equals(referenceValue)) {
+                    // change value
+                    refParentNode.put(referencePropertyName, referenceValue);
+                    return true;
+                }
+                // already set to referenceValue value
+                return false;
             }
         });
     }

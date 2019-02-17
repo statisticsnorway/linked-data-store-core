@@ -1,7 +1,10 @@
 package no.ssb.lds.core.saga;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import no.ssb.concurrent.futureselector.SelectableFuture;
 import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
+import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.saga.api.Saga;
 import no.ssb.saga.execution.SagaExecution;
 import no.ssb.saga.execution.SagaHandoffControl;
@@ -9,10 +12,10 @@ import no.ssb.saga.execution.SagaHandoffResult;
 import no.ssb.saga.execution.adapter.AdapterLoader;
 import no.ssb.saga.execution.sagalog.SagaLog;
 import no.ssb.saga.execution.sagalog.SagaLogEntry;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -58,15 +61,15 @@ public class SagaExecutionCoordinator {
         return threadPool;
     }
 
-    public SelectableFuture<SagaHandoffResult> handoff(boolean sync, AdapterLoader adapterLoader, Saga saga, String namespace, String entity, String id, ZonedDateTime version, JSONObject data) {
+    public SelectableFuture<SagaHandoffResult> handoff(boolean sync, AdapterLoader adapterLoader, Saga saga, String namespace, String entity, String id, ZonedDateTime version, JsonNode data) {
         String versionStr = version.format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
         SagaExecution sagaExecution = new SagaExecution(sagaLog, threadPool, saga, adapterLoader);
-        JSONObject input = new JSONObject();
+        ObjectNode input = JsonDocument.mapper.createObjectNode();
         input.put("namespace", namespace);
         input.put("entity", entity);
         input.put("id", id);
         input.put("version", versionStr);
-        input.put("data", data);
+        input.set("data", data);
         String executionId = UUID.randomUUID().toString();
 
         SagaHandoffControl handoffControl = startSagaExecutionWithThrottling(sagaExecution, input, executionId);
@@ -79,7 +82,7 @@ public class SagaExecutionCoordinator {
         return future;
     }
 
-    private SagaHandoffControl startSagaExecutionWithThrottling(SagaExecution sagaExecution, JSONObject input, String executionId) {
+    private SagaHandoffControl startSagaExecutionWithThrottling(SagaExecution sagaExecution, JsonNode input, String executionId) {
         SagaHandoffControl handoffControl;
         try {
             semaphore.acquire();
@@ -126,7 +129,12 @@ public class SagaExecutionCoordinator {
         SagaLogEntry startSagaEntry = sagaLogEntries.get(0);
         Saga saga = sagaRepository.get(startSagaEntry.sagaName);
         AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-        JSONObject sagaInput = new JSONObject(startSagaEntry.jsonData);
+        JsonNode sagaInput;
+        try {
+            sagaInput = JsonDocument.mapper.readTree(startSagaEntry.jsonData);
+        } catch (IOException e) {
+            throw new RuntimeException();
+        }
         SagaExecution sagaExecution = new SagaExecution(sagaLog, threadPool, saga, adapterLoader);
         SagaHandoffControl handoffControl = sagaExecution.executeSaga(executionId, sagaInput, true, r -> {
         });

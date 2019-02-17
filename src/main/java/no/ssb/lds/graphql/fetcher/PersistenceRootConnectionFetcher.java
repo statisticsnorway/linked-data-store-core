@@ -13,13 +13,12 @@ import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 /**
  * Root fetcher that supports relay style connections.
  */
-public class PersistenceRootConnectionFetcher extends ConnectionFetcher<Map<String, Object>> {
+public class PersistenceRootConnectionFetcher extends ConnectionFetcher<FetcherContext> {
 
 
     private final RxJsonPersistence persistence;
@@ -33,22 +32,22 @@ public class PersistenceRootConnectionFetcher extends ConnectionFetcher<Map<Stri
     }
 
     @Override
-    Connection<Map<String, Object>> getConnection(DataFetchingEnvironment environment,
+    Connection<FetcherContext> getConnection(DataFetchingEnvironment environment,
                                                   ConnectionParameters parameters) {
         try (Transaction tx = persistence.createTransaction(true)) {
 
             Flowable<JsonDocument> documentFlowable = persistence.readDocuments(
                     tx, parameters.getSnapshot(), nameSpace, entityName, parameters.getRange());
 
-            List<Edge<Map<String, Object>>> edges = documentFlowable.map(document -> toEdge(document)).toList().blockingGet();
+            List<Edge<FetcherContext>> edges = documentFlowable.map(document -> toEdge(document)).toList().blockingGet();
 
             if (edges.isEmpty()) {
                 PageInfo pageInfo = new DefaultPageInfo(null, null, false, false);
                 return new DefaultConnection<>(Collections.emptyList(), pageInfo);
             }
 
-            Edge<Map<String, Object>> firstEdge = edges.get(0);
-            Edge<Map<String, Object>> lastEdge = edges.get(edges.size() - 1);
+            Edge<FetcherContext> firstEdge = edges.get(0);
+            Edge<FetcherContext> lastEdge = edges.get(edges.size() - 1);
 
             boolean hasPrevious = persistence.hasPrevious(tx, parameters.getSnapshot(), nameSpace, entityName,
                     firstEdge.getCursor().getValue()).blockingGet();
