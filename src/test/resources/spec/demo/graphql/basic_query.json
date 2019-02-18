@@ -1,0 +1,4 @@
+{
+  "query": "{\n  provisionagreement {\n    edges {\n      node {\n        name\n        contacts {\n          edges {\n            node {\n              name\n              email\n            }\n          }\n        }\n      }\n    }\n  }\n}",
+  "variables": null
+}

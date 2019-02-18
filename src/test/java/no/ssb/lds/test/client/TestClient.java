@@ -112,6 +112,10 @@ public final class TestClient {
         return post(uri, HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8), HttpResponse.BodyHandlers.ofString());
     }
 
+    public ResponseHelper<String> postJson(String uri, String body) {
+        return postJson(uri, HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8), HttpResponse.BodyHandlers.ofString());
+    }
+
     public <R> ResponseHelper<R> post(String uri, HttpRequest.BodyPublisher bodyPublisher, HttpResponse.BodyHandler<R> bodyHandler) {
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create(server.testURL(uri)))
