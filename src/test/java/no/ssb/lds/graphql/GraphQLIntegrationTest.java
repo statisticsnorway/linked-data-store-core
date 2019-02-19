@@ -26,24 +26,36 @@ public class GraphQLIntegrationTest {
             "graphql.enabled", "true",
             "specification.schema", "spec/demo/contact.json,spec/demo/provisionagreement.json"
     })
-    public void thatBasicQueryWorks() throws IOException {
+    public void thatGetContactOnlyWorks() throws IOException {
         // setup demo data
-        client.put("/data/provisionagreement/2a41c", FileAndClasspathReaderUtils.readFileOrClasspathResource("demo/1-sirius.json"));
-        client.put("/data/provisionagreement/2a41c/address", FileAndClasspathReaderUtils.readFileOrClasspathResource("demo/2-sirius-address.json"));
-        client.put("/data/contact/4b2ef", FileAndClasspathReaderUtils.readFileOrClasspathResource("demo/3-skrue.json"));
-        client.put("/data/contact/821aa", FileAndClasspathReaderUtils.readFileOrClasspathResource("demo/4-donald.json"));
-        client.put("/data/provisionagreement/2a41c/contacts/contact/4b2ef");
-        client.put("/data/provisionagreement/2a41c/contacts/contact/821aa");
-        assertEquals(client.get("/data/provisionagreement/2a41c").expect200Ok().body(), "{\"address\":{\"city\":\"Andeby\",\"street\":\"Pengebingen\"},\"contacts\":[\"/contact/4b2ef\",\"/contact/821aa\"],\"name\":\"Sirius\"}");
-        assertEquals(client.get("/data/contact/4b2ef").expect200Ok().body(), "{\"email\":\"skrue@bingen.no\",\"name\":\"Onkel Skrue\"}");
+        putResource("/data/contact/821aa", "demo/4-donald.json");
         assertEquals(client.get("/data/contact/821aa").expect200Ok().body(), "{\"email\":\"donald@duck.no\",\"name\":\"Donald Duck\"}");
 
-        // Test a very basic query that gets all data starting with provisionagreement
-        String query = FileAndClasspathReaderUtils.readFileOrClasspathResource("spec/demo/graphql/basic_query.json");
-        String graphqlResponseBody = client.postJson("/graphql", query)
-                .expect200Ok()
-                .body();
+        assertNoErrors(executeGraphQLQuery("spec/demo/graphql/contact_only.json"));
+    }
 
+    @Test
+    @ConfigurationOverride({
+            "graphql.enabled", "true",
+            "specification.schema", "spec/demo/contact.json,spec/demo/provisionagreement.json"
+    })
+    public void thatLinkingQueryWorks() throws IOException {
+        // setup demo data
+        putResource("/data/provisionagreement/2a41c", "demo/1-sirius.json");
+        putResource("/data/provisionagreement/2a41c/address", "demo/2-sirius-address.json");
+        putResource("/data/contact/4b2ef", "demo/3-skrue.json");
+        putResource("/data/contact/821aa", "demo/4-donald.json");
+        client.put("/data/provisionagreement/2a41c/contacts/contact/4b2ef");
+        client.put("/data/provisionagreement/2a41c/contacts/contact/821aa");
+
+        assertNoErrors(executeGraphQLQuery("spec/demo/graphql/basic_query.json"));
+    }
+
+    private void putResource(String path, String resourceFilePath) {
+        client.put(path, FileAndClasspathReaderUtils.readFileOrClasspathResource(resourceFilePath));
+    }
+
+    private void assertNoErrors(String graphqlResponseBody) throws IOException {
         JsonNode responseRootNode = mapper.readTree(graphqlResponseBody);
         if (responseRootNode.has("errors")) {
             // there should not be any errors!
@@ -51,5 +63,12 @@ public class GraphQLIntegrationTest {
             String errorMessages = mapper.writeValueAsString(errors);
             Assert.fail(errorMessages);
         }
+    }
+
+    private String executeGraphQLQuery(String path) {
+        String query = FileAndClasspathReaderUtils.readFileOrClasspathResource(path);
+        return client.postJson("/graphql", query)
+                .expect200Ok()
+                .body();
     }
 }

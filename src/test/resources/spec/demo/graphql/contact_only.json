@@ -1,0 +1,4 @@
+{
+  "query": "{\n  contact {\n    edges {\n      node {\n        name\n        email\n      }\n    }\n  }\n}\n",
+  "variables": null
+}
