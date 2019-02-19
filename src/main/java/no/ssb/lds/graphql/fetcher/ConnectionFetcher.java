@@ -11,6 +11,7 @@ import no.ssb.lds.api.persistence.reactivex.Range;
 import no.ssb.lds.graphql.GraphQLContext;
 
 import java.time.ZonedDateTime;
+import java.util.Map;
 
 import static java.lang.String.format;
 
@@ -50,9 +51,9 @@ public abstract class ConnectionFetcher<T> implements DataFetcher<Connection<T>>
         return first;
     }
 
-    protected static Edge<FetcherContext> toEdge(JsonDocument document) {
+    protected static Edge<Map<String, Object>> toEdge(JsonDocument document) {
         return new DefaultEdge<>(
-                new FetcherContext(null, document),
+                document.toMap(),
                 new DefaultConnectionCursor(document.key().id())
         );
     }

@@ -1,14 +1,13 @@
 package no.ssb.lds.graphql.fetcher;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import graphql.relay.Connection;
 import graphql.relay.Edge;
 import no.ssb.lds.api.persistence.DocumentKey;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
+import no.ssb.lds.api.persistence.json.JsonTools;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.core.persistence.memory.MemoryInitializer;
 import org.testng.annotations.BeforeMethod;
@@ -17,9 +16,11 @@ import org.testng.annotations.Test;
 
 import java.time.ZonedDateTime;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 
+import static no.ssb.lds.api.persistence.json.JsonDocument.mapper;
 import static no.ssb.lds.graphql.fetcher.PersistenceLinksConnectionFetcherTest.TestEnvironment;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -28,10 +29,8 @@ public class PersistenceRootConnectionFetcherTest {
 
     private PersistenceRootConnectionFetcher connectionFetcher;
     private ZonedDateTime snapshot;
-    private ObjectNode source;
+    private LinkedHashMap<String, Object> source = new LinkedHashMap<>();
     private Map<String, JsonNode> data = new LinkedHashMap<>();
-    private final TypeReference<Map<String, Object>> mapTypeReference = new TypeReference<>() {
-    };
 
     /*
      * Pagination in GraphQL ar handled using So called Relay Connections.
@@ -59,7 +58,7 @@ public class PersistenceRootConnectionFetcherTest {
 
                 // Save reference for assertions.
                 String entityId = String.format("target-%s", i);
-                ObjectNode jsonObject = JsonDocument.mapper.createObjectNode();
+                ObjectNode jsonObject = mapper.createObjectNode();
                 jsonObject.put("id", entityId);
                 data.put(String.format("/Target/%s", entityId), jsonObject);
 
@@ -71,9 +70,7 @@ public class PersistenceRootConnectionFetcherTest {
                         null // not required by memory store?
                 );
             }
-            source = JsonDocument.mapper.createObjectNode();
-            ArrayNode array = source.putArray("targetIds");
-            data.keySet().stream().forEachOrdered(id -> array.add(id));
+            source.put("targetIds", new LinkedList<>(data.keySet()));
         }
 
 
@@ -81,77 +78,63 @@ public class PersistenceRootConnectionFetcherTest {
 
     @Test
     public void testForwardPagination() throws Exception {
-        Connection<FetcherContext> firstFive = connectionFetcher.get(withArguments(Map.of("first", 5)));
+        Connection<Map<String, Object>> firstFive = connectionFetcher.get(withArguments(Map.of("first", 5)));
 
         assertThat(firstFive.getPageInfo().isHasPreviousPage()).isFalse();
         assertThat(firstFive.getPageInfo().isHasNextPage()).isTrue();
-        assertThat(firstFive.getEdges()).extracting(Edge::getNode).extracting(fc -> fc.getDocument().jackson()).containsExactlyElementsOf(
-                () -> data.values().stream()
-                        .limit(5)
-                        .iterator()
+        assertThat(firstFive.getEdges()).extracting(Edge::getNode).containsExactlyElementsOf(
+                () -> data.values().stream().map(JsonTools::toMap).limit(5).iterator()
         );
 
-        Connection<FetcherContext> lastFive = connectionFetcher.get(withArguments(Map.of("first", 5, "after", firstFive.getPageInfo().getEndCursor().getValue())));
+        Connection<Map<String, Object>> lastFive = connectionFetcher.get(withArguments(Map.of("first", 5, "after", firstFive.getPageInfo().getEndCursor().getValue())));
 
         assertThat(lastFive.getPageInfo().isHasPreviousPage()).isTrue();
         assertThat(lastFive.getPageInfo().isHasNextPage()).isFalse();
-        assertThat(lastFive.getEdges()).extracting(Edge::getNode).extracting(fc -> fc.getDocument().jackson()).containsExactlyElementsOf(
-                () -> data.values().stream()
-                        .skip(5)
-                        .iterator()
+        assertThat(lastFive.getEdges()).extracting(Edge::getNode).containsExactlyElementsOf(
+                () -> data.values().stream().map(JsonTools::toMap).skip(5).iterator()
         );
     }
 
     @Test
     public void testBackwardPagination() throws Exception {
-        Connection<FetcherContext> lastFive = connectionFetcher.get(withArguments(Map.of("last", 5)));
+        Connection<Map<String, Object>> lastFive = connectionFetcher.get(withArguments(Map.of("last", 5)));
 
         assertThat(lastFive.getPageInfo().isHasPreviousPage()).isTrue();
         assertThat(lastFive.getPageInfo().isHasNextPage()).isFalse();
-        assertThat(lastFive.getEdges()).extracting(Edge::getNode).extracting(fc -> fc.getDocument().jackson()).containsExactlyElementsOf(
-                () -> data.values().stream()
-                        .skip(5)
-                        .iterator()
+        assertThat(lastFive.getEdges()).extracting(Edge::getNode).containsExactlyElementsOf(
+                () -> data.values().stream().map(JsonTools::toMap).skip(5).iterator()
         );
 
-        Connection<FetcherContext> firstFive = connectionFetcher.get(withArguments(Map.of("last", 5, "before", lastFive.getPageInfo().getStartCursor().getValue())));
+        Connection<Map<String, Object>> firstFive = connectionFetcher.get(withArguments(Map.of("last", 5, "before", lastFive.getPageInfo().getStartCursor().getValue())));
 
         assertThat(firstFive.getPageInfo().isHasPreviousPage()).isFalse();
         assertThat(firstFive.getPageInfo().isHasNextPage()).isTrue();
-        assertThat(firstFive.getEdges()).extracting(Edge::getNode).extracting(fc -> fc.getDocument().jackson()).containsExactlyElementsOf(
-                () -> data.values().stream()
-                        .limit(5)
-                        .iterator()
+        assertThat(firstFive.getEdges()).extracting(Edge::getNode).containsExactlyElementsOf(
+                () -> data.values().stream().map(JsonTools::toMap).limit(5).iterator()
         );
     }
 
     @Test
     public void testAfter() throws Exception {
-        Connection<FetcherContext> firstFiveAfter = connectionFetcher.get(
+        Connection<Map<String, Object>> firstFiveAfter = connectionFetcher.get(
                 withArguments(Map.of("first", 5, "after", "target-2")));
 
         assertThat(firstFiveAfter.getPageInfo().isHasPreviousPage()).isTrue();
         assertThat(firstFiveAfter.getPageInfo().isHasNextPage()).isTrue();
-        assertThat(firstFiveAfter.getEdges()).extracting(Edge::getNode).extracting(fc -> fc.getDocument().jackson()).containsExactlyElementsOf(
-                () -> data.values().stream()
-                        .skip(3)
-                        .limit(5)
-                        .iterator()
+        assertThat(firstFiveAfter.getEdges()).extracting(Edge::getNode).containsExactlyElementsOf(
+                () -> data.values().stream().map(JsonTools::toMap).skip(3).limit(5).iterator()
         );
     }
 
     @Test
     public void testBefore() throws Exception {
-        Connection<FetcherContext> lastFiveBefore = connectionFetcher.get(
+        Connection<Map<String, Object>> lastFiveBefore = connectionFetcher.get(
                 withArguments(Map.of("last", 5, "before", "target-7")));
 
         assertThat(lastFiveBefore.getPageInfo().isHasPreviousPage()).isTrue();
         assertThat(lastFiveBefore.getPageInfo().isHasNextPage()).isTrue();
-        assertThat(lastFiveBefore.getEdges()).extracting(Edge::getNode).extracting(fc -> fc.getDocument().jackson()).containsExactlyElementsOf(
-                () -> data.values().stream()
-                        .skip(2)
-                        .limit(5)
-                        .iterator()
+        assertThat(lastFiveBefore.getEdges()).extracting(Edge::getNode).containsExactlyElementsOf(
+                () -> data.values().stream().map(JsonTools::toMap).skip(2).limit(5).iterator()
         );
     }
 

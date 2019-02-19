@@ -14,12 +14,13 @@ import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
  * A wrapper around {@link PersistenceLinksFetcher} that support relay style connections.
  */
-public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<FetcherContext> {
+public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<String, Object>> {
 
     // Field name containing the ids of the target.
     private final JsonNavigationPath relationPath;
@@ -46,12 +47,12 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Fetcher
      * Extracts the id from the source object in the environment.
      */
     private static String getIdFromSource(DataFetchingEnvironment environment) {
-        FetcherContext ctx = environment.getSource();
-        return ctx.getDocument().key().id();
+        Map<String, Object> source = environment.getSource();
+        return (String) source.get("id");
     }
 
     @Override
-    Connection<FetcherContext> getConnection(DataFetchingEnvironment environment, ConnectionParameters parameters) {
+    Connection<Map<String, Object>> getConnection(DataFetchingEnvironment environment, ConnectionParameters parameters) {
         try (Transaction tx = persistence.createTransaction(true)) {
 
             String sourceId = getIdFromSource(environment);
@@ -59,7 +60,7 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Fetcher
             Flowable<JsonDocument> documents = persistence.readLinkedDocuments(tx, parameters.getSnapshot(), nameSpace,
                     sourceEntityName, sourceId, relationPath, targetEntityName, parameters.getRange());
 
-            List<Edge<FetcherContext>> edges = documents.map(document -> toEdge(document)).toList()
+            List<Edge<Map<String, Object>>> edges = documents.map(document -> toEdge(document)).toList()
                     .blockingGet();
 
             if (edges.isEmpty()) {
@@ -72,8 +73,8 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Fetcher
                 edges = edges.subList(0, parameters.getFirst());
             }
 
-            Edge<FetcherContext> firstEdge = edges.get(0);
-            Edge<FetcherContext> lastEdge = edges.get(edges.size() - 1);
+            Edge<Map<String, Object>> firstEdge = edges.get(0);
+            Edge<Map<String, Object>> lastEdge = edges.get(edges.size() - 1);
 
             boolean hasPrevious = true; // !firstEdge.getCursor().getValue().equals(first.get());
             boolean hasNext = true; // !lastEdge.getCursor().getValue().equals(last.get());

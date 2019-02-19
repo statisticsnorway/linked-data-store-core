@@ -1,7 +1,6 @@
 package no.ssb.lds.graphql.fetcher;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import graphql.execution.ExecutionContext;
 import graphql.execution.ExecutionId;
@@ -21,6 +20,7 @@ import no.ssb.lds.api.json.JsonNavigationPath;
 import no.ssb.lds.api.persistence.DocumentKey;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
+import no.ssb.lds.api.persistence.json.JsonTools;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.core.persistence.memory.MemoryInitializer;
 import no.ssb.lds.graphql.GraphQLContext;
@@ -29,24 +29,25 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Ignore;
 import org.testng.annotations.Test;
 
-import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import static no.ssb.lds.api.persistence.json.JsonDocument.mapper;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class PersistenceLinksConnectionFetcherTest {
     private PersistenceLinksConnectionFetcher connectionFetcher;
     private ZonedDateTime snapshot;
-    private ObjectNode source;
+    private Map<String, Object> source = new LinkedHashMap<>();
     private Map<String, JsonNode> data = new LinkedHashMap<>();
 
     /*
-     * Pagination in GraphQL are handled using so called Relay Connections.
+     * Pagination in GraphQL ar handled using So called Relay Connections.
      * graphql java comes with a simple implementation
      *
      * For each one to many relationship we need:
@@ -57,7 +58,7 @@ public class PersistenceLinksConnectionFetcherTest {
      */
 
     @BeforeMethod
-    public void setUp() throws IOException {
+    public void setUp() {
         RxJsonPersistence persistence = new MemoryInitializer().initialize("ns",
                 Map.of("persistence.mem.wait.min", "0",
                         "persistence.mem.wait.max", "0"),
@@ -71,29 +72,23 @@ public class PersistenceLinksConnectionFetcherTest {
 
                 // Save reference for assertions.
                 String entityId = String.format("target-%s", i);
-                ObjectNode jsonObject = JsonDocument.mapper.createObjectNode();
+                ObjectNode jsonObject = mapper.createObjectNode();
                 jsonObject.put("id", entityId);
+                data.put(String.format("/Target/%s", entityId), jsonObject);
 
                 // Put the document into persistence.
                 DocumentKey key = new DocumentKey("ns", "Target", entityId, snapshot);
-                JsonDocument document = new JsonDocument(key, jsonObject);
                 persistence.createOrOverwrite(
                         tx,
-                        document,
+                        new JsonDocument(key, jsonObject),
                         null // not required by memory store.
                 );
-
-                data.put(String.format("/Target/%s", entityId), jsonObject);
             }
-            source = JsonDocument.mapper.createObjectNode();
             source.put("id", "sourceId");
-            ArrayNode array = source.putArray("targetIds");
-            data.keySet().stream().forEachOrdered(id -> array.add(id));
+            source.put("targetIds", new LinkedList<>(data.keySet()));
             DocumentKey key = new DocumentKey("ns", "Source", "sourceId", snapshot);
-            String jsonStr = JsonDocument.mapper.writer().writeValueAsString(source);
-            JsonDocument document = new JsonDocument(key, JsonDocument.mapper.readTree(jsonStr));
             persistence.createOrOverwrite(
-                    tx, document,
+                    tx, new JsonDocument(key, source),
                     null // not required by memory store.
             );
         }
@@ -104,55 +99,47 @@ public class PersistenceLinksConnectionFetcherTest {
     @Ignore // TODO @Hadrien Investigate why this method hangs on the very first line
     @Test
     public void testForwardPagination() throws Exception {
-        Connection<FetcherContext> firstFive = connectionFetcher.get(withArguments(Map.of("first", 5)));
+        Connection<Map<String, Object>> firstFive = connectionFetcher.get(withArguments(Map.of("first", 5)));
 
         assertThat(firstFive.getPageInfo().isHasPreviousPage())
                 .as("hasPreviousPage").isFalse();
         assertThat(firstFive.getPageInfo().isHasNextPage())
                 .as("hasNextPage").isTrue();
-        assertThat(firstFive.getEdges()).extracting(Edge::getNode).extracting(fc -> fc.getDocument().jackson())
+        assertThat(firstFive.getEdges()).extracting(Edge::getNode)
                 .as("returned nodes").containsExactlyElementsOf(
-                () -> data.values().stream()
-                        .limit(5)
-                        .iterator()
+                () -> data.values().stream().map(JsonTools::toMap).limit(5).iterator()
         );
 
-        Connection<FetcherContext> lastFive = connectionFetcher.get(withArguments(Map.of("first", 5, "after", firstFive.getPageInfo().getEndCursor().getValue())));
+        Connection<Map<String, Object>> lastFive = connectionFetcher.get(withArguments(Map.of("first", 5, "after", firstFive.getPageInfo().getEndCursor().getValue())));
 
         assertThat(lastFive.getPageInfo().isHasPreviousPage()).as("hasPreviousPage").isTrue();
         assertThat(lastFive.getPageInfo().isHasNextPage()).isFalse();
-        assertThat(lastFive.getEdges()).extracting(Edge::getNode).extracting(fc -> fc.getDocument().jackson()).containsExactlyElementsOf(
-                () -> data.values().stream()
-                        .skip(5)
-                        .iterator()
+        assertThat(lastFive.getEdges()).extracting(Edge::getNode).containsExactlyElementsOf(
+                () -> data.values().stream().map(JsonTools::toMap).skip(5).iterator()
         );
     }
 
     @Ignore // TODO @Hadrien Investigate why this method hangs on the very first line
     @Test
     public void testBackwardPagination() throws Exception {
-        Connection<FetcherContext> lastFive = connectionFetcher.get(withArguments(Map.of("last", 5)));
+        Connection<Map<String, Object>> lastFive = connectionFetcher.get(withArguments(Map.of("last", 5)));
 
         assertThat(lastFive.getPageInfo().isHasPreviousPage())
                 .as("hasPreviousPage").isTrue();
         assertThat(lastFive.getPageInfo().isHasNextPage())
                 .as("hasNextPage").isFalse();
-        assertThat(lastFive.getEdges()).extracting(Edge::getNode).extracting(fc -> fc.getDocument().jackson()).containsExactlyElementsOf(
-                () -> data.values().stream()
-                        .skip(5)
-                        .iterator()
+        assertThat(lastFive.getEdges()).extracting(Edge::getNode).containsExactlyElementsOf(
+                () -> data.values().stream().map(JsonTools::toMap).skip(5).iterator()
         );
 
-        Connection<FetcherContext> firstFive = connectionFetcher.get(withArguments(Map.of("last", 5, "before", lastFive.getPageInfo().getStartCursor().getValue())));
+        Connection<Map<String, Object>> firstFive = connectionFetcher.get(withArguments(Map.of("last", 5, "before", lastFive.getPageInfo().getStartCursor().getValue())));
 
         assertThat(firstFive.getPageInfo().isHasPreviousPage())
                 .as("hasPreviousPage").isFalse();
         assertThat(firstFive.getPageInfo().isHasNextPage())
                 .as("hasNextPage").isTrue();
-        assertThat(firstFive.getEdges()).extracting(Edge::getNode).extracting(fc -> fc.getDocument().jackson()).containsExactlyElementsOf(
-                () -> data.values().stream()
-                        .limit(5)
-                        .iterator()
+        assertThat(firstFive.getEdges()).extracting(Edge::getNode).containsExactlyElementsOf(
+                () -> data.values().stream().map(JsonTools::toMap).limit(5).iterator()
         );
     }
 
@@ -166,12 +153,12 @@ public class PersistenceLinksConnectionFetcherTest {
     public static final class TestEnvironment implements DataFetchingEnvironment {
 
         private final Map<String, Object> arguments;
-        private final JsonNode source;
+        private final Object source;
         private final ZonedDateTime snapshot;
 
         public TestEnvironment(
                 Map<String, Object> arguments,
-                JsonNode source,
+                Map<String, Object> source,
                 ZonedDateTime snapshot
         ) {
             this.arguments = Objects.requireNonNull(arguments);

@@ -8,13 +8,14 @@ import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.graphql.GraphQLContext;
 
 import java.time.ZonedDateTime;
+import java.util.Map;
 import java.util.Objects;
 import java.util.StringJoiner;
 
 /**
  * DataFetcher that gets the data from {@link RxJsonPersistence}.
  */
-public class PersistenceFetcher implements DataFetcher<FetcherContext> {
+public class PersistenceFetcher implements DataFetcher<Map<String, Object>> {
 
     private final RxJsonPersistence backend;
     private final String nameSpace;
@@ -34,10 +35,10 @@ public class PersistenceFetcher implements DataFetcher<FetcherContext> {
     }
 
     @Override
-    public FetcherContext get(DataFetchingEnvironment environment) throws Exception {
+    public Map<String, Object> get(DataFetchingEnvironment environment) throws Exception {
         GraphQLContext context = environment.getContext();
         JsonDocument document = readDocument(environment.getArgument("id"), context.getSnapshot());
-        return new FetcherContext(null, document);
+        return document != null ? document.toMap() : null;
     }
 
     private JsonDocument readDocument(String id, ZonedDateTime snapshot) {
