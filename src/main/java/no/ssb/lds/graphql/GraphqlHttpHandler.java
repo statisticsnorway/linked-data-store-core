@@ -1,5 +1,7 @@
 package no.ssb.lds.graphql;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
@@ -12,8 +14,6 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
-import org.json.JSONObject;
-import org.json.JSONTokener;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -33,6 +33,7 @@ import static io.undertow.util.Methods.OPTIONS;
 import static io.undertow.util.Methods.OPTIONS_STRING;
 import static io.undertow.util.Methods.POST;
 import static io.undertow.util.Methods.POST_STRING;
+import static no.ssb.lds.api.persistence.json.JsonDocument.mapper;
 
 /**
  * Handler that executes GraphQL queries.
@@ -78,13 +79,9 @@ public class GraphqlHttpHandler implements HttpHandler {
         return Optional.empty();
     }
 
-    private static JSONObject toJson(HttpServerExchange exchange) throws IOException {
+    private static JsonNode toJson(HttpServerExchange exchange) throws IOException {
         try (InputStream bi = new BufferedInputStream(exchange.getInputStream())) {
-            JSONTokener tokener = new JSONTokener(new InputStreamReader(
-                    bi,
-                    Charset.forName(exchange.getRequestCharset())
-            ));
-            return new JSONObject(tokener);
+            return mapper.readTree(new InputStreamReader(bi, Charset.forName(exchange.getRequestCharset())));
         }
     }
 
@@ -118,13 +115,17 @@ public class GraphqlHttpHandler implements HttpHandler {
             if (IS_GRAPHQL.resolve(exchange)) {
                 executionInput.query(toString(exchange));
             } else if (IS_JSON.resolve(exchange)) {
-                JSONObject json = toJson(exchange);
-                executionInput.query(json.getString("query"));
-                if (json.has("variables") && !json.isNull("variables")) {
-                    executionInput.variables(json.getJSONObject("variables").toMap());
+                JsonNode json = toJson(exchange);
+                executionInput.query(json.get("query").textValue());
+                if (json.has("variables") && !json.get("variables").isNull()) {
+                    // TODO convert directly from JsonNode tree to Map<String, Object> instead of using serialization
+                    JsonNode variables = json.get("variables");
+                    String variablesJson = mapper.writeValueAsString(variables);
+                    Map<String, Object> jsonMap = toMap(variablesJson);
+                    executionInput.variables(jsonMap);
                 }
                 if (json.has("operationName")) {
-                    executionInput.operationName(json.getString("operationName"));
+                    executionInput.operationName(json.get("operationName").textValue());
                 }
             } else {
                 exchange.setStatusCode(StatusCodes.UNSUPPORTED_MEDIA_TYPE);
@@ -141,8 +142,7 @@ public class GraphqlHttpHandler implements HttpHandler {
             operationName.ifPresent(executionInput::operationName);
 
             Optional<String> variables = extractParam(parameters, "variables");
-            variables.map(JSONObject::new).map(JSONObject::toMap)
-                    .ifPresent(executionInput::variables);
+            variables.map(this::toMap).ifPresent(executionInput::variables);
 
         } else {
             exchange.setStatusCode(StatusCodes.METHOD_NOT_ALLOWED);
@@ -156,11 +156,21 @@ public class GraphqlHttpHandler implements HttpHandler {
         ExecutionResult result = graphQl.execute(executionInput);
 
         // Serialize
-        JSONObject json = new JSONObject(result.toSpecification());
+        Map<String, Object> resultMap = result.toSpecification();
+        String jsonResult = mapper.writeValueAsString(resultMap);
 
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
         exchange.setStatusCode(StatusCodes.OK);
-        exchange.getResponseSender().send(json.toString());
+        exchange.getResponseSender().send(jsonResult);
 
+    }
+
+    private Map<String, Object> toMap(String variablesJson) {
+        try {
+            return mapper.readValue(variablesJson, new TypeReference<Map<String, Object>>() {
+            });
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

@@ -1,6 +1,7 @@
 package no.ssb.lds.graphql;
 
 import com.damnhandy.uri.template.UriTemplate;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import graphql.GraphQL;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.StaticDataFetcher;
@@ -9,7 +10,6 @@ import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.undertow.Undertow;
-import org.json.JSONObject;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -24,6 +24,7 @@ import java.net.http.HttpResponse;
 import java.util.Map;
 
 import static graphql.schema.idl.RuntimeWiring.newRuntimeWiring;
+import static no.ssb.lds.api.persistence.json.JsonDocument.mapper;
 import static org.testng.Assert.assertEquals;
 
 public class GraphqlHttpHandlerTest {
@@ -195,26 +196,26 @@ public class GraphqlHttpHandlerTest {
         // operationName and variables are optional fields. operationName is only required
         // if multiple operations are present in the query.
 
-        JSONObject query = new JSONObject(Map.of(
-                "query", "query Foo {" +
-                        "   me {" +
-                        "       name" +
-                        "   }" +
-                        "}" +
-                        "query Bar($foo: Boolean!) {" +
-                        "   me {" +
-                        "       name" +
-                        "       address @skip(if: $foo) {" +
-                        "           street" +
-                        "       }" +
-                        "   }" +
-                        "}",
-                "operationName", "Bar",
-                "variables", Map.of("foo", true)
-        ));
+        ObjectNode root = mapper.createObjectNode();
+        root.put("query", "query Foo {" +
+                "   me {" +
+                "       name" +
+                "   }" +
+                "}" +
+                "query Bar($foo: Boolean!) {" +
+                "   me {" +
+                "       name" +
+                "       address @skip(if: $foo) {" +
+                "           street" +
+                "       }" +
+                "   }" +
+                "}");
+        root.put("operationName", "Bar");
+        ObjectNode variables = root.putObject("variables");
+        variables.put("foo", true);
 
         HttpRequest request = HttpRequest.newBuilder(URI.create(uriTemplate.expand()))
-                .POST(HttpRequest.BodyPublishers.ofString(query.toString()))
+                .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(root)))
                 .header("Content-Type", "application/json")
                 .build();
 

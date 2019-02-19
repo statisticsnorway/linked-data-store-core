@@ -1,5 +1,8 @@
 package no.ssb.lds.core.saga;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.core.persistence.PersistenceCreateOrOverwriteSagaAdapter;
 import no.ssb.lds.core.utils.FileAndClasspathReaderUtils;
 import no.ssb.lds.test.ConfigurationOverride;
@@ -8,7 +11,6 @@ import no.ssb.lds.test.server.TestServer;
 import no.ssb.lds.test.server.TestServerListener;
 import no.ssb.saga.api.Saga;
 import no.ssb.saga.execution.adapter.Adapter;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.Assert;
@@ -16,6 +18,7 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -56,15 +59,15 @@ public class SagaExecutionCoordinatorWatchdogTest {
             /*
              * Configure a  dummy slow node before saga fan-out in order to easily provoke deadlock.
              */
-            final JSONObject empty = new JSONObject();
-            sec.sagaRepository.getAdapterLoader().register(new Adapter<>(JSONObject.class, "SlowNodeAdapter", (i, d) -> {
+            final ObjectNode empty = JsonDocument.mapper.createObjectNode();
+            sec.sagaRepository.getAdapterLoader().register(new Adapter<>(JsonNode.class, "SlowNodeAdapter", (i, d) -> {
                 try {
                     Thread.sleep(2000);
                 } catch (InterruptedException e) {
                 }
                 return empty;
             }));
-            sec.sagaRepository.getAdapterLoader().register(new Adapter<>(JSONObject.class, "search", (i, d) -> empty));
+            sec.sagaRepository.getAdapterLoader().register(new Adapter<>(JsonNode.class, "search", (i, d) -> empty));
             sec.sagaRepository.register(Saga
                     .start(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE).linkTo("slownode", "search-index-update")
                     .id("slownode").adapter("SlowNodeAdapter").linkTo("persistence")
@@ -78,7 +81,7 @@ public class SagaExecutionCoordinatorWatchdogTest {
         final ExecutorService executor = Executors.newFixedThreadPool(sagaThreadPoolCoreSize);
 
         try {
-            JSONObject provisionAgreementSirius = resource("provisionagreement_sirius.json");
+            JsonNode provisionAgreementSirius = resource("provisionagreement_sirius.json");
 
             AtomicInteger successfulWrites = new AtomicInteger(0);
             LOG.debug("Running {} sagas simultaneously", sagaThreadPoolCoreSize);
@@ -138,8 +141,12 @@ public class SagaExecutionCoordinatorWatchdogTest {
         }
     }
 
-    static final JSONObject resource(String resourceName) {
-        return new JSONObject(FileAndClasspathReaderUtils.getResourceAsString("spec/schemas.examples/" + resourceName, StandardCharsets.UTF_8));
+    static final JsonNode resource(String resourceName) {
+        try {
+            return JsonDocument.mapper.readTree(FileAndClasspathReaderUtils.getResourceAsString("spec/schemas.examples/" + resourceName, StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     static void shutdownAndAwaitTermination(ExecutorService pool) {
