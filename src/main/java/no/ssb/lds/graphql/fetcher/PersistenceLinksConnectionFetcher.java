@@ -14,7 +14,6 @@ import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -47,8 +46,8 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Fetcher
      * Extracts the id from the source object in the environment.
      */
     private static String getIdFromSource(DataFetchingEnvironment environment) {
-        Map<String, Object> source = environment.getSource();
-        return (String) source.get("id");
+        FetcherContext ctx = environment.getSource();
+        return ctx.getDocument().key().id();
     }
 
     @Override

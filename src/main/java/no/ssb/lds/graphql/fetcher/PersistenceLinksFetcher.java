@@ -3,6 +3,7 @@ package no.ssb.lds.graphql.fetcher;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import io.reactivex.Maybe;
+import no.ssb.lds.api.json.JsonNavigationPath;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
@@ -11,7 +12,6 @@ import no.ssb.lds.graphql.GraphQLContext;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -33,10 +33,15 @@ public class PersistenceLinksFetcher implements DataFetcher<List<FetcherContext>
 
     @Override
     public List<FetcherContext> get(DataFetchingEnvironment environment) throws Exception {
-        Map<String, Object> source = environment.getSource();
-        List<String> links = (List<String>) source.get(field);
+        FetcherContext ctx = environment.getSource();
+        List<String> links = new ArrayList<>();
+        ctx.getDocument().traverseField(JsonNavigationPath.from(field), (node, path) -> {
+            if (node != null && !node.isNull()) {
+                links.add(node.textValue());
+            }
+        });
         List<FetcherContext> results = new ArrayList<>();
-        if (links == null) {
+        if (links.isEmpty()) {
             return null;
         }
         for (String link : links) {

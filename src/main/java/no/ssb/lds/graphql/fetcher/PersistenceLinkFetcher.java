@@ -2,6 +2,7 @@ package no.ssb.lds.graphql.fetcher;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
+import no.ssb.lds.api.json.JsonNavigationPath;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
@@ -10,6 +11,7 @@ import no.ssb.lds.graphql.GraphQLContext;
 import java.time.ZonedDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,8 +31,18 @@ public class PersistenceLinkFetcher implements DataFetcher<FetcherContext> {
 
     @Override
     public FetcherContext get(DataFetchingEnvironment environment) {
-        Map<String, Object> source = environment.getSource();
-        String link = (String) source.get(field);
+        FetcherContext ctx = environment.getSource();
+        AtomicReference<String> linkRef = new AtomicReference<>();
+        ctx.getDocument().traverseField(JsonNavigationPath.from(field), (node, path) -> {
+            if (node != null && !node.isNull()) {
+                linkRef.set(node.textValue());
+            }
+        });
+        String link = linkRef.get();
+        if (link == null) {
+            // TODO: Handle.
+            return new FetcherContext(null, null);
+        }
         Matcher matcher = pattern.matcher(link);
         if (matcher.matches()) {
             String id = matcher.group("id");
