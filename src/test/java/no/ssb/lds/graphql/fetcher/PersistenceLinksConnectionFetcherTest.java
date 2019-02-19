@@ -37,7 +37,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import static no.ssb.lds.api.persistence.json.JsonDocument.mapper;
+import static no.ssb.lds.api.persistence.json.JsonTools.mapper;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class PersistenceLinksConnectionFetcherTest {

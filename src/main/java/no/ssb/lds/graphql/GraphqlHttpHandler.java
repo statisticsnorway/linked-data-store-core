@@ -33,7 +33,7 @@ import static io.undertow.util.Methods.OPTIONS;
 import static io.undertow.util.Methods.OPTIONS_STRING;
 import static io.undertow.util.Methods.POST;
 import static io.undertow.util.Methods.POST_STRING;
-import static no.ssb.lds.api.persistence.json.JsonDocument.mapper;
+import static no.ssb.lds.api.persistence.json.JsonTools.mapper;
 
 /**
  * Handler that executes GraphQL queries.

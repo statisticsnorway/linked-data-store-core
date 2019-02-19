@@ -20,7 +20,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 
-import static no.ssb.lds.api.persistence.json.JsonDocument.mapper;
+import static no.ssb.lds.api.persistence.json.JsonTools.mapper;
 import static no.ssb.lds.graphql.fetcher.PersistenceLinksConnectionFetcherTest.TestEnvironment;
 import static org.assertj.core.api.Assertions.assertThat;
 

@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 
+import static no.ssb.lds.api.persistence.json.JsonTools.mapper;
 import static org.testng.Assert.assertEquals;
 
 @Listeners(TestServerListener.class)
@@ -32,7 +33,7 @@ public class EmbeddedResourceHandlerTest {
         ZonedDateTime timestamp = ZonedDateTime.now(ZoneId.of("Etc/UTC"));
         JsonNode jsonObject;
         try {
-            jsonObject = JsonDocument.mapper.readTree(json);
+            jsonObject = mapper.readTree(json);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

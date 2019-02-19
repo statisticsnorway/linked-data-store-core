@@ -24,7 +24,7 @@ import java.net.http.HttpResponse;
 import java.util.Map;
 
 import static graphql.schema.idl.RuntimeWiring.newRuntimeWiring;
-import static no.ssb.lds.api.persistence.json.JsonDocument.mapper;
+import static no.ssb.lds.api.persistence.json.JsonTools.mapper;
 import static org.testng.Assert.assertEquals;
 
 public class GraphqlHttpHandlerTest {

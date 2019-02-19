@@ -23,6 +23,8 @@ import org.slf4j.LoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 
+import static no.ssb.lds.api.persistence.json.JsonTools.mapper;
+
 public class ReferenceResourceHandler implements HttpHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(ReferenceResourceHandler.class);
@@ -128,7 +130,7 @@ public class ReferenceResourceHandler implements HttpHandler {
         String managedDomain = topLevelElement.name();
         String managedDocumentId = topLevelElement.id();
 
-        ArrayNode output = JsonDocument.mapper.createArrayNode();
+        ArrayNode output = mapper.createArrayNode();
         try (Transaction tx = persistence.createTransaction(true)) {
             JsonDocument jsonDocument = persistence.readDocument(tx, resourceContext.getTimestamp(), namespace, managedDomain, managedDocumentId).blockingGet();
             if (jsonDocument != null && !jsonDocument.deleted()) {

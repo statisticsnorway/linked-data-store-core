@@ -28,6 +28,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 
 import static java.util.Optional.ofNullable;
+import static no.ssb.lds.api.persistence.json.JsonTools.mapper;
 
 public class EmbeddedResourceHandler implements HttpHandler {
 
@@ -88,14 +89,14 @@ public class EmbeddedResourceHandler implements HttpHandler {
             result = "[null]";
         } else if (subTreeRoot.isContainerNode()) {
             try {
-                result = JsonDocument.mapper.writeValueAsString(subTreeRoot);
+                result = mapper.writeValueAsString(subTreeRoot);
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
         } else {
             // wrap simple values in json array.
             try {
-                result = JsonDocument.mapper.writeValueAsString(JsonDocument.mapper.createArrayNode().add(subTreeRoot));
+                result = mapper.writeValueAsString(mapper.createArrayNode().add(subTreeRoot));
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
@@ -125,14 +126,14 @@ public class EmbeddedResourceHandler implements HttpHandler {
 
                     JsonNode embeddedJson;
                     try {
-                        embeddedJson = JsonDocument.mapper.readTree(message);
+                        embeddedJson = mapper.readTree(message);
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
 
                     if (LOG.isTraceEnabled()) {
                         try {
-                            LOG.trace("{} {}\n{}", exchange.getRequestMethod(), exchange.getRequestPath(), JsonDocument.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(embeddedJson));
+                            LOG.trace("{} {}\n{}", exchange.getRequestMethod(), exchange.getRequestPath(), mapper.writerWithDefaultPrettyPrinter().writeValueAsString(embeddedJson));
                         } catch (JsonProcessingException e) {
                             throw new RuntimeException(e);
                         }
@@ -143,7 +144,7 @@ public class EmbeddedResourceHandler implements HttpHandler {
                     try {
                         LinkedDocumentValidator validator = new LinkedDocumentValidator(specification, schemaRepository);
                         // TODO avoid serialization and de-serialization due to using both jackson and org.json
-                        validator.validate(managedDomain, JsonDocument.mapper.writeValueAsString(managedDocument));
+                        validator.validate(managedDomain, mapper.writeValueAsString(managedDocument));
                     } catch (LinkedDocumentValidationException ve) {
                         LOG.debug("Schema validation error: {}", ve.getMessage());
                         exchange.setStatusCode(400);

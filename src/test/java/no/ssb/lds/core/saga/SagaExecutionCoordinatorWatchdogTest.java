@@ -2,7 +2,6 @@ package no.ssb.lds.core.saga;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.core.persistence.PersistenceCreateOrOverwriteSagaAdapter;
 import no.ssb.lds.core.utils.FileAndClasspathReaderUtils;
 import no.ssb.lds.test.ConfigurationOverride;
@@ -25,6 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static no.ssb.lds.api.persistence.json.JsonTools.mapper;
 import static org.testng.Assert.assertEquals;
 
 @Listeners(TestServerListener.class)
@@ -59,7 +59,7 @@ public class SagaExecutionCoordinatorWatchdogTest {
             /*
              * Configure a  dummy slow node before saga fan-out in order to easily provoke deadlock.
              */
-            final ObjectNode empty = JsonDocument.mapper.createObjectNode();
+            final ObjectNode empty = mapper.createObjectNode();
             sec.sagaRepository.getAdapterLoader().register(new Adapter<>(JsonNode.class, "SlowNodeAdapter", (i, d) -> {
                 try {
                     Thread.sleep(2000);
@@ -143,7 +143,7 @@ public class SagaExecutionCoordinatorWatchdogTest {
 
     static final JsonNode resource(String resourceName) {
         try {
-            return JsonDocument.mapper.readTree(FileAndClasspathReaderUtils.getResourceAsString("spec/schemas.examples/" + resourceName, StandardCharsets.UTF_8));
+            return mapper.readTree(FileAndClasspathReaderUtils.getResourceAsString("spec/schemas.examples/" + resourceName, StandardCharsets.UTF_8));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

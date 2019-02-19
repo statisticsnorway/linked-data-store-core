@@ -9,7 +9,7 @@ import org.testng.annotations.Test;
 
 import static java.time.ZoneId.of;
 import static java.time.ZonedDateTime.now;
-import static no.ssb.lds.api.persistence.json.JsonDocument.mapper;
+import static no.ssb.lds.api.persistence.json.JsonTools.mapper;
 import static no.ssb.lds.core.domain.resource.ResourceContext.createResourceContext;
 import static no.ssb.lds.core.domain.resource.ResourceContextTest.specification;
 import static org.testng.Assert.assertEquals;

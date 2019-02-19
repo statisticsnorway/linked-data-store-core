@@ -29,6 +29,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 
+import static no.ssb.lds.api.persistence.json.JsonTools.mapper;
+
 public class ManagedResourceHandler implements HttpHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(ManagedResourceHandler.class);
@@ -78,7 +80,7 @@ public class ManagedResourceHandler implements HttpHandler {
             return;
         }
 
-        ArrayNode output = JsonDocument.mapper.createArrayNode();
+        ArrayNode output = mapper.createArrayNode();
         try (Transaction tx = persistence.createTransaction(true)) {
             if (isManagedList) {
                 Iterable<JsonDocument> documents = persistence.readDocuments(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), Range.unbounded()).blockingIterable();
@@ -100,7 +102,7 @@ public class ManagedResourceHandler implements HttpHandler {
         } else if (output.size() == 1) {
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
             try {
-                exchange.getResponseSender().send(JsonDocument.mapper.writeValueAsString(output.get(0)), StandardCharsets.UTF_8);
+                exchange.getResponseSender().send(mapper.writeValueAsString(output.get(0)), StandardCharsets.UTF_8);
             } catch (JsonProcessingException e) {
                 throw new RuntimeException();
             }
@@ -132,14 +134,14 @@ public class ManagedResourceHandler implements HttpHandler {
                     // deserialize request data
                     JsonNode requestData;
                     try {
-                        requestData = JsonDocument.mapper.readTree(requestBody);
+                        requestData = mapper.readTree(requestBody);
                     } catch (IOException e) {
                         throw new RuntimeException("Malformed json in request. Unable to deserialize.");
                     }
 
                     if (LOG.isTraceEnabled()) {
                         try {
-                            LOG.trace("{} {}\n{}", exchange.getRequestMethod(), exchange.getRequestPath(), JsonDocument.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(requestData));
+                            LOG.trace("{} {}\n{}", exchange.getRequestMethod(), exchange.getRequestPath(), mapper.writerWithDefaultPrettyPrinter().writeValueAsString(requestData));
                         } catch (JsonProcessingException e) {
                             throw new RuntimeException(e);
                         }

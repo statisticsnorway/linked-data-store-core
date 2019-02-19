@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import no.ssb.concurrent.futureselector.SelectableFuture;
 import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
-import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.saga.api.Saga;
 import no.ssb.saga.execution.SagaExecution;
 import no.ssb.saga.execution.SagaHandoffControl;
@@ -27,6 +26,8 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+
+import static no.ssb.lds.api.persistence.json.JsonTools.mapper;
 
 public class SagaExecutionCoordinator {
 
@@ -64,7 +65,7 @@ public class SagaExecutionCoordinator {
     public SelectableFuture<SagaHandoffResult> handoff(boolean sync, AdapterLoader adapterLoader, Saga saga, String namespace, String entity, String id, ZonedDateTime version, JsonNode data) {
         String versionStr = version.format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
         SagaExecution sagaExecution = new SagaExecution(sagaLog, threadPool, saga, adapterLoader);
-        ObjectNode input = JsonDocument.mapper.createObjectNode();
+        ObjectNode input = mapper.createObjectNode();
         input.put("namespace", namespace);
         input.put("entity", entity);
         input.put("id", id);
@@ -131,7 +132,7 @@ public class SagaExecutionCoordinator {
         AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
         JsonNode sagaInput;
         try {
-            sagaInput = JsonDocument.mapper.readTree(startSagaEntry.jsonData);
+            sagaInput = mapper.readTree(startSagaEntry.jsonData);
         } catch (IOException e) {
             throw new RuntimeException();
         }

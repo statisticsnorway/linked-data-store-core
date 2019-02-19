@@ -12,7 +12,7 @@ import org.testng.annotations.Test;
 import javax.inject.Inject;
 import java.io.IOException;
 
-import static no.ssb.lds.api.persistence.json.JsonDocument.mapper;
+import static no.ssb.lds.api.persistence.json.JsonTools.mapper;
 import static org.testng.Assert.assertEquals;
 
 @Listeners(TestServerListener.class)
