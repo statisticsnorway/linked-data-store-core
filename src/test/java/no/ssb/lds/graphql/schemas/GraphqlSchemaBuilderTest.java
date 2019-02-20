@@ -129,7 +129,7 @@ public class GraphqlSchemaBuilderTest {
         }
 
         @Override
-        public Flowable<JsonDocument> findDocument(Transaction tx, ZonedDateTime snapshot, String namespace, String entityName, String path, String value, Range<String> range) {
+        public Flowable<JsonDocument> findDocument(Transaction tx, ZonedDateTime snapshot, String namespace, String entityName, JsonNavigationPath path, String value, Range<String> range) {
             return null;
         }
 
