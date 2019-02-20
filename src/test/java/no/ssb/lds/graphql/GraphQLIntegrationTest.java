@@ -11,7 +11,6 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
-import java.io.IOException;
 
 import static org.testng.Assert.assertEquals;
 
@@ -26,7 +25,7 @@ public class GraphQLIntegrationTest {
             "graphql.enabled", "true",
             "specification.schema", "spec/demo/contact.json,spec/demo/provisionagreement.json"
     })
-    public void thatGetContactOnlyWorks() throws IOException {
+    public void thatGetContactOnlyWorks() {
         // setup demo data
         putResource("/data/contact/821aa", "demo/4-donald.json");
         assertEquals(client.get("/data/contact/821aa").expect200Ok().body(), "{\"email\":\"donald@duck.no\",\"name\":\"Donald Duck\"}");
@@ -39,7 +38,7 @@ public class GraphQLIntegrationTest {
             "graphql.enabled", "true",
             "specification.schema", "spec/demo/contact.json,spec/demo/provisionagreement.json"
     })
-    public void thatLinkingQueryWorks() throws IOException {
+    public void thatLinkingQueryWorks() {
         // setup demo data
         putResource("/data/provisionagreement/2a41c", "demo/1-sirius.json");
         putResource("/data/provisionagreement/2a41c/address", "demo/2-sirius-address.json");
