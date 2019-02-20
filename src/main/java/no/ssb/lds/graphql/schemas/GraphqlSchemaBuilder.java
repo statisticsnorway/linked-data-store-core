@@ -12,6 +12,7 @@ import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeReference;
 import graphql.schema.GraphQLUnionType;
 import no.ssb.lds.api.json.JsonNavigationPath;
+import no.ssb.lds.api.persistence.DocumentKey;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.api.specification.SpecificationElement;
@@ -368,7 +369,7 @@ public class GraphqlSchemaBuilder {
                 }
                 unionType.typeResolver(env -> {
                     Map<String, Object> object = env.getObject();
-                    return (GraphQLObjectType) env.getSchema().getType((String) object.get("__typename"));
+                    return (GraphQLObjectType) env.getSchema().getType(((DocumentKey) object.get("__key")).entity());
                 });
                 unionTypes.add(propertyName);
                 return unionType.build();

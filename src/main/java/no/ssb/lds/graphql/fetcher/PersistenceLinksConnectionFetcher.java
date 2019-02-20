@@ -8,6 +8,7 @@ import graphql.relay.PageInfo;
 import graphql.schema.DataFetchingEnvironment;
 import io.reactivex.Flowable;
 import no.ssb.lds.api.json.JsonNavigationPath;
+import no.ssb.lds.api.persistence.DocumentKey;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
@@ -48,7 +49,8 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
      */
     private static String getIdFromSource(DataFetchingEnvironment environment) {
         Map<String, Object> source = environment.getSource();
-        return (String) source.get("id");
+        DocumentKey key = (DocumentKey) source.get("__key");
+        return key.id();
     }
 
     @Override

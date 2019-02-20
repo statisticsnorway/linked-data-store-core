@@ -52,9 +52,9 @@ public abstract class ConnectionFetcher<T> implements DataFetcher<Connection<T>>
     }
 
     protected static Edge<Map<String, Object>> toEdge(JsonDocument document) {
-        return new DefaultEdge<>(
-                document.toMap(),
-                new DefaultConnectionCursor(document.key().id())
+        Map<String, Object> map = document.toMap();
+        map.put("__key", document.key());
+        return new DefaultEdge<>(map, new DefaultConnectionCursor(document.key().id())
         );
     }
 
