@@ -53,7 +53,7 @@ public abstract class ConnectionFetcher<T> implements DataFetcher<Connection<T>>
 
     protected static Edge<Map<String, Object>> toEdge(JsonDocument document) {
         Map<String, Object> map = document.toMap();
-        map.put("__key", document.key());
+        map.put("__graphql_internal_document_key", document.key());
         return new DefaultEdge<>(map, new DefaultConnectionCursor(document.key().id())
         );
     }

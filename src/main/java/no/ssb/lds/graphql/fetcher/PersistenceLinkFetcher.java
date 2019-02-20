@@ -38,7 +38,7 @@ public class PersistenceLinkFetcher implements DataFetcher<Map<String, Object>> 
             JsonDocument document = readDocument(type, id, context.getSnapshot());
             if (document != null) {
                 Map<String, Object> asMap = document.toMap();
-                asMap.put("__key", document.key());
+                asMap.put("__graphql_internal_document_key", document.key());
                 return asMap;
             } else {
                 return null;

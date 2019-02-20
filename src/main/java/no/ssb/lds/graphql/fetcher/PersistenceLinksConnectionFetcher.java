@@ -49,7 +49,7 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
      */
     private static String getIdFromSource(DataFetchingEnvironment environment) {
         Map<String, Object> source = environment.getSource();
-        DocumentKey key = (DocumentKey) source.get("__key");
+        DocumentKey key = (DocumentKey) source.get("__graphql_internal_document_key");
         return key.id();
     }
 

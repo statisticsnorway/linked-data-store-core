@@ -369,7 +369,7 @@ public class GraphqlSchemaBuilder {
                 }
                 unionType.typeResolver(env -> {
                     Map<String, Object> object = env.getObject();
-                    return (GraphQLObjectType) env.getSchema().getType(((DocumentKey) object.get("__key")).entity());
+                    return (GraphQLObjectType) env.getSchema().getType(((DocumentKey) object.get("__graphql_internal_document_key")).entity());
                 });
                 unionTypes.add(propertyName);
                 return unionType.build();
