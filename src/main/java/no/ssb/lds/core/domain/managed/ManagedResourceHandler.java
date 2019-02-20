@@ -1,6 +1,5 @@
 package no.ssb.lds.core.domain.managed;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.undertow.server.HttpHandler;
@@ -9,6 +8,7 @@ import io.undertow.util.Headers;
 import no.ssb.concurrent.futureselector.SelectableFuture;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
+import no.ssb.lds.api.persistence.json.JsonTools;
 import no.ssb.lds.api.persistence.reactivex.Range;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
@@ -25,7 +25,6 @@ import no.ssb.saga.execution.adapter.AdapterLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 
@@ -101,15 +100,11 @@ public class ManagedResourceHandler implements HttpHandler {
             exchange.setStatusCode(404);
         } else if (output.size() == 1) {
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
-            try {
-                exchange.getResponseSender().send(mapper.writeValueAsString(output.get(0)), StandardCharsets.UTF_8);
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException();
-            }
+            exchange.getResponseSender().send(JsonTools.toJson(output.get(0)), StandardCharsets.UTF_8);
         } else {
             // (output.length() > 1
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
-            exchange.getResponseSender().send(output.toString(), StandardCharsets.UTF_8);
+            exchange.getResponseSender().send(JsonTools.toJson(output), StandardCharsets.UTF_8);
         }
         exchange.endExchange();
     }
@@ -132,19 +127,10 @@ public class ManagedResourceHandler implements HttpHandler {
                     }
 
                     // deserialize request data
-                    JsonNode requestData;
-                    try {
-                        requestData = mapper.readTree(requestBody);
-                    } catch (IOException e) {
-                        throw new RuntimeException("Malformed json in request. Unable to deserialize.");
-                    }
+                    JsonNode requestData = JsonTools.toJsonNode(requestBody);
 
                     if (LOG.isTraceEnabled()) {
-                        try {
-                            LOG.trace("{} {}\n{}", exchange.getRequestMethod(), exchange.getRequestPath(), mapper.writerWithDefaultPrettyPrinter().writeValueAsString(requestData));
-                        } catch (JsonProcessingException e) {
-                            throw new RuntimeException(e);
-                        }
+                        LOG.trace("{} {}\n{}", exchange.getRequestMethod(), exchange.getRequestPath(), requestBody);
                     }
 
                     try {

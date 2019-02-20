@@ -10,6 +10,7 @@ import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.undertow.Undertow;
+import no.ssb.lds.api.persistence.json.JsonTools;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -215,7 +216,7 @@ public class GraphqlHttpHandlerTest {
         variables.put("foo", true);
 
         HttpRequest request = HttpRequest.newBuilder(URI.create(uriTemplate.expand()))
-                .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(root)))
+                .POST(HttpRequest.BodyPublishers.ofString(JsonTools.toJson(root)))
                 .header("Content-Type", "application/json")
                 .build();
 

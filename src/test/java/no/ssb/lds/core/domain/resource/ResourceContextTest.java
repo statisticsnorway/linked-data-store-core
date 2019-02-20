@@ -1,9 +1,9 @@
 package no.ssb.lds.core.domain.resource;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import no.ssb.lds.api.json.JsonNavigationPath;
+import no.ssb.lds.api.persistence.json.JsonTools;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.api.specification.SpecificationElementType;
 import no.ssb.lds.core.specification.SpecificationBuilder;
@@ -116,25 +116,21 @@ public class ResourceContextTest {
     }
 
     @Test
-    public void thatNavigateOnNestedNestedArrayReferenceResourceWorksOnEmptyDocument() throws JsonProcessingException {
+    public void thatNavigateOnNestedNestedArrayReferenceResourceWorksOnEmptyDocument() {
         Specification specification = specification();
         ResourceContext context = ResourceContext.createResourceContext(specification, "/ns/SomeEntity/123/object1/object2/refs/OtherEntity/456", ZonedDateTime.now(ZoneId.of("Etc/UTC")));
         JsonNode documentRoot = mapper.createObjectNode();
         context.navigateAndCreateJson(documentRoot, t -> {
             Assert.assertEquals(t.resourceElement.getSpecificationElement().getSpecificationElementType(), SpecificationElementType.REF);
             Assert.assertEquals(JsonNavigationPath.from(t.resourceElement.getSpecificationElement()).serialize(), "$.object1.object2.refs");
-            try {
-                Assert.assertEquals(mapper.writeValueAsString(t.jsonObject), "{}");
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
+            Assert.assertEquals(JsonTools.toJson(t.jsonObject), "{}");
             return null;
         });
-        Assert.assertEquals(mapper.writeValueAsString(documentRoot), "{\"object1\":{\"object2\":{}}}");
+        Assert.assertEquals(JsonTools.toJson(documentRoot), "{\"object1\":{\"object2\":{}}}");
     }
 
     @Test
-    public void thatNavigateOnNestedNestedArrayReferenceResourceWorksOnPopulatedDocument() throws JsonProcessingException {
+    public void thatNavigateOnNestedNestedArrayReferenceResourceWorksOnPopulatedDocument() {
         Specification specification = specification();
         ResourceContext context = ResourceContext.createResourceContext(specification, "/ns/SomeEntity/123/object1/object2/refs/OtherEntity/456", ZonedDateTime.now(ZoneId.of("Etc/UTC")));
         ObjectNode documentRoot = mapper.createObjectNode();
@@ -142,18 +138,14 @@ public class ResourceContextTest {
         context.navigateAndCreateJson(documentRoot, t -> {
             Assert.assertEquals(t.resourceElement.getSpecificationElement().getSpecificationElementType(), SpecificationElementType.REF);
             Assert.assertEquals(JsonNavigationPath.from(t.resourceElement.getSpecificationElement()).serialize(), "$.object1.object2.refs");
-            try {
-                Assert.assertEquals(mapper.writeValueAsString(t.jsonObject), "{\"refs\":[\"/OtherEntity/1\"]}");
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
+            Assert.assertEquals(JsonTools.toJson(t.jsonObject), "{\"refs\":[\"/OtherEntity/1\"]}");
             return null;
         });
-        Assert.assertEquals(mapper.writeValueAsString(documentRoot), "{\"object1\":{\"object2\":{\"refs\":[\"/OtherEntity/1\"]}}}");
+        Assert.assertEquals(JsonTools.toJson(documentRoot), "{\"object1\":{\"object2\":{\"refs\":[\"/OtherEntity/1\"]}}}");
     }
 
     @Test
-    public void thatNavigateOnNestedNestedArrayReferenceResourceWorksOnPartlyPopulatedDocument() throws JsonProcessingException {
+    public void thatNavigateOnNestedNestedArrayReferenceResourceWorksOnPartlyPopulatedDocument() {
         Specification specification = specification();
         ResourceContext context = ResourceContext.createResourceContext(specification, "/ns/SomeEntity/123/object1/object2/refs/OtherEntity/456", ZonedDateTime.now(ZoneId.of("Etc/UTC")));
         ObjectNode documentRoot = mapper.createObjectNode();
@@ -161,14 +153,10 @@ public class ResourceContextTest {
         context.navigateAndCreateJson(documentRoot, t -> {
             Assert.assertEquals(t.resourceElement.getSpecificationElement().getSpecificationElementType(), SpecificationElementType.REF);
             Assert.assertEquals(JsonNavigationPath.from(t.resourceElement.getSpecificationElement()).serialize(), "$.object1.object2.refs");
-            try {
-                Assert.assertEquals(mapper.writeValueAsString(t.jsonObject), "{}");
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
+            Assert.assertEquals(JsonTools.toJson(t.jsonObject), "{}");
             return null;
         });
-        Assert.assertEquals(mapper.writeValueAsString(documentRoot), "{\"object1\":{\"object2\":{}}}");
+        Assert.assertEquals(JsonTools.toJson(documentRoot), "{\"object1\":{\"object2\":{}}}");
     }
 
     // TODO Test array-navigation

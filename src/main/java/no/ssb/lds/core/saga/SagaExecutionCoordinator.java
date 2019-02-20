@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import no.ssb.concurrent.futureselector.SelectableFuture;
 import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
+import no.ssb.lds.api.persistence.json.JsonTools;
 import no.ssb.saga.api.Saga;
 import no.ssb.saga.execution.SagaExecution;
 import no.ssb.saga.execution.SagaHandoffControl;
@@ -14,7 +15,6 @@ import no.ssb.saga.execution.sagalog.SagaLogEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -130,12 +130,7 @@ public class SagaExecutionCoordinator {
         SagaLogEntry startSagaEntry = sagaLogEntries.get(0);
         Saga saga = sagaRepository.get(startSagaEntry.sagaName);
         AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-        JsonNode sagaInput;
-        try {
-            sagaInput = mapper.readTree(startSagaEntry.jsonData);
-        } catch (IOException e) {
-            throw new RuntimeException();
-        }
+        JsonNode sagaInput = JsonTools.toJsonNode(startSagaEntry.jsonData);
         SagaExecution sagaExecution = new SagaExecution(sagaLog, threadPool, saga, adapterLoader);
         SagaHandoffControl handoffControl = sagaExecution.executeSaga(executionId, sagaInput, true, r -> {
         });

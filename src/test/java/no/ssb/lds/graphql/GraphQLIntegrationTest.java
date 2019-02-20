@@ -1,6 +1,7 @@
 package no.ssb.lds.graphql;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import no.ssb.lds.api.persistence.json.JsonTools;
 import no.ssb.lds.core.utils.FileAndClasspathReaderUtils;
 import no.ssb.lds.test.ConfigurationOverride;
 import no.ssb.lds.test.client.TestClient;
@@ -12,7 +13,6 @@ import org.testng.annotations.Test;
 import javax.inject.Inject;
 import java.io.IOException;
 
-import static no.ssb.lds.api.persistence.json.JsonTools.mapper;
 import static org.testng.Assert.assertEquals;
 
 @Listeners(TestServerListener.class)
@@ -55,12 +55,12 @@ public class GraphQLIntegrationTest {
         client.put(path, FileAndClasspathReaderUtils.readFileOrClasspathResource(resourceFilePath));
     }
 
-    private void assertNoErrors(String graphqlResponseBody) throws IOException {
-        JsonNode responseRootNode = mapper.readTree(graphqlResponseBody);
+    private void assertNoErrors(String graphqlResponseBody) {
+        JsonNode responseRootNode = JsonTools.toJsonNode(graphqlResponseBody);
         if (responseRootNode.has("errors")) {
             // there should not be any errors!
             JsonNode errors = responseRootNode.get("errors");
-            String errorMessages = mapper.writeValueAsString(errors);
+            String errorMessages = JsonTools.toJson(errors);
             Assert.fail(errorMessages);
         }
     }

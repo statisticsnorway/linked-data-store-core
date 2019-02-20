@@ -2,6 +2,7 @@ package no.ssb.lds.core.saga;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import no.ssb.lds.api.persistence.json.JsonTools;
 import no.ssb.lds.core.persistence.PersistenceCreateOrOverwriteSagaAdapter;
 import no.ssb.lds.core.utils.FileAndClasspathReaderUtils;
 import no.ssb.lds.test.ConfigurationOverride;
@@ -17,7 +18,6 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -142,11 +142,7 @@ public class SagaExecutionCoordinatorWatchdogTest {
     }
 
     static final JsonNode resource(String resourceName) {
-        try {
-            return mapper.readTree(FileAndClasspathReaderUtils.getResourceAsString("spec/schemas.examples/" + resourceName, StandardCharsets.UTF_8));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return JsonTools.toJsonNode(FileAndClasspathReaderUtils.getResourceAsString("spec/schemas.examples/" + resourceName, StandardCharsets.UTF_8));
     }
 
     static void shutdownAndAwaitTermination(ExecutorService pool) {

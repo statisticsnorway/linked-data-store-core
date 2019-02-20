@@ -1,6 +1,5 @@
 package no.ssb.lds.graphql;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
@@ -14,6 +13,7 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
+import no.ssb.lds.api.persistence.json.JsonTools;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -118,11 +118,7 @@ public class GraphqlHttpHandler implements HttpHandler {
                 JsonNode json = toJson(exchange);
                 executionInput.query(json.get("query").textValue());
                 if (json.has("variables") && !json.get("variables").isNull()) {
-                    // TODO convert directly from JsonNode tree to Map<String, Object> instead of using serialization
-                    JsonNode variables = json.get("variables");
-                    String variablesJson = mapper.writeValueAsString(variables);
-                    Map<String, Object> jsonMap = toMap(variablesJson);
-                    executionInput.variables(jsonMap);
+                    executionInput.variables(JsonTools.toMap(json.get("variables")));
                 }
                 if (json.has("operationName")) {
                     executionInput.operationName(json.get("operationName").textValue());
@@ -142,7 +138,7 @@ public class GraphqlHttpHandler implements HttpHandler {
             operationName.ifPresent(executionInput::operationName);
 
             Optional<String> variables = extractParam(parameters, "variables");
-            variables.map(this::toMap).ifPresent(executionInput::variables);
+            variables.map(JsonTools::toJsonNode).map(JsonTools::toMap).ifPresent(executionInput::variables);
 
         } else {
             exchange.setStatusCode(StatusCodes.METHOD_NOT_ALLOWED);
@@ -157,20 +153,11 @@ public class GraphqlHttpHandler implements HttpHandler {
 
         // Serialize
         Map<String, Object> resultMap = result.toSpecification();
-        String jsonResult = mapper.writeValueAsString(resultMap);
+        String jsonResult = JsonTools.toJson(JsonTools.toJsonNode(resultMap));
 
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
         exchange.setStatusCode(StatusCodes.OK);
         exchange.getResponseSender().send(jsonResult);
 
-    }
-
-    private Map<String, Object> toMap(String variablesJson) {
-        try {
-            return mapper.readValue(variablesJson, new TypeReference<Map<String, Object>>() {
-            });
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 }

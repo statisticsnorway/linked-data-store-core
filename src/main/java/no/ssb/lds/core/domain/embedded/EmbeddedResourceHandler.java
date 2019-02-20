@@ -1,6 +1,5 @@
 package no.ssb.lds.core.domain.embedded;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -8,6 +7,7 @@ import io.undertow.util.Headers;
 import no.ssb.concurrent.futureselector.SelectableFuture;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
+import no.ssb.lds.api.persistence.json.JsonTools;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.domain.resource.ResourceContext;
@@ -23,7 +23,6 @@ import no.ssb.saga.execution.adapter.AdapterLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 
@@ -88,18 +87,10 @@ public class EmbeddedResourceHandler implements HttpHandler {
         if (subTreeRoot == null) {
             result = "[null]";
         } else if (subTreeRoot.isContainerNode()) {
-            try {
-                result = mapper.writeValueAsString(subTreeRoot);
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
+            result = JsonTools.toJson(subTreeRoot);
         } else {
             // wrap simple values in json array.
-            try {
-                result = mapper.writeValueAsString(mapper.createArrayNode().add(subTreeRoot));
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
+            result = JsonTools.toJson(mapper.createArrayNode().add(subTreeRoot));
         }
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
         exchange.getResponseSender().send(result, StandardCharsets.UTF_8);
@@ -124,19 +115,10 @@ public class EmbeddedResourceHandler implements HttpHandler {
                         return;
                     }
 
-                    JsonNode embeddedJson;
-                    try {
-                        embeddedJson = mapper.readTree(message);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
+                    JsonNode embeddedJson = JsonTools.toJsonNode(message);
 
                     if (LOG.isTraceEnabled()) {
-                        try {
-                            LOG.trace("{} {}\n{}", exchange.getRequestMethod(), exchange.getRequestPath(), mapper.writerWithDefaultPrettyPrinter().writeValueAsString(embeddedJson));
-                        } catch (JsonProcessingException e) {
-                            throw new RuntimeException(e);
-                        }
+                        LOG.trace("{} {}\n{}", exchange.getRequestMethod(), exchange.getRequestPath(), message);
                     }
 
                     mergeJson(resourceContext, managedDocument, embeddedJson);
@@ -144,15 +126,13 @@ public class EmbeddedResourceHandler implements HttpHandler {
                     try {
                         LinkedDocumentValidator validator = new LinkedDocumentValidator(specification, schemaRepository);
                         // TODO avoid serialization and de-serialization due to using both jackson and org.json
-                        validator.validate(managedDomain, mapper.writeValueAsString(managedDocument));
+                        validator.validate(managedDomain, JsonTools.toJson(managedDocument));
                     } catch (LinkedDocumentValidationException ve) {
                         LOG.debug("Schema validation error: {}", ve.getMessage());
                         exchange.setStatusCode(400);
                         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
                         exchange.getResponseSender().send("Schema validation error: " + ve.getMessage());
                         return;
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
                     }
 
                     boolean sync = exchange.getQueryParameters().getOrDefault("sync", new LinkedList()).stream().anyMatch(s -> "true".equalsIgnoreCase((String) s));

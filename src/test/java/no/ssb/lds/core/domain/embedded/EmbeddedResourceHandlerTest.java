@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import no.ssb.lds.api.persistence.DocumentKey;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
+import no.ssb.lds.api.persistence.json.JsonTools;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.test.client.TestClient;
 import no.ssb.lds.test.server.TestServer;
@@ -13,11 +14,9 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
-import java.io.IOException;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 
-import static no.ssb.lds.api.persistence.json.JsonTools.mapper;
 import static org.testng.Assert.assertEquals;
 
 @Listeners(TestServerListener.class)
@@ -31,12 +30,7 @@ public class EmbeddedResourceHandlerTest {
 
     private void createTestResource(String entity, String id, String json) {
         ZonedDateTime timestamp = ZonedDateTime.now(ZoneId.of("Etc/UTC"));
-        JsonNode jsonObject;
-        try {
-            jsonObject = mapper.readTree(json);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        JsonNode jsonObject = JsonTools.toJsonNode(json);
         RxJsonPersistence persistence = server.getPersistence();
         try (Transaction tx = persistence.createTransaction(false)) {
             persistence.createOrOverwrite(tx, new JsonDocument(new DocumentKey("data", entity, id, timestamp), jsonObject), server.getSpecification()).blockingAwait();
