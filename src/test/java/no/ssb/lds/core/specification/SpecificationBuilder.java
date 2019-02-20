@@ -17,7 +17,7 @@ public class SpecificationBuilder {
     }
 
     public static TestSpecificationElement numericNode(String name) {
-        return new TestSpecificationElement(name, SpecificationElementType.EMBEDDED, Set.of("numeric"), List.of(), Set.of(), Map.of(), null);
+        return new TestSpecificationElement(name, SpecificationElementType.EMBEDDED, Set.of("number"), List.of(), Set.of(), Map.of(), null);
     }
 
     public static TestSpecificationElement stringNode(String name) {
