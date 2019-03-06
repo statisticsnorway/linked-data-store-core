@@ -129,19 +129,22 @@ public class GraphqlSchemaBuilder {
         for (SpecificationElement element : root.getProperties().values()) {
 
             try {
-                GraphQLObjectType buildType = createObjectType(element)
-                        .build();
 
-                GraphQLFieldDefinition.Builder rootQueryField = createRootQueryField(element);
-                DataFetcher rootQueryFetcher = createRootQueryFetcher(element);
-                queryBuilder.field(rootQueryField.dataFetcher(rootQueryFetcher).build());
+                // Create the type anyways.
+                GraphQLObjectType buildType = createObjectType(element).build();
+                additionalTypes.add(buildType);
 
-                // Create root field with connection.
-                queryBuilder.field(createRootQueryConnectionField(element));
+                if (SpecificationElementType.MANAGED.equals(element.getSpecificationElementType())) {
+                    GraphQLFieldDefinition.Builder rootQueryField = createRootQueryField(element);
+                    DataFetcher rootQueryFetcher = createRootQueryFetcher(element);
+                    queryBuilder.field(rootQueryField.dataFetcher(rootQueryFetcher).build());
 
+                    // Create root field with connection.
+                    queryBuilder.field(createRootQueryConnectionField(element));
+                }
                 log.debug("Converted {} to GraphQL type {}", element.getName(), buildType);
 
-                additionalTypes.add(buildType);
+
             } catch (Exception ex) {
                 log.error("could not convert {}", element.getName(), ex);
                 throw ex;
@@ -203,7 +206,7 @@ public class GraphqlSchemaBuilder {
      */
     private GraphQLFieldDefinition.Builder createRootQueryField(SpecificationElement element) {
         return GraphQLFieldDefinition.newFieldDefinition()
-                .name(element.getName())
+                .name(element.getName() + "ById")
                 .argument(
                         GraphQLArgument.newArgument()
                                 .name("id")
