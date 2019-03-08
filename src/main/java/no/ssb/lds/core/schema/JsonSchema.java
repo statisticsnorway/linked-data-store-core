@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 
 public class JsonSchema {
 
-    static final Pattern compactJsonPattern = Pattern.compile("\\s(?=([^\"]*\"[^\"]*\")*[^\"]*$)");
+    static final Pattern nonSpace = Pattern.compile("(\"[^\"]*\")|\\s");
     final Map<String, Schema> schemas = new LinkedHashMap<>();
     final Map<String, String> schemaJsonByName = new LinkedHashMap<>();
     final Map<String, JsonSchemaDefinitionElement> definitions = new LinkedHashMap<>();
@@ -36,7 +36,7 @@ public class JsonSchema {
     }
 
     JsonSchema addSchemaJson(String name, String schemaJson) {
-        schemaJsonByName.put(name, compactJsonPattern.matcher(schemaJson).replaceAll(""));
+        schemaJsonByName.put(name, nonSpace.matcher(schemaJson).replaceAll("$1"));
         return this;
     }
 
