@@ -1,0 +1,4 @@
+{
+  "query": "{\n  Search(query: \"%s\") {\n     __typename\n     ... on provisionagreement {\n         name\n     }\n  }\n}\n",
+  "variables": null
+}

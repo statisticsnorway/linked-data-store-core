@@ -2,6 +2,9 @@ package no.ssb.lds.core.saga;
 
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
+import no.ssb.lds.core.extension.UpdateIndexSagaAdapter;
+import no.ssb.lds.core.extension.DeleteIndexSagaAdapter;
+import no.ssb.lds.core.extension.SearchIndex;
 import no.ssb.lds.core.persistence.PersistenceCreateOrOverwriteSagaAdapter;
 import no.ssb.lds.core.persistence.PersistenceDeleteSagaAdapter;
 import no.ssb.saga.api.Saga;
@@ -19,18 +22,22 @@ public class SagaRepository {
 
     final AdapterLoader adapterLoader;
 
-    public SagaRepository(Specification specification, RxJsonPersistence persistence) {
+    public SagaRepository(Specification specification, RxJsonPersistence persistence, SearchIndex indexer) {
         register(Saga
-                .start(SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE).linkTo("persistence")
+                .start(SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE).linkTo("persistence", "search-index-update")
                 .id("persistence").adapter(PersistenceCreateOrOverwriteSagaAdapter.NAME).linkToEnd()
+                .id("search-index-update").adapter(UpdateIndexSagaAdapter.NAME).linkToEnd()
                 .end());
-        register(Saga.start(SAGA_DELETE_MANAGED_RESOURCE).linkTo("persistence")
+        register(Saga.start(SAGA_DELETE_MANAGED_RESOURCE).linkTo("persistence", "search-index-delete")
                 .id("persistence").adapter(PersistenceDeleteSagaAdapter.NAME).linkToEnd()
+                .id("search-index-delete").adapter(DeleteIndexSagaAdapter.NAME).linkToEnd()
                 .end());
 
         adapterLoader = new AdapterLoader()
                 .register(new PersistenceCreateOrOverwriteSagaAdapter(persistence, specification))
-                .register(new PersistenceDeleteSagaAdapter(persistence));
+                .register(new PersistenceDeleteSagaAdapter(persistence))
+                .register(new UpdateIndexSagaAdapter(indexer, specification))
+                .register(new DeleteIndexSagaAdapter(indexer, specification));
     }
 
     public AdapterLoader getAdapterLoader() {

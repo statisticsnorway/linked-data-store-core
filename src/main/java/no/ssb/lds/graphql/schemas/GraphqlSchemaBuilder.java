@@ -17,10 +17,12 @@ import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.api.specification.SpecificationElement;
 import no.ssb.lds.api.specification.SpecificationElementType;
+import no.ssb.lds.core.extension.SearchIndex;
 import no.ssb.lds.graphql.fetcher.PersistenceFetcher;
 import no.ssb.lds.graphql.fetcher.PersistenceLinkFetcher;
 import no.ssb.lds.graphql.fetcher.PersistenceLinksConnectionFetcher;
 import no.ssb.lds.graphql.fetcher.PersistenceRootConnectionFetcher;
+import no.ssb.lds.graphql.fetcher.QueryFetcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,11 +56,14 @@ public class GraphqlSchemaBuilder {
     private final Set<String> connectionTypes = new HashSet<>();
 
     private final RxJsonPersistence persistence;
+    private final SearchIndex searchIndex;
     private final String nameSpace;
 
-    public GraphqlSchemaBuilder(Specification specification, RxJsonPersistence persistence, String nameSpace) {
+    public GraphqlSchemaBuilder(Specification specification, RxJsonPersistence persistence, SearchIndex searchIndex,
+                                String nameSpace) {
         this.specification = Objects.requireNonNull(specification);
         this.persistence = Objects.requireNonNull(persistence);
+        this.searchIndex = Objects.requireNonNull(searchIndex);
         this.nameSpace = Objects.requireNonNull(nameSpace);
         if (this.nameSpace.isEmpty()) {
             throw new IllegalArgumentException("namespace was empty");
@@ -124,6 +129,7 @@ public class GraphqlSchemaBuilder {
 
         Set<GraphQLType> additionalTypes = new LinkedHashSet<>();
         GraphQLObjectType.Builder queryBuilder = GraphQLObjectType.newObject().name("Query");
+        Set<GraphQLObjectType> searchTypes = new LinkedHashSet<>();
 
         SpecificationElement root = specification.getRootElement();
         for (SpecificationElement element : root.getProperties().values()) {
@@ -133,6 +139,7 @@ public class GraphqlSchemaBuilder {
                 // Create the type anyways.
                 GraphQLObjectType buildType = createObjectType(element).build();
                 additionalTypes.add(buildType);
+                searchTypes.add(buildType);
 
                 if (SpecificationElementType.MANAGED.equals(element.getSpecificationElementType())) {
                     GraphQLFieldDefinition.Builder rootQueryField = createRootQueryField(element);
@@ -158,6 +165,26 @@ public class GraphqlSchemaBuilder {
                         .field(GraphQLFieldDefinition.newFieldDefinition().name("hasPreviousPage").type(GraphQLNonNull.nonNull(GraphQLBoolean)))
                         .build()
         ));
+
+        queryBuilder.field(GraphQLFieldDefinition.newFieldDefinition()
+                .name("Search")
+                .argument(
+                        GraphQLArgument.newArgument()
+                                .name("query")
+                                .type(new GraphQLNonNull(GraphQLString))
+                                .build()
+                )
+                .type(GraphQLList.list(GraphQLTypeReference.typeRef("SearchResult")))
+                .dataFetcher(new QueryFetcher(searchIndex, this.nameSpace, "search"))
+                .build());
+
+        additionalTypes.add(GraphQLUnionType.newUnionType().name("SearchResult")
+                .possibleTypes(searchTypes.toArray(new GraphQLObjectType[]{}))
+                .typeResolver(env -> {
+                    Map<String, Object> object = env.getObject();
+                    return (GraphQLObjectType) env.getSchema().getType(((DocumentKey) object.get("__graphql_internal_document_key")).entity());
+                })
+                .build());
 
         return GraphQLSchema.newSchema().query(queryBuilder.build()).additionalTypes(additionalTypes).build();
     }
