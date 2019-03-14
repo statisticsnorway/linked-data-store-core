@@ -37,6 +37,6 @@ public class PersistenceCreateOrOverwriteSagaAdapter extends Adapter<JsonNode> {
         } catch (Throwable t) {
             throw new AbortSagaException("Unable to write data using persistence.", t);
         }
-        return null;
+        return input;
     }
 }

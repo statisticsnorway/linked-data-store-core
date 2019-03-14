@@ -24,6 +24,8 @@ module no.ssb.lds.core {
     requires org.reactivestreams;
     requires com.github.akarnokd.rxjava2jdk9interop;
 
+    requires kafka.clients;
+
     opens no.ssb.lds.graphql.graphiql;
 
     uses PersistenceInitializer;

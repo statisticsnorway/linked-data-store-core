@@ -12,6 +12,7 @@ import no.ssb.config.DynamicConfiguration;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.controller.NamespaceController;
+import no.ssb.lds.core.notification.KafkaConfigurator;
 import no.ssb.lds.core.persistence.PersistenceConfigurator;
 import no.ssb.lds.core.saga.FileSagaLog;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
@@ -50,6 +51,7 @@ public class UndertowApplication {
     private final Undertow server;
     private final String host;
     private final int port;
+
     UndertowApplication(Specification specification, RxJsonPersistence persistence, SagaExecutionCoordinator sec,
                         SagaRepository sagaRepository, SagasObserver sagasObserver, String host, int port,
                         boolean enableRequestDump, SagaLog sagaLog, SelectableThreadPoolExectutor sagaThreadPool,
@@ -91,6 +93,7 @@ public class UndertowApplication {
                 .setHandler(httpHandler)
                 .build();
     }
+
     private final SagaExecutionCoordinator sec;
     private final SagaRepository sagaRepository;
     private final SagasObserver sagasObserver;
@@ -105,7 +108,14 @@ public class UndertowApplication {
         RxJsonPersistence persistence = PersistenceConfigurator.configurePersistence(configuration, specification);
         SagaLog sagaLog = SagaLogInitializer.initializeSagaLog(configuration.evaluateToString("saga.log.type"), configuration.evaluateToString("saga.log.type.file.path"));
         String host = configuration.evaluateToString("http.host");
-        SagaRepository sagaRepository = new SagaRepository(specification, persistence);
+        SagaRepository sagaRepository;
+        boolean kafkaEnabled = configuration.evaluateToBoolean("kafka.enabled");
+
+        if (kafkaEnabled) {
+            sagaRepository = new SagaRepository(specification, persistence, KafkaConfigurator.createProducer());
+        } else {
+            sagaRepository = new SagaRepository(specification, persistence);
+        }
         final SagasObserver sagasObserver = new SagasObserver(sagaRepository).start();
         final AtomicLong nextWorkerId = new AtomicLong(1);
         int sagaThreadPoolQueueCapacity = configuration.evaluateToInt("saga.threadpool.queue.capacity");
