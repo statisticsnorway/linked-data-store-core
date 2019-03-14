@@ -11,6 +11,7 @@ import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeReference;
 import graphql.schema.GraphQLUnionType;
+import graphql.schema.idl.SchemaPrinter;
 import no.ssb.lds.api.json.JsonNavigationPath;
 import no.ssb.lds.api.persistence.DocumentKey;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
@@ -18,6 +19,7 @@ import no.ssb.lds.api.search.SearchIndex;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.api.specification.SpecificationElement;
 import no.ssb.lds.api.specification.SpecificationElementType;
+import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import no.ssb.lds.graphql.fetcher.PersistenceFetcher;
 import no.ssb.lds.graphql.fetcher.PersistenceLinkFetcher;
 import no.ssb.lds.graphql.fetcher.PersistenceLinksConnectionFetcher;
@@ -69,6 +71,20 @@ public class GraphqlSchemaBuilder {
         if (this.namespace.isEmpty()) {
             throw new IllegalArgumentException("namespace was empty");
         }
+    }
+
+    /**
+     * Use this to print a graphql schema out of a directory of json files.
+     */
+    public static void main(String... argv) {
+        JsonSchemaBasedSpecification spec = JsonSchemaBasedSpecification.create(argv[0]);
+        GraphqlSchemaBuilder builder = new GraphqlSchemaBuilder(
+                spec,
+                new EmptyPersistence(),
+                "/ns"
+        );
+        SchemaPrinter printer = new SchemaPrinter();
+        System.out.println(printer.print(builder.getSchema()));
     }
 
     /**
