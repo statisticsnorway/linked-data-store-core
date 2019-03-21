@@ -38,7 +38,13 @@ public class PersistenceFetcher implements DataFetcher<Map<String, Object>> {
     public Map<String, Object> get(DataFetchingEnvironment environment) throws Exception {
         GraphQLContext context = environment.getContext();
         JsonDocument document = readDocument(environment.getArgument("id"), context.getSnapshot());
-        return document != null ? document.toMap() : null;
+        if (document != null) {
+            Map<String, Object> map = document.toMap();
+            map.put("__graphql_internal_document_key", document.key());
+            return map;
+        } else {
+            return null;
+        }
     }
 
     private JsonDocument readDocument(String id, ZonedDateTime snapshot) {
