@@ -1,10 +1,10 @@
 package no.ssb.lds.core.saga;
 
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
+import no.ssb.lds.api.search.SearchIndex;
 import no.ssb.lds.api.specification.Specification;
-import no.ssb.lds.core.extension.UpdateIndexSagaAdapter;
-import no.ssb.lds.core.extension.DeleteIndexSagaAdapter;
-import no.ssb.lds.core.extension.SearchIndex;
+import no.ssb.lds.core.search.UpdateIndexSagaAdapter;
+import no.ssb.lds.core.search.DeleteIndexSagaAdapter;
 import no.ssb.lds.core.persistence.PersistenceCreateOrOverwriteSagaAdapter;
 import no.ssb.lds.core.persistence.PersistenceDeleteSagaAdapter;
 import no.ssb.saga.api.Saga;

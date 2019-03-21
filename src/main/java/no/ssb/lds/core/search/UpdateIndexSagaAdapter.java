@@ -1,12 +1,15 @@
-package no.ssb.lds.core.extension;
+package no.ssb.lds.core.search;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import no.ssb.lds.api.persistence.DocumentKey;
 import no.ssb.lds.api.persistence.json.JsonDocument;
+import no.ssb.lds.api.search.SearchIndex;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.saga.api.SagaNode;
 import no.ssb.saga.execution.adapter.Adapter;
 
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 public class UpdateIndexSagaAdapter extends Adapter<JsonNode> {
@@ -25,10 +28,11 @@ public class UpdateIndexSagaAdapter extends Adapter<JsonNode> {
     @Override
     public JsonNode executeAction(Object sagaInput, Map<SagaNode, Object> dependeesOutput) {
         JsonNode input = (JsonNode) sagaInput;
-        // We want to overwrite the index for each version, so we set timestamp to null
+        String versionStr = input.get("version").textValue();
+        ZonedDateTime version = ZonedDateTime.parse(versionStr, DateTimeFormatter.ISO_ZONED_DATE_TIME);
         indexer.createOrOverwrite(new JsonDocument(new DocumentKey(input.get("namespace").textValue(),
-                input.get("entity").textValue(), input.get("id").textValue(), null), input.get("data")),
-                specification);
+                input.get("entity").textValue(), input.get("id").textValue(), version), input.get("data")))
+                .blockingAwait();
         return null;
     }
 }

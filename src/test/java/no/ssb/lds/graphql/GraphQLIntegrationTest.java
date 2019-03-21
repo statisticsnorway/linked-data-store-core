@@ -23,7 +23,6 @@ public class GraphQLIntegrationTest {
     @Test
     @ConfigurationOverride({
             "graphql.enabled", "true",
-            "search.index.provider", "testSearchIndex",
             "specification.schema", "spec/demo/contact.json,spec/demo/provisionagreement.json"
     })
     public void thatGetContactOnlyWorks() {
@@ -38,12 +37,10 @@ public class GraphQLIntegrationTest {
     @Test
     @ConfigurationOverride({
             "graphql.enabled", "true",
-            "search.index.provider", "testSearchIndex",
             "specification.schema", "spec/demo/contact.json"
     })
     public void thatSeachByContactNameWorks() {
         // setup demo data
-        putResource("/data/contact/4b2ef", "demo/3-skrue.json");
         putResource("/data/contact/821aa", "demo/4-donald.json");
         JsonNode result = executeGraphQLQuery("spec/demo/graphql/search_contact.json", "Duck");
         assertNoErrors(result);
@@ -58,7 +55,6 @@ public class GraphQLIntegrationTest {
     @Test
     @ConfigurationOverride({
             "graphql.enabled", "true",
-            "search.index.provider", "testSearchIndex",
             "specification.schema", "spec/demo/contact.json,spec/demo/provisionagreement.json"
     })
     public void thatNestedSeachWorks() {
@@ -81,7 +77,6 @@ public class GraphQLIntegrationTest {
     @Test
     @ConfigurationOverride({
             "graphql.enabled", "true",
-            "search.index.provider", "testSearchIndex",
             "specification.schema", "spec/demo/contact.json,spec/demo/provisionagreement.json"
     })
     public void thatLinkingQueryWorks() {

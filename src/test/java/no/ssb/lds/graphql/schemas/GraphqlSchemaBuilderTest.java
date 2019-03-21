@@ -15,9 +15,9 @@ import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.api.persistence.reactivex.Range;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
+import no.ssb.lds.api.search.SearchIndex;
 import no.ssb.lds.api.specification.Specification;
-import no.ssb.lds.core.extension.SearchIndex;
-import no.ssb.lds.core.extension.SearchIndexConfigurator;
+import no.ssb.lds.core.search.SearchIndexConfigurator;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import org.testng.annotations.Test;
 
@@ -63,9 +63,10 @@ public class GraphqlSchemaBuilderTest {
         );
         RxJsonPersistence fakePersistence = new MockPersistence();
         DynamicConfiguration configuration = new StoreBasedDynamicConfiguration.Builder()
+                .values("graphql.search.enabled", "true")
                 .values("search.index.provider", "testSearchIndex")
                 .build();
-        SearchIndex searchIndex = SearchIndexConfigurator.configureSearchIndex(configuration, specification);
+        SearchIndex searchIndex = SearchIndexConfigurator.configureSearchIndex(configuration);
         GraphqlSchemaBuilder builder = new GraphqlSchemaBuilder(specification, fakePersistence, searchIndex,
                 "/ns");
         GraphQLSchema schema = builder.getSchema();
