@@ -1,6 +1,5 @@
 package no.ssb.lds.graphql;
 
-import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.time.Clock;
@@ -18,19 +17,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class GraphQLUndettowContextTest {
 
-    private ZonedDateTime defaultSnapshot;
+    private ZonedDateTime defaultSnapshot = ZonedDateTime.parse("2000-01-01T00:00:00Z");
+    private Clock fixedClock = Clock.fixed(defaultSnapshot.toInstant(), defaultSnapshot.getZone());
 
-    @BeforeMethod
-    public void setUp() {
-        defaultSnapshot = ZonedDateTime.parse("2000-01-01T00:00:00Z");
-        GraphQLUndertowContext.CLOCK = Clock.fixed(defaultSnapshot.toInstant(), defaultSnapshot.getZone());
-    }
 
     @Test
     public void testVariable() {
         ZonedDateTime givenSnapshot = ZonedDateTime.parse("1999-01-01T00:00:00Z");
         Map<String, Object> variables = Map.of(SNAPSHOT_VARIABLE_NAME, givenSnapshot.toString());
-        ZonedDateTime snapshot = GraphQLUndertowContext.getSnapshot(Collections.emptyMap(), variables);
+        ZonedDateTime snapshot = GraphQLUndertowContext.getSnapshot(Collections.emptyMap(), variables, fixedClock);
 
         assertThat(snapshot).isEqualTo(givenSnapshot);
     }
@@ -39,7 +34,7 @@ public class GraphQLUndettowContextTest {
     public void testNullVariable() {
         LinkedHashMap<String, Object> variables = new LinkedHashMap<>();
         variables.put(SNAPSHOT_VARIABLE_NAME, null);
-        ZonedDateTime snapshot = GraphQLUndertowContext.getSnapshot(Collections.emptyMap(), variables);
+        ZonedDateTime snapshot = GraphQLUndertowContext.getSnapshot(Collections.emptyMap(), variables, fixedClock);
 
         assertThat(snapshot).isEqualTo(defaultSnapshot);
     }
@@ -48,7 +43,7 @@ public class GraphQLUndettowContextTest {
     public void testInvalidFormatVariable() {
         Map<String, Object> variables = Map.of(SNAPSHOT_VARIABLE_NAME, "not-a-date-time");
 
-        ZonedDateTime snapshot = GraphQLUndertowContext.getSnapshot(Collections.emptyMap(), variables);
+        ZonedDateTime snapshot = GraphQLUndertowContext.getSnapshot(Collections.emptyMap(), variables, fixedClock);
         assertThat(snapshot).isEqualTo(defaultSnapshot);
     }
 
@@ -57,7 +52,7 @@ public class GraphQLUndettowContextTest {
         Map<String, Object> variables = Map.of(SNAPSHOT_VARIABLE_NAME, false);
 
         assertThatThrownBy(() -> {
-            GraphQLUndertowContext.getSnapshot(Collections.emptyMap(), variables);
+            GraphQLUndertowContext.getSnapshot(Collections.emptyMap(), variables, fixedClock);
         }).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -67,7 +62,7 @@ public class GraphQLUndettowContextTest {
         LinkedList<String> parameters = new LinkedList<>();
         parameters.add(givenSnapshot.toString());
         Map<String, Deque<String>> queryParameters = Map.of(SNAPSHOT_QUERY_NAME, parameters);
-        ZonedDateTime snapshot = GraphQLUndertowContext.getSnapshot(queryParameters, Collections.emptyMap());
+        ZonedDateTime snapshot = GraphQLUndertowContext.getSnapshot(queryParameters, Collections.emptyMap(), fixedClock);
 
         assertThat(snapshot).isEqualTo(givenSnapshot);
     }
@@ -80,7 +75,7 @@ public class GraphQLUndettowContextTest {
         Map<String, Deque<String>> queryParameters = Map.of(SNAPSHOT_QUERY_NAME, parameters);
 
         assertThatThrownBy(() -> {
-            GraphQLUndertowContext.getSnapshot(queryParameters, Collections.emptyMap());
+            GraphQLUndertowContext.getSnapshot(queryParameters, Collections.emptyMap(), fixedClock);
         }).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -89,7 +84,7 @@ public class GraphQLUndettowContextTest {
         LinkedList<String> parameters = new LinkedList<>();
         parameters.add(null);
         Map<String, Deque<String>> queryParameters = Map.of(SNAPSHOT_QUERY_NAME, parameters);
-        ZonedDateTime snapshot = GraphQLUndertowContext.getSnapshot(queryParameters, Collections.emptyMap());
+        ZonedDateTime snapshot = GraphQLUndertowContext.getSnapshot(queryParameters, Collections.emptyMap(), fixedClock);
 
         assertThat(snapshot).isEqualTo(defaultSnapshot);
     }
@@ -99,7 +94,7 @@ public class GraphQLUndettowContextTest {
         LinkedList<String> parameters = new LinkedList<>();
         parameters.add("not-a-variable");
         Map<String, Deque<String>> queryParameters = Map.of(SNAPSHOT_QUERY_NAME, parameters);
-        ZonedDateTime snapshot = GraphQLUndertowContext.getSnapshot(queryParameters, Collections.emptyMap());
+        ZonedDateTime snapshot = GraphQLUndertowContext.getSnapshot(queryParameters, Collections.emptyMap(), fixedClock);
 
         assertThat(snapshot).isEqualTo(defaultSnapshot);
     }
@@ -107,7 +102,7 @@ public class GraphQLUndettowContextTest {
     @Test
     public void testNoQueryParameterNoVariable() {
         ZonedDateTime snapshot =
-                GraphQLUndertowContext.getSnapshot(Collections.emptyMap(), Collections.emptyMap());
+                GraphQLUndertowContext.getSnapshot(Collections.emptyMap(), Collections.emptyMap(), fixedClock);
 
         assertThat(snapshot).isEqualTo(defaultSnapshot);
     }
@@ -122,7 +117,7 @@ public class GraphQLUndettowContextTest {
         Map<String, Object> variables = Map.of(SNAPSHOT_VARIABLE_NAME, variable.toString());
 
         ZonedDateTime snapshot =
-                GraphQLUndertowContext.getSnapshot(queryParameters, variables);
+                GraphQLUndertowContext.getSnapshot(queryParameters, variables, fixedClock);
 
         assertThat(snapshot).isEqualTo(parameter);
     }

@@ -22,9 +22,6 @@ public class GraphQLUndertowContext implements GraphQLContext {
     // Name of the snapshot graphql variable
     static final String SNAPSHOT_VARIABLE_NAME = "__" + SNAPSHOT_QUERY_NAME;
 
-    // Clock so we can test.
-    static Clock CLOCK = Clock.systemUTC();
-
     private final HttpServerExchange exchange;
     private final ZonedDateTime snapshot;
     private final ExecutionInput executionInput;
@@ -33,23 +30,24 @@ public class GraphQLUndertowContext implements GraphQLContext {
         this.exchange = Objects.requireNonNull(exchange);
         this.executionInput = executionInput;
         // Init snapshot.
-        this.snapshot = getSnapshot(exchange.getQueryParameters(), executionInput.getVariables());
+        this.snapshot = getSnapshot(exchange.getQueryParameters(), executionInput.getVariables(), Clock.systemUTC());
     }
 
     /**
      * Gets the snapshot from server exchange query parameters or variables.
      * <p>
-     * If both the queryParameters and variable did not contain snapshot value, the current time is used.
+     * If both the queryParameters and variable did not contain snapshot value, the given clock is used.
      * The value found in the queryParameters take precedence over the value found in the variables.
      *
      * @throws IllegalArgumentException if the query parameter SNAPSHOT_QUERY_NAME contains more than one value
      *                                  or if variable SNAPSHOT_VARIABLE_NAME is mapped is not a string.
      */
-    static ZonedDateTime getSnapshot(Map<String, Deque<String>> queryParameters, Map<String, Object> variables)
+    static ZonedDateTime getSnapshot(Map<String, Deque<String>> queryParameters, Map<String, Object> variables,
+                                     Clock clock)
             throws IllegalArgumentException {
         return getSnapshotFromQuery(queryParameters)
                 .or(() -> getSnapshotFromVariables(variables))
-                .orElse(ZonedDateTime.now(CLOCK));
+                .orElse(ZonedDateTime.now(clock));
     }
 
     /**
