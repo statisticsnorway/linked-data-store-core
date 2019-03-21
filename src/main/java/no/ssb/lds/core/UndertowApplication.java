@@ -55,7 +55,7 @@ public class UndertowApplication {
     UndertowApplication(Specification specification, RxJsonPersistence persistence, SagaExecutionCoordinator sec,
                         SagaRepository sagaRepository, SagasObserver sagasObserver, String host, int port,
                         boolean enableRequestDump, SagaLog sagaLog, SelectableThreadPoolExectutor sagaThreadPool,
-                        NamespaceController namespaceController, boolean graphqlEnabled, String nameSpace,
+                        NamespaceController namespaceController, boolean graphqlEnabled, String namespace,
                         SearchIndex searchIndex) {
         this.specification = specification;
         this.host = host;
@@ -69,7 +69,7 @@ public class UndertowApplication {
 
         PathHandler pathHandler = Handlers.path();
         if (graphqlEnabled) {
-            GraphQL graphQL = GraphQL.newGraphQL(new GraphqlSchemaBuilder(specification, persistence, searchIndex, nameSpace)
+            GraphQL graphQL = GraphQL.newGraphQL(new GraphqlSchemaBuilder(specification, persistence, searchIndex, namespace)
                     .getSchema()).build();
 
             pathHandler.addExactPath("/graphiql", Handlers.resource(new ClassPathResourceManager(
