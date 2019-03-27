@@ -22,7 +22,7 @@ import no.ssb.lds.graphql.fetcher.PersistenceFetcher;
 import no.ssb.lds.graphql.fetcher.PersistenceLinkFetcher;
 import no.ssb.lds.graphql.fetcher.PersistenceLinksConnectionFetcher;
 import no.ssb.lds.graphql.fetcher.PersistenceRootConnectionFetcher;
-import no.ssb.lds.graphql.fetcher.QueryFetcher;
+import no.ssb.lds.graphql.fetcher.QueryConnectionFetcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -147,7 +147,9 @@ public class GraphqlSchemaBuilder {
                     queryBuilder.field(rootQueryField.dataFetcher(rootQueryFetcher).build());
 
                     // Create root field with connection.
-                    queryBuilder.field(createRootQueryConnectionField(element));
+                    queryBuilder.field(createRootQueryConnectionField(element.getName())
+                            .dataFetcher(new PersistenceRootConnectionFetcher(persistence, namespace,
+                                    element.getName())));
                     searchTypes.add(buildType);
                 }
                 log.debug("Converted {} to GraphQL type {}", element.getName(), buildType);
@@ -168,7 +170,7 @@ public class GraphqlSchemaBuilder {
         ));
 
         if (searchIndex != null) {
-            queryBuilder.field(GraphQLFieldDefinition.newFieldDefinition()
+            queryBuilder.field(createRootQueryConnectionField("SearchResult")
                     .name("Search")
                     .argument(
                             GraphQLArgument.newArgument()
@@ -176,9 +178,7 @@ public class GraphqlSchemaBuilder {
                                     .type(new GraphQLNonNull(GraphQLString))
                                     .build()
                     )
-                    .type(GraphQLList.list(GraphQLTypeReference.typeRef("SearchResult")))
-                    .dataFetcher(new QueryFetcher(searchIndex, persistence, this.namespace, "search"))
-                    .build());
+                    .dataFetcher(new QueryConnectionFetcher(searchIndex, persistence, this.namespace, "SearchResult")).build());
 
             additionalTypes.add(GraphQLUnionType.newUnionType().name("SearchResult")
                     .possibleTypes(searchTypes.toArray(new GraphQLObjectType[]{}))
@@ -196,7 +196,7 @@ public class GraphqlSchemaBuilder {
         return new PersistenceFetcher(persistence, this.namespace, element.getName());
     }
 
-    private GraphQLFieldDefinition.Builder createRootQueryConnectionField(SpecificationElement element) {
+    private GraphQLFieldDefinition.Builder createRootQueryConnectionField(final String elementName) {
         GraphQLFieldDefinition.Builder pageInfoField = GraphQLFieldDefinition.newFieldDefinition()
                 .name("pageInfo").type(GraphQLTypeReference.typeRef("PageInfo"));
 
@@ -205,10 +205,10 @@ public class GraphqlSchemaBuilder {
                 .type(GraphQLString).name("cursor");
 
         GraphQLFieldDefinition.Builder nodeField = GraphQLFieldDefinition.newFieldDefinition()
-                .type(GraphQLTypeReference.typeRef(element.getName())).name("node");
+                .type(GraphQLTypeReference.typeRef(elementName)).name("node");
 
         GraphQLObjectType.Builder edgeType = GraphQLObjectType.newObject()
-                .name(element.getName() + "Edge")
+                .name(elementName + "Edge")
                 .field(cursorField)
                 .field(nodeField);
 
@@ -218,17 +218,16 @@ public class GraphqlSchemaBuilder {
 
 
         GraphQLObjectType.Builder connectionType = GraphQLObjectType.newObject()
-                .name(element.getName() + "Connection")
+                .name(elementName + "Connection")
                 .field(edgesField)
                 .field(pageInfoField);
         return GraphQLFieldDefinition.newFieldDefinition()
-                .name(element.getName())
+                .name(elementName)
                 .argument(GraphQLArgument.newArgument().name("first").type(GraphQLInt).build())
                 .argument(GraphQLArgument.newArgument().name("after").type(GraphQLString).build())
                 .argument(GraphQLArgument.newArgument().name("last").type(GraphQLInt).build())
                 .argument(GraphQLArgument.newArgument().name("before").type(GraphQLString).build())
-                .type(connectionType.build())
-                .dataFetcher(new PersistenceRootConnectionFetcher(persistence, namespace, element.getName()));
+                .type(connectionType.build());
     }
 
     /**

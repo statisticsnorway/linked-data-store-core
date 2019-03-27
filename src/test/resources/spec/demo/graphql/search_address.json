@@ -1,4 +1,4 @@
 {
-  "query": "{\n  Search(query: \"%s\") {\n     __typename\n     ... on provisionagreement {\n         name\n     }\n  }\n}\n",
+  "query": "{\n  Search(query: \"%s\") {\n    edges {\n  \t\tnode {\n        __typename ... on provisionagreement {\n          name\n        }\n      }      \n    }       \n  }\n}\n",
   "variables": null
 }

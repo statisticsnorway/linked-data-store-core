@@ -44,12 +44,12 @@ public class GraphQLIntegrationTest {
         putResource("/data/contact/821aa", "demo/4-donald.json");
         JsonNode result = executeGraphQLQuery("spec/demo/graphql/search_contact.json", "Duck");
         assertNoErrors(result);
-        Assert.assertEquals(result.get("data").get("Search").size(), 1);
-        Assert.assertEquals(result.get("data").get("Search").get(0).get("name").textValue(), "Donald Duck");
+        Assert.assertEquals(result.get("data").get("Search").get("edges").size(), 1);
+        Assert.assertEquals(result.get("data").get("Search").get("edges").get(0).get("node").get("name").textValue(), "Donald Duck");
         // Check that the entity is deleted from the index
         client.delete("/data/contact/821aa");
         result = executeGraphQLQuery("spec/demo/graphql/search_contact.json", "Duck");
-        Assert.assertEquals(result.get("data").get("Search").size(), 0);
+        Assert.assertEquals(result.get("data").get("Search").get("edges").size(), 0);
     }
 
     @Test
@@ -64,14 +64,14 @@ public class GraphQLIntegrationTest {
 
         JsonNode result = executeGraphQLQuery("spec/demo/graphql/search_address.json", "Andeby");
         assertNoErrors(result);
-        Assert.assertEquals(result.get("data").get("Search").size(), 1);
-        Assert.assertEquals(result.get("data").get("Search").get(0).get("name").textValue(), "Sirius");
+        Assert.assertEquals(result.get("data").get("Search").get("edges").size(), 1);
+        Assert.assertEquals(result.get("data").get("Search").get("edges").get(0).get("node").get("name").textValue(), "Sirius");
         // Check that the entity index is updated
         client.put("/data/provisionagreement/2a41c", FileAndClasspathReaderUtils.readFileOrClasspathResource(
                 "demo/1-sirius.json").replace("Sirius", "Jupiter"));
         result = executeGraphQLQuery("spec/demo/graphql/search_address.json", "Jupiter");
         assertNoErrors(result);
-        Assert.assertEquals(result.get("data").get("Search").size(), 1);
+        Assert.assertEquals(result.get("data").get("Search").get("edges").size(), 1);
     }
 
     @Test
@@ -96,7 +96,7 @@ public class GraphQLIntegrationTest {
     }
 
     private void assertNoErrors(JsonNode responseRootNode) {
-        //System.out.println(responseRootNode);
+        System.out.println(responseRootNode);
         if (responseRootNode.has("errors")) {
             // there should not be any errors!
             JsonNode errors = responseRootNode.get("errors");
