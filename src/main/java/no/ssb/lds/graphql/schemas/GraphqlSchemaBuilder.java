@@ -2,6 +2,7 @@ package no.ssb.lds.graphql.schemas;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.GraphQLArgument;
+import graphql.schema.GraphQLDirective;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLNonNull;
@@ -56,6 +57,11 @@ public class GraphqlSchemaBuilder {
     // Keep track of the types we registered.
     private final Set<String> unionTypes = new HashSet<>();
     private final Set<String> connectionTypes = new HashSet<>();
+
+    private final GraphQLDirective.Builder linkDirective = GraphQLDirective.newDirective()
+            .name("link")
+            .description("Defines links between attributes and objects")
+            .validLocation(Introspection.DirectiveLocation.FIELD_DEFINITION);
 
     private final RxJsonPersistence persistence;
     private final SearchIndex searchIndex;
@@ -298,7 +304,7 @@ public class GraphqlSchemaBuilder {
             case EMBEDDED:
                 return buildEmbeddedField(property);
             case REF:
-                return buildReferenceField(property);
+                return buildReferenceField(property).withDirective(linkDirective);
             case ROOT:
             case MANAGED:
             default:
