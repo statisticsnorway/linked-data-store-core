@@ -1,5 +1,6 @@
 package no.ssb.lds.graphql.schemas;
 
+import graphql.introspection.Introspection;
 import graphql.schema.DataFetcher;
 import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLDirective;
@@ -71,12 +72,12 @@ public class GraphqlSchemaBuilder {
                                 String namespace) {
         this.specification = Objects.requireNonNull(specification);
         this.persistence = Objects.requireNonNull(persistence);
-        // SearchIndex is implementation is not required
-        this.searchIndex = searchIndex;
         this.namespace = Objects.requireNonNull(namespace);
         if (this.namespace.isEmpty()) {
             throw new IllegalArgumentException("namespace was empty");
         }
+        // SearchIndex is implementation is not required
+        this.searchIndex = searchIndex;
     }
 
     /**
@@ -220,14 +221,14 @@ public class GraphqlSchemaBuilder {
 
     private GraphQLFieldDefinition.Builder createRootQueryConnectionField(final String elementName) {
         GraphQLFieldDefinition.Builder pageInfoField = GraphQLFieldDefinition.newFieldDefinition()
-                .name("pageInfo").type(GraphQLTypeReference.typeRef("PageInfo"));
+                .name("pageInfo").type(GraphQLNonNull.nonNull(GraphQLTypeReference.typeRef("PageInfo")));
 
         // Create root connection
         GraphQLFieldDefinition.Builder cursorField = GraphQLFieldDefinition.newFieldDefinition()
-                .type(GraphQLString).name("cursor");
+                .type(GraphQLNonNull.nonNull(GraphQLString)).name("cursor");
 
         GraphQLFieldDefinition.Builder nodeField = GraphQLFieldDefinition.newFieldDefinition()
-                .type(GraphQLTypeReference.typeRef(elementName)).name("node");
+                .type(GraphQLNonNull.nonNull(GraphQLTypeReference.typeRef(elementName))).name("node");
 
         GraphQLObjectType.Builder edgeType = GraphQLObjectType.newObject()
                 .name(elementName + "Edge")
@@ -236,7 +237,7 @@ public class GraphqlSchemaBuilder {
 
         GraphQLFieldDefinition.Builder edgesField = GraphQLFieldDefinition.newFieldDefinition()
                 .name("edges")
-                .type(GraphQLList.list(edgeType.build()));
+                .type(GraphQLNonNull.nonNull(GraphQLList.list(GraphQLNonNull.nonNull(edgeType.build()))));
 
 
         GraphQLObjectType.Builder connectionType = GraphQLObjectType.newObject()
@@ -264,7 +265,7 @@ public class GraphqlSchemaBuilder {
                                 .type(new GraphQLNonNull(GraphQLID))
                                 .build()
                 )
-                .type(GraphQLTypeReference.typeRef(element.getName()));
+                .type(GraphQLNonNull.nonNull(GraphQLTypeReference.typeRef(element.getName())));
     }
 
     /**
@@ -280,7 +281,6 @@ public class GraphqlSchemaBuilder {
             // For each property
             for (SpecificationElement property : specificationElement.getProperties().values()) {
                 GraphQLFieldDefinition.Builder field = buildField(property);
-
                 object.field(field);
             }
 
@@ -326,14 +326,14 @@ public class GraphqlSchemaBuilder {
         GraphQLOutputType connectionType;
         if (!connectionTypes.contains(connectionName)) {
             GraphQLFieldDefinition.Builder pageInfoField = GraphQLFieldDefinition.newFieldDefinition()
-                    .name("pageInfo").type(GraphQLTypeReference.typeRef("PageInfo"));
+                    .name("pageInfo").type(GraphQLNonNull.nonNull(GraphQLTypeReference.typeRef("PageInfo")));
 
             GraphQLFieldDefinition.Builder cursorField = GraphQLFieldDefinition.newFieldDefinition()
-                    .type(GraphQLString).name("cursor");
+                    .type(GraphQLNonNull.nonNull(GraphQLString)).name("cursor");
 
 
             GraphQLFieldDefinition.Builder nodeField = GraphQLFieldDefinition.newFieldDefinition()
-                    .type(graphQLOutputType).name("node");
+                    .type(GraphQLNonNull.nonNull(graphQLOutputType)).name("node");
 
             GraphQLObjectType.Builder edgeType = GraphQLObjectType.newObject()
                     .name(sourceName + targetName + "Edge")
@@ -342,7 +342,7 @@ public class GraphqlSchemaBuilder {
 
             GraphQLFieldDefinition.Builder edgesField = GraphQLFieldDefinition.newFieldDefinition()
                     .name("edges")
-                    .type(GraphQLList.list(edgeType.build()));
+                    .type(GraphQLNonNull.nonNull(GraphQLList.list(GraphQLNonNull.nonNull(edgeType.build()))));
 
 
             connectionType = GraphQLObjectType.newObject()
@@ -382,7 +382,7 @@ public class GraphqlSchemaBuilder {
             case STRING:
                 GraphQLFieldDefinition.Builder field = createFieldDefinition(property);
                 GraphQLOutputType graphQLOutputType = buildReferenceTargetType(property);
-                field.type(graphQLOutputType);
+                field.type(isNullable(property) ? graphQLOutputType : GraphQLNonNull.nonNull(graphQLOutputType));
                 String name;
                 if (graphQLOutputType instanceof GraphQLUnionType) {
                     // Make sure the fetcher recognize actual types.
@@ -470,7 +470,7 @@ public class GraphqlSchemaBuilder {
                 JsonType arrayType = elementJsonType(arrayElement);
                 if (arrayType == JsonType.OBJECT && !"".equals(arrayElement.getName())) {
                     String refType = arrayElement.getName();
-                    return GraphQLList.list(GraphQLTypeReference.typeRef(refType));
+                    return GraphQLList.list(GraphQLNonNull.nonNull(GraphQLTypeReference.typeRef(refType)));
                 } else {
                     // TODO: Array can be of scalar type.
                     return GraphQLList.list(GraphQLString);
