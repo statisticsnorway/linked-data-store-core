@@ -1,7 +1,9 @@
 import no.ssb.lds.api.persistence.PersistenceInitializer;
+import no.ssb.lds.api.search.SearchIndexProvider;
 
 module no.ssb.lds.core {
     requires no.ssb.lds.persistence.api;
+    requires no.ssb.lds.search.api;
     requires no.ssb.config;
     requires no.ssb.concurrent.futureselector;
     requires no.ssb.saga.api;
@@ -27,6 +29,7 @@ module no.ssb.lds.core {
     opens no.ssb.lds.graphql.graphiql;
 
     uses PersistenceInitializer;
+    uses SearchIndexProvider;
 
     exports no.ssb.lds.core;
 }

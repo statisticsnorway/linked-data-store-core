@@ -1,0 +1,4 @@
+{
+  "query": "{\n  contactById(id: \"%s\") {\n     name\n     email\n  }\n}\n",
+  "variables": null
+}

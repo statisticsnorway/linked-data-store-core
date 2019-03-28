@@ -93,6 +93,12 @@
 
         <dependency>
             <groupId>no.ssb.lds</groupId>
+            <artifactId>linked-data-store-search-provider-api</artifactId>
+            <version>0.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>no.ssb.lds</groupId>
             <artifactId>linked-data-store-persistence-provider-memory</artifactId>
             <version>0.6</version>
             <scope>test</scope>

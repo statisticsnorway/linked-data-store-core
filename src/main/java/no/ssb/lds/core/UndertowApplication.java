@@ -10,8 +10,10 @@ import io.undertow.server.handlers.resource.ClassPathResourceManager;
 import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
 import no.ssb.config.DynamicConfiguration;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
+import no.ssb.lds.api.search.SearchIndex;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.controller.NamespaceController;
+import no.ssb.lds.core.search.SearchIndexConfigurator;
 import no.ssb.lds.core.persistence.PersistenceConfigurator;
 import no.ssb.lds.core.saga.FileSagaLog;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
@@ -53,7 +55,8 @@ public class UndertowApplication {
     UndertowApplication(Specification specification, RxJsonPersistence persistence, SagaExecutionCoordinator sec,
                         SagaRepository sagaRepository, SagasObserver sagasObserver, String host, int port,
                         boolean enableRequestDump, SagaLog sagaLog, SelectableThreadPoolExectutor sagaThreadPool,
-                        NamespaceController namespaceController, boolean graphqlEnabled, String nameSpace) {
+                        NamespaceController namespaceController, boolean graphqlEnabled, String namespace,
+                        SearchIndex searchIndex) {
         this.specification = specification;
         this.host = host;
         this.port = port;
@@ -66,7 +69,7 @@ public class UndertowApplication {
 
         PathHandler pathHandler = Handlers.path();
         if (graphqlEnabled) {
-            GraphQL graphQL = GraphQL.newGraphQL(new GraphqlSchemaBuilder(specification, persistence, nameSpace)
+            GraphQL graphQL = GraphQL.newGraphQL(new GraphqlSchemaBuilder(specification, persistence, searchIndex, namespace)
                     .getSchema()).build();
 
             pathHandler.addExactPath("/graphiql", Handlers.resource(new ClassPathResourceManager(
@@ -105,7 +108,8 @@ public class UndertowApplication {
         RxJsonPersistence persistence = PersistenceConfigurator.configurePersistence(configuration, specification);
         SagaLog sagaLog = SagaLogInitializer.initializeSagaLog(configuration.evaluateToString("saga.log.type"), configuration.evaluateToString("saga.log.type.file.path"));
         String host = configuration.evaluateToString("http.host");
-        SagaRepository sagaRepository = new SagaRepository(specification, persistence);
+        SearchIndex searchIndex = SearchIndexConfigurator.configureSearchIndex(configuration);
+        SagaRepository sagaRepository = new SagaRepository(specification, persistence, searchIndex);
         final SagasObserver sagasObserver = new SagasObserver(sagaRepository).start();
         final AtomicLong nextWorkerId = new AtomicLong(1);
         int sagaThreadPoolQueueCapacity = configuration.evaluateToInt("saga.threadpool.queue.capacity");
@@ -152,7 +156,7 @@ public class UndertowApplication {
         // TODO: Pass configuration instead to avoid so many parameters. Undertow has a nice builder pattern.
         return new UndertowApplication(specification, persistence, sec, sagaRepository, sagasObserver, host, port, enableRequestDump,
                 sagaLog, sagaThreadPool, namespaceController, graphqlEnabled,
-                configuration.evaluateToString("namespace.default"));
+                configuration.evaluateToString("namespace.default"), searchIndex);
     }
 
     public void enableSagaExecutionAutomaticDeadlockDetectionAndResolution() {

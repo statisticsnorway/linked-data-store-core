@@ -14,6 +14,7 @@ import graphql.schema.GraphQLUnionType;
 import no.ssb.lds.api.json.JsonNavigationPath;
 import no.ssb.lds.api.persistence.DocumentKey;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
+import no.ssb.lds.api.search.SearchIndex;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.api.specification.SpecificationElement;
 import no.ssb.lds.api.specification.SpecificationElementType;
@@ -21,6 +22,7 @@ import no.ssb.lds.graphql.fetcher.PersistenceFetcher;
 import no.ssb.lds.graphql.fetcher.PersistenceLinkFetcher;
 import no.ssb.lds.graphql.fetcher.PersistenceLinksConnectionFetcher;
 import no.ssb.lds.graphql.fetcher.PersistenceRootConnectionFetcher;
+import no.ssb.lds.graphql.fetcher.QueryConnectionFetcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,13 +56,17 @@ public class GraphqlSchemaBuilder {
     private final Set<String> connectionTypes = new HashSet<>();
 
     private final RxJsonPersistence persistence;
-    private final String nameSpace;
+    private final SearchIndex searchIndex;
+    private final String namespace;
 
-    public GraphqlSchemaBuilder(Specification specification, RxJsonPersistence persistence, String nameSpace) {
+    public GraphqlSchemaBuilder(Specification specification, RxJsonPersistence persistence, SearchIndex searchIndex,
+                                String namespace) {
         this.specification = Objects.requireNonNull(specification);
         this.persistence = Objects.requireNonNull(persistence);
-        this.nameSpace = Objects.requireNonNull(nameSpace);
-        if (this.nameSpace.isEmpty()) {
+        // SearchIndex is implementation is not required
+        this.searchIndex = searchIndex;
+        this.namespace = Objects.requireNonNull(namespace);
+        if (this.namespace.isEmpty()) {
             throw new IllegalArgumentException("namespace was empty");
         }
     }
@@ -124,6 +130,7 @@ public class GraphqlSchemaBuilder {
 
         Set<GraphQLType> additionalTypes = new LinkedHashSet<>();
         GraphQLObjectType.Builder queryBuilder = GraphQLObjectType.newObject().name("Query");
+        Set<GraphQLObjectType> searchTypes = new LinkedHashSet<>();
 
         SpecificationElement root = specification.getRootElement();
         for (SpecificationElement element : root.getProperties().values()) {
@@ -140,7 +147,10 @@ public class GraphqlSchemaBuilder {
                     queryBuilder.field(rootQueryField.dataFetcher(rootQueryFetcher).build());
 
                     // Create root field with connection.
-                    queryBuilder.field(createRootQueryConnectionField(element));
+                    queryBuilder.field(createRootQueryConnectionField(element.getName())
+                            .dataFetcher(new PersistenceRootConnectionFetcher(persistence, namespace,
+                                    element.getName())));
+                    searchTypes.add(buildType);
                 }
                 log.debug("Converted {} to GraphQL type {}", element.getName(), buildType);
 
@@ -159,14 +169,34 @@ public class GraphqlSchemaBuilder {
                         .build()
         ));
 
+        if (searchIndex != null) {
+            queryBuilder.field(createRootQueryConnectionField("SearchResult")
+                    .name("Search")
+                    .argument(
+                            GraphQLArgument.newArgument()
+                                    .name("query")
+                                    .type(new GraphQLNonNull(GraphQLString))
+                                    .build()
+                    )
+                    .dataFetcher(new QueryConnectionFetcher(searchIndex, persistence, this.namespace, "SearchResult")).build());
+
+            additionalTypes.add(GraphQLUnionType.newUnionType().name("SearchResult")
+                    .possibleTypes(searchTypes.toArray(new GraphQLObjectType[]{}))
+                    .typeResolver(env -> {
+                        Map<String, Object> object = env.getObject();
+                        return (GraphQLObjectType) env.getSchema().getType(((DocumentKey) object.get("__graphql_internal_document_key")).entity());
+                    })
+                    .build());
+        }
+
         return GraphQLSchema.newSchema().query(queryBuilder.build()).additionalTypes(additionalTypes).build();
     }
 
     private DataFetcher createRootQueryFetcher(SpecificationElement element) {
-        return new PersistenceFetcher(persistence, this.nameSpace, element.getName());
+        return new PersistenceFetcher(persistence, this.namespace, element.getName());
     }
 
-    private GraphQLFieldDefinition.Builder createRootQueryConnectionField(SpecificationElement element) {
+    private GraphQLFieldDefinition.Builder createRootQueryConnectionField(final String elementName) {
         GraphQLFieldDefinition.Builder pageInfoField = GraphQLFieldDefinition.newFieldDefinition()
                 .name("pageInfo").type(GraphQLTypeReference.typeRef("PageInfo"));
 
@@ -175,10 +205,10 @@ public class GraphqlSchemaBuilder {
                 .type(GraphQLString).name("cursor");
 
         GraphQLFieldDefinition.Builder nodeField = GraphQLFieldDefinition.newFieldDefinition()
-                .type(GraphQLTypeReference.typeRef(element.getName())).name("node");
+                .type(GraphQLTypeReference.typeRef(elementName)).name("node");
 
         GraphQLObjectType.Builder edgeType = GraphQLObjectType.newObject()
-                .name(element.getName() + "Edge")
+                .name(elementName + "Edge")
                 .field(cursorField)
                 .field(nodeField);
 
@@ -188,17 +218,16 @@ public class GraphqlSchemaBuilder {
 
 
         GraphQLObjectType.Builder connectionType = GraphQLObjectType.newObject()
-                .name(element.getName() + "Connection")
+                .name(elementName + "Connection")
                 .field(edgesField)
                 .field(pageInfoField);
         return GraphQLFieldDefinition.newFieldDefinition()
-                .name(element.getName())
+                .name(elementName)
                 .argument(GraphQLArgument.newArgument().name("first").type(GraphQLInt).build())
                 .argument(GraphQLArgument.newArgument().name("after").type(GraphQLString).build())
                 .argument(GraphQLArgument.newArgument().name("last").type(GraphQLInt).build())
                 .argument(GraphQLArgument.newArgument().name("before").type(GraphQLString).build())
-                .type(connectionType.build())
-                .dataFetcher(new PersistenceRootConnectionFetcher(persistence, nameSpace, element.getName()));
+                .type(connectionType.build());
     }
 
     /**
@@ -313,7 +342,7 @@ public class GraphqlSchemaBuilder {
                 .argument(GraphQLArgument.newArgument().name("before").type(GraphQLString).build())
                 .type(connectionType)
                 .dataFetcher(new PersistenceLinksConnectionFetcher(
-                        persistence, nameSpace, sourceName, jsonPath, targetName
+                        persistence, namespace, sourceName, jsonPath, targetName
                 ));
     }
 
@@ -343,7 +372,7 @@ public class GraphqlSchemaBuilder {
                 }
                 field.dataFetcher(new PersistenceLinkFetcher(
                         persistence,
-                        this.nameSpace,
+                        this.namespace,
                         propertyName, name
                 ));
                 return field;

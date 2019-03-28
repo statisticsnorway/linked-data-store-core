@@ -1,0 +1,4 @@
+{
+  "query": "{\n  Search(query: \"%s\") {\n    edges {\n  \t\tnode {\n        __typename ... on contact {\n          name\n        }\n      }      \n    }       \n  }\n}\n",
+  "variables": null
+}
