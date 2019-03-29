@@ -88,6 +88,7 @@ public class GraphqlSchemaBuilder {
         GraphqlSchemaBuilder builder = new GraphqlSchemaBuilder(
                 spec,
                 new EmptyPersistence(),
+                null,
                 "/ns"
         );
         SchemaPrinter printer = new SchemaPrinter();
