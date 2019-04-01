@@ -101,7 +101,11 @@
   function graphQLFetcher(graphQLParams) {
     // This example expects a GraphQL server at the path /graphql.
     // Change this to point wherever you host your GraphQL server.
-    return fetch('/graphql', {
+    var path = window.location.pathname;
+    var regex = /\/graphiql\/?/i;
+    var prefix = path.replace(regex, "");
+
+    return fetch(prefix + '/graphql', {
       method: 'post',
       headers: {
         'Accept': 'application/json',

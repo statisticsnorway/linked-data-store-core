@@ -45,7 +45,7 @@ public class NamespaceController implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        String requestPath = exchange.getRequestPath();
+        String requestPath = exchange.getRelativePath();
 
         // NOTE: CORSController cannot be shared across requests or threads
         CORSController cors = new CORSController(corsAllowOrigin, corsAllowHeaders, corsAllowOriginTest, undertowPort);

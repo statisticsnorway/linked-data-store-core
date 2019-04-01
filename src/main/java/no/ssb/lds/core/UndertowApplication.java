@@ -6,6 +6,7 @@ import io.undertow.Handlers;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.PathHandler;
+import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.resource.ClassPathResourceManager;
 import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
 import no.ssb.config.DynamicConfiguration;
@@ -13,13 +14,13 @@ import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.search.SearchIndex;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.controller.NamespaceController;
-import no.ssb.lds.core.search.SearchIndexConfigurator;
 import no.ssb.lds.core.persistence.PersistenceConfigurator;
 import no.ssb.lds.core.saga.FileSagaLog;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
 import no.ssb.lds.core.saga.SagaLogInitializer;
 import no.ssb.lds.core.saga.SagaRepository;
 import no.ssb.lds.core.saga.SagasObserver;
+import no.ssb.lds.core.search.SearchIndexConfigurator;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import no.ssb.lds.graphql.GraphqlHttpHandler;
 import no.ssb.lds.graphql.schemas.GraphqlSchemaBuilder;
@@ -52,11 +53,12 @@ public class UndertowApplication {
     private final Undertow server;
     private final String host;
     private final int port;
+
     UndertowApplication(Specification specification, RxJsonPersistence persistence, SagaExecutionCoordinator sec,
                         SagaRepository sagaRepository, SagasObserver sagasObserver, String host, int port,
-                        boolean enableRequestDump, SagaLog sagaLog, SelectableThreadPoolExectutor sagaThreadPool,
-                        NamespaceController namespaceController, boolean graphqlEnabled, String namespace,
-                        SearchIndex searchIndex) {
+                        SagaLog sagaLog, SelectableThreadPoolExectutor sagaThreadPool,
+                        NamespaceController namespaceController, SearchIndex searchIndex,
+                        DynamicConfiguration configuration) {
         this.specification = specification;
         this.host = host;
         this.port = port;
@@ -66,6 +68,11 @@ public class UndertowApplication {
         this.sagasObserver = sagasObserver;
         this.sagaLog = sagaLog;
         this.sagaThreadPool = sagaThreadPool;
+
+        String namespace = configuration.evaluateToString("namespace.default");
+        boolean enableRequestDump = configuration.evaluateToBoolean("http.request.dump");
+        boolean graphqlEnabled = configuration.evaluateToBoolean("graphql.enabled");
+        String pathPrefix = configuration.evaluateToString("http.prefix");
 
         PathHandler pathHandler = Handlers.path();
         if (graphqlEnabled) {
@@ -87,6 +94,11 @@ public class UndertowApplication {
             httpHandler = Handlers.requestDump(pathHandler);
         } else {
             httpHandler = pathHandler;
+        }
+
+        if (pathPrefix != null && !pathPrefix.isEmpty()) {
+            LOG.info("Using http prefix: {}", pathPrefix);
+            httpHandler = Handlers.path(ResponseCodeHandler.HANDLE_404).addPrefixPath(pathPrefix, httpHandler);
         }
 
         this.server = Undertow.builder()
@@ -150,13 +162,9 @@ public class UndertowApplication {
                 port
         );
 
-        boolean enableRequestDump = configuration.evaluateToBoolean("http.request.dump");
-        boolean graphqlEnabled = configuration.evaluateToBoolean("graphql.enabled");
-
-        // TODO: Pass configuration instead to avoid so many parameters. Undertow has a nice builder pattern.
-        return new UndertowApplication(specification, persistence, sec, sagaRepository, sagasObserver, host, port, enableRequestDump,
-                sagaLog, sagaThreadPool, namespaceController, graphqlEnabled,
-                configuration.evaluateToString("namespace.default"), searchIndex);
+        return new UndertowApplication(specification, persistence, sec, sagaRepository, sagasObserver, host, port,
+                sagaLog, sagaThreadPool, namespaceController,
+                searchIndex, configuration);
     }
 
     public void enableSagaExecutionAutomaticDeadlockDetectionAndResolution() {

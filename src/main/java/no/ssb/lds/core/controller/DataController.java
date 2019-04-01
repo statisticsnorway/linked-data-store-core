@@ -67,7 +67,7 @@ class DataController implements HttpHandler {
                 }
                 timestamp.withZoneSameInstant(ZoneId.of("Etc/UTC"));
             }
-            resourceContext = ResourceContext.createResourceContext(specification, exchange.getRequestPath(), timestamp);
+            resourceContext = ResourceContext.createResourceContext(specification, exchange.getRelativePath(), timestamp);
         } catch (ResourceException e) {
             exchange.setStatusCode(400);
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
