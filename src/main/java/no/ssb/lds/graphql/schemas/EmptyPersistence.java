@@ -44,6 +44,11 @@ class EmptyPersistence implements RxJsonPersistence {
     }
 
     @Override
+    public Completable createOrOverwrite(Transaction tx, Flowable<JsonDocument> documentFlowable, Specification specification) {
+        return Completable.complete();
+    }
+
+    @Override
     public Completable deleteDocument(Transaction tx, String ns, String entityName, String id, ZonedDateTime version, PersistenceDeletePolicy policy) {
         return Completable.complete();
     }
