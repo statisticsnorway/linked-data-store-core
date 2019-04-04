@@ -117,7 +117,7 @@ public class UndertowApplication {
         boolean corsAllowCredentials = configuration.evaluateToBoolean("http.cors.allow.credentials");
         int corsMaxAge = configuration.evaluateToInt("http.cors.allow.max-age");
 
-        CORSHandler corsHandler = new CORSHandler(httpHandler, ResponseCodeHandler.HANDLE_403, corsAllowOrigin,
+        CORSHandler corsHandler = new CORSHandler(httpHandler, httpHandler, corsAllowOrigin,
                 corsAllowCredentials, StatusCodes.NO_CONTENT, corsMaxAge, corsAllowMethods, corsAllowHeaders
         );
 
