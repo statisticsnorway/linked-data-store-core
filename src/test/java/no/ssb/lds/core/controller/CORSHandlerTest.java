@@ -72,8 +72,8 @@ public class CORSHandlerTest {
                 Pattern.compile("http://foo"),
                 Pattern.compile("https://bar"),
                 Pattern.compile("https?://(regexp|pxeger)"));
-        CORSHandler corsHandler = new CORSHandler(httpHandler, patterns, 444, 123456,
-                Set.of("GET", "PUT"), Set.of("x-foo", "y-bar"));
+        CORSHandler corsHandler = new CORSHandler(httpHandler, patterns, true, 444,
+                123456, Set.of("GET", "PUT"), Set.of("x-foo", "y-bar"));
 
         int port = findFree();
         server = Undertow.builder().addHttpListener(port, "localhost").setHandler(corsHandler).build();
@@ -108,6 +108,10 @@ public class CORSHandlerTest {
             assertThat(response.header(CORSHandler.ACCESS_CONTROL_ALLOW_ORIGIN.toString())).isEqualTo("http://foo");
             assertThat(response.header(CORSHandler.ACCESS_CONTROL_ALLOW_HEADERS.toString()))
                     .contains("y-bar").contains("x-foo").contains(",");
+            assertThat(response.header(CORSHandler.ACCESS_CONTROL_ALLOW_CREDENTIALS.toString()))
+                    .isEqualTo("true");
+            assertThat(response.header(CORSHandler.ACCESS_CONTROL_MAX_AGE.toString()))
+                    .isEqualTo("123456");
             assertThat(httpServerExchange).isNull();
         }
     }

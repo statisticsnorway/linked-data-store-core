@@ -8,11 +8,13 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.resource.ClassPathResourceManager;
+import io.undertow.util.StatusCodes;
 import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
 import no.ssb.config.DynamicConfiguration;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.search.SearchIndex;
 import no.ssb.lds.api.specification.Specification;
+import no.ssb.lds.core.controller.CORSHandler;
 import no.ssb.lds.core.controller.NamespaceController;
 import no.ssb.lds.core.persistence.PersistenceConfigurator;
 import no.ssb.lds.core.saga.FileSagaLog;
@@ -28,11 +30,16 @@ import no.ssb.saga.execution.sagalog.SagaLog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class UndertowApplication {
 
@@ -101,11 +108,25 @@ public class UndertowApplication {
             httpHandler = Handlers.path(ResponseCodeHandler.HANDLE_404).addPrefixPath(pathPrefix, httpHandler);
         }
 
+        List<Pattern> corsAllowOrigin = Stream.of(configuration.evaluateToString("http.cors.allow.origin")
+                .split(",")).map(Pattern::compile).collect(Collectors.toUnmodifiableList());
+        Set<String> corsAllowMethods = Set.of(configuration.evaluateToString("http.cors.allow.methods")
+                .split(","));
+        Set<String> corsAllowHeaders = Set.of(configuration.evaluateToString("http.cors.allow.header")
+                .split(","));
+        boolean corsAllowCredentials = configuration.evaluateToBoolean("http.cors.allow.credentials");
+        int corsMaxAge = configuration.evaluateToInt("http.cors.allow.max-age");
+
+        CORSHandler corsHandler = new CORSHandler(httpHandler, ResponseCodeHandler.HANDLE_403, corsAllowOrigin,
+                corsAllowCredentials, StatusCodes.NO_CONTENT, corsMaxAge, corsAllowMethods, corsAllowHeaders
+        );
+
         this.server = Undertow.builder()
                 .addHttpListener(port, host)
-                .setHandler(httpHandler)
+                .setHandler(corsHandler)
                 .build();
     }
+
     private final SagaExecutionCoordinator sec;
     private final SagaRepository sagaRepository;
     private final SagasObserver sagasObserver;
@@ -154,12 +175,8 @@ public class UndertowApplication {
                 specification,
                 specification,
                 persistence,
-                configuration.evaluateToString("http.cors.allow.origin"),
-                configuration.evaluateToString("http.cors.allow.header"),
-                configuration.evaluateToBoolean("http.cors.allow.origin.test"),
                 sec,
-                sagaRepository,
-                port
+                sagaRepository
         );
 
         return new UndertowApplication(specification, persistence, sec, sagaRepository, sagasObserver, host, port,

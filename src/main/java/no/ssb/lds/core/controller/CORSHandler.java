@@ -21,58 +21,71 @@ import java.util.stream.Collectors;
  */
 public class CORSHandler implements HttpHandler {
 
+    public static final Set<HttpString> DEFAULT_ALLOW_HEADERS = Set.of(
+            Headers.AUTHORIZATION, Headers.CONTENT_TYPE, Headers.RANGE);
+
     public static final HttpString ACCESS_CONTROL_ALLOW_CREDENTIALS = new HttpString("Access-Control-Allow-Credentials");
     public static final HttpString ACCESS_CONTROL_ALLOW_HEADERS = new HttpString("Access-Control-Allow-Headers");
     public static final HttpString ACCESS_CONTROL_ALLOW_METHODS = new HttpString("Access-Control-Allow-Methods");
     public static final HttpString ACCESS_CONTROL_ALLOW_ORIGIN = new HttpString("Access-Control-Allow-Origin");
     public static final HttpString ACCESS_CONTROL_EXPOSE_HEADERS = new HttpString("Access-Control-Expose-Headers");
     public static final HttpString ACCESS_CONTROL_MAX_AGE = new HttpString("Access-Control-Max-Age");
-    public static final Set<HttpString> DEFAULT_ALLOW_HEADERS = Set.of(
-            Headers.AUTHORIZATION, Headers.CONTENT_TYPE, Headers.RANGE);
-    private static final Logger log = LoggerFactory.getLogger(CORSHandler.class);
+
     private static final HttpString ACCESS_CONTROL_REQUEST_METHOD = new HttpString("Access-Control-Request-Method");
     private static final HttpString ACCESS_CONTROL_REQUEST_HEADERS = new HttpString("Access-Control-Request-Headers");
-    // Max age.
-    private static final long DEFAULT_MAX_AGE = 864000; // 10 days
-    private static final Set<HttpString> DEFAULT_ALLOW_METHODS = Set.of(
-            Methods.DELETE, Methods.GET, Methods.HEAD, Methods.OPTIONS, Methods.PATCH, Methods.POST, Methods.PUT);
-    // Response code returned upon preflight.
-    private static int DEFAULT_PREFLIGHT = StatusCodes.NO_CONTENT;
+
+
     private final HttpHandler next;
     private final HttpHandler fail;
-    private final List<Pattern> originPatterns;
-    private final int preflightResponseCode;
-    private final long maxAge;
-    private final Set<String> allowedMethods;
-    private final Set<String> allowedHeaders;
 
-    private final boolean supportsCredential = false;
+    private final List<Pattern> originPatterns;
+    private static final Logger log = LoggerFactory.getLogger(CORSHandler.class);
+    private final int preflightResponseCode;
+    // Max age.
+    private static final long DEFAULT_MAX_AGE = 864000; // 10 days
+    private final long maxAge;
+
+    private static final Set<HttpString> DEFAULT_ALLOW_METHODS = Set.of(
+            Methods.DELETE, Methods.GET, Methods.HEAD, Methods.OPTIONS, Methods.PATCH, Methods.POST, Methods.PUT);
+    private final Set<String> allowedMethods;
+    // Response code returned upon preflight.
+    private static int DEFAULT_PREFLIGHT = StatusCodes.NO_CONTENT;
+    private final Set<String> allowedHeaders;
+    private final boolean supportsCredential;
 
     public CORSHandler(HttpHandler next, List<Pattern> originPatterns) {
-        this(next, next, originPatterns);
+        this(next, next, originPatterns, false);
     }
 
-    public CORSHandler(HttpHandler next, HttpHandler fail, List<Pattern> originPatterns) {
-        this(next, fail, originPatterns, DEFAULT_PREFLIGHT, DEFAULT_MAX_AGE,
+    public CORSHandler(HttpHandler next, HttpHandler fail, List<Pattern> originPatterns, boolean supportsCredential) {
+        this(next, fail, originPatterns, supportsCredential, DEFAULT_PREFLIGHT, DEFAULT_MAX_AGE,
                 DEFAULT_ALLOW_METHODS.stream().map(HttpString::toString).collect(Collectors.toSet()),
                 DEFAULT_ALLOW_HEADERS.stream().map(HttpString::toString).collect(Collectors.toSet())
         );
     }
 
-    public CORSHandler(HttpHandler next, List<Pattern> originPatterns, int preflightResponseCode, long maxAge,
-                       Set<String> allowedMethods, Set<String> allowedHeaders) {
-        this(next, next, originPatterns, preflightResponseCode, maxAge, allowedMethods, allowedHeaders);
+    public CORSHandler(HttpHandler next, List<Pattern> originPatterns, boolean supportsCredential,
+                       int preflightResponseCode, long maxAge, Set<String> allowedMethods, Set<String> allowedHeaders) {
+        this(next, next, originPatterns, supportsCredential, preflightResponseCode, maxAge, allowedMethods,
+                allowedHeaders);
     }
 
-    public CORSHandler(HttpHandler next, HttpHandler fail, List<Pattern> originPatterns, int preflightResponseCode, long maxAge,
-                       Set<String> allowedMethods, Set<String> allowedHeaders) {
+    public CORSHandler(HttpHandler next, HttpHandler fail, List<Pattern> originPatterns, boolean supportsCredential,
+                       int preflightResponseCode, long maxAge, Set<String> allowedMethods, Set<String> allowedHeaders) {
         this.next = next;
         this.fail = fail;
         this.originPatterns = originPatterns;
+        this.supportsCredential = supportsCredential;
         this.preflightResponseCode = preflightResponseCode;
         this.maxAge = maxAge;
         this.allowedMethods = allowedMethods;
         this.allowedHeaders = allowedHeaders;
+    }
+
+    private static final class OutOfScopeException extends Exception {
+        public OutOfScopeException(String message) {
+            super(message);
+        }
     }
 
     @Override
@@ -222,12 +235,6 @@ public class CORSHandler implements HttpHandler {
         }
         exchange.getResponseHeaders().add(ACCESS_CONTROL_ALLOW_ORIGIN, origin);
         exchange.getResponseHeaders().add(Headers.VARY, Headers.ORIGIN_STRING);
-    }
-
-    private static final class OutOfScopeException extends Exception {
-        public OutOfScopeException(String message) {
-            super(message);
-        }
     }
 
 
