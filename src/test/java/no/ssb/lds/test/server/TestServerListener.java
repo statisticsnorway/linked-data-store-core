@@ -152,7 +152,7 @@ public class TestServerListener implements ITestListener, IInvokedMethodListener
         boolean injectableTestClassFieldsInvalidated = false;
         if (testclassHistory.remove(method.getTestMethod().getTestClass().getRealClass().getName())) {
             injectableTestClassFieldsInvalidated = true;
-            LOG.info("Invalidating injected varaibles for: {}.{}", method.getTestMethod().getTestClass().getRealClass().getName(), method.getTestMethod().getMethodName());
+            LOG.info("Invalidating injected variables for: {}.{}", method.getTestMethod().getTestClass().getRealClass().getName(), method.getTestMethod().getMethodName());
         }
         String previousTestClazz = currentTestClazz.get();
         if (!method.getTestMethod().getTestClass().getRealClass().getName().equals(previousTestClazz)) {
