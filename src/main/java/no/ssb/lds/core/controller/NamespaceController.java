@@ -22,12 +22,10 @@ public class NamespaceController implements HttpHandler {
     private final RxJsonPersistence persistence;
     private final SagaExecutionCoordinator sec;
     private final SagaRepository sagaRepository;
-    private String corsAllowOrigin;
-    private String corsAllowHeaders;
-    private boolean corsAllowOriginTest;
-    private int undertowPort;
 
-    public NamespaceController(String namespaceDefault, Specification specification, SchemaRepository schemaRepository, RxJsonPersistence persistence, String corsAllowOrigin, String corsAllowHeaders, boolean corsAllowOriginTest, SagaExecutionCoordinator sec, SagaRepository sagaRepository, int undertowPort) {
+    public NamespaceController(String namespaceDefault, Specification specification, SchemaRepository schemaRepository,
+                               RxJsonPersistence persistence, SagaExecutionCoordinator sec,
+                               SagaRepository sagaRepository) {
         this.specification = specification;
         this.schemaRepository = schemaRepository;
         this.persistence = persistence;
@@ -37,36 +35,17 @@ public class NamespaceController implements HttpHandler {
         }
         this.defaultNamespace = namespaceDefault;
         this.sec = sec;
-        this.corsAllowOrigin = corsAllowOrigin;
-        this.corsAllowHeaders = corsAllowHeaders;
-        this.corsAllowOriginTest = corsAllowOriginTest;
-        this.undertowPort = undertowPort;
     }
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         String requestPath = exchange.getRelativePath();
 
-        // NOTE: CORSController cannot be shared across requests or threads
-        CORSController cors = new CORSController(corsAllowOrigin, corsAllowHeaders, corsAllowOriginTest, undertowPort);
-
-        cors.handleRequest(exchange);
-
-        if (requestPath.trim().length() <= 1 && !cors.isOptionsRequest()) {
+        // TODO: This should be handled by a path handler.
+        if (requestPath.trim().length() <= 1) {
             exchange.setStatusCode(404);
             return;
         }
-
-        if (cors.isBadRequest()) {
-            return;
-        }
-
-        if (cors.isOptionsRequest()) {
-            cors.doOptions();
-            return;
-        }
-
-        cors.handleValidRequest();
 
         if (requestPath.startsWith("/ping")) {
             new PingController().handleRequest(exchange);

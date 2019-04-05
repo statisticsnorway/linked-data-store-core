@@ -25,6 +25,18 @@ public class GraphQLIntegrationTest {
             "graphql.enabled", "true",
             "specification.schema", "spec/demo/contact.json,spec/demo/provisionagreement.json"
     })
+    public void thatGraphQLEndpointSupportsCors() {
+
+        client.options("/graphql",
+                "Access-Controll-Request-Method", "POST"
+                ).response().headers();
+    }
+
+    @Test
+    @ConfigurationOverride({
+            "graphql.enabled", "true",
+            "specification.schema", "spec/demo/contact.json,spec/demo/provisionagreement.json"
+    })
     public void thatGetContactOnlyWorks() {
         // setup demo data
         putResource("/data/contact/821aa", "demo/4-donald.json");

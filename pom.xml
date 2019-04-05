@@ -88,7 +88,7 @@
         <dependency>
             <groupId>no.ssb.lds</groupId>
             <artifactId>linked-data-store-persistence-provider-api</artifactId>
-            <version>0.10</version>
+            <version>0.11-SNAPSHOT</version>
         </dependency>
 
         <dependency>
@@ -135,6 +135,7 @@
             <artifactId>json</artifactId>
             <version>20180813</version>
         </dependency>
+
         <dependency>
             <groupId>com.github.everit-org.json-schema</groupId>
             <artifactId>org.everit.json.schema</artifactId>
@@ -289,6 +290,15 @@
             <version>3.6.1</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- https://mvnrepository.com/artifact/com.squareup.okhttp3/okhttp-urlconnection -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp-urlconnection</artifactId>
+            <version>3.14.0</version>
+            <scope>test</scope>
+        </dependency>
+
 
     </dependencies>
 
