@@ -4,6 +4,7 @@ import graphql.introspection.Introspection;
 import graphql.schema.DataFetcher;
 import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLDirective;
+import graphql.schema.GraphQLEnumType;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLNonNull;
@@ -194,6 +195,12 @@ public class GraphqlSchemaBuilder {
         ));
 
         if (searchIndex != null) {
+            // Type filter for search
+            GraphQLEnumType.Builder typefilter = GraphQLEnumType.newEnum().name("TypeFilters").description("Defines valid type filters");
+            for (GraphQLObjectType type : searchTypes) {
+                typefilter.value(type.getName());
+            }
+            additionalTypes.add(typefilter.build());
             queryBuilder.field(createRootQueryConnectionField("SearchResult")
                     .name("Search")
                     .argument(
@@ -202,8 +209,13 @@ public class GraphqlSchemaBuilder {
                                     .type(new GraphQLNonNull(GraphQLString))
                                     .build()
                     )
+                    .argument(
+                            GraphQLArgument.newArgument()
+                                    .name("filter")
+                                    .type(GraphQLList.list(GraphQLTypeReference.typeRef("TypeFilters")))
+                                    .build()
+                    )
                     .dataFetcher(new QueryConnectionFetcher(searchIndex, persistence, this.namespace, "SearchResult")).build());
-
             additionalTypes.add(GraphQLUnionType.newUnionType().name("SearchResult")
                     .possibleTypes(searchTypes.toArray(new GraphQLObjectType[]{}))
                     .typeResolver(env -> {

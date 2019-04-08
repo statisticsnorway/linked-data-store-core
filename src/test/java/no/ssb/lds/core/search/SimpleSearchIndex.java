@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -50,7 +51,7 @@ public class SimpleSearchIndex implements SearchIndex {
     }
 
     @Override
-    public Single<SearchResponse> search(String query, long from, long size) {
+    public Single<SearchResponse> search(String query, List<String> filter, long from, long size) {
         return Flowable.fromIterable(index.entrySet().stream()
                 .filter(entry -> entry.getValue() != null)
                 .filter(entry -> entry.getValue().leafNodesByPath().values().stream()
