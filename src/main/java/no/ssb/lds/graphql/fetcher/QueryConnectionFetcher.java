@@ -114,7 +114,8 @@ public class QueryConnectionFetcher extends ConnectionFetcher<Map<String, Object
     private Connection<Map<String, Object>> search(String query, List<String> typeFilter,
                                                    ZonedDateTime snapshot, Range<String> range) {
         IndexBasedRange settings = IndexBasedRange.fromRange(range, MAX_SEARCH_LIMIT);
-        SearchResponse response = searchIndex.search(query, new HashSet<>(typeFilter), settings.from, settings.size).blockingGet();
+        HashSet<String> filter = typeFilter != null ? new HashSet<>(typeFilter) : null;
+        SearchResponse response = searchIndex.search(query, filter, settings.from, settings.size).blockingGet();
 
         LOG.info("Search query '{}' resulted in {} hits from search settings. Fetching results from {} to {}", query,
                 response.getTotalHits(), settings.from, settings.from + settings.size);
