@@ -26,7 +26,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Deque;
 import java.util.LinkedList;
+import java.util.Map;
 
 import static no.ssb.lds.api.persistence.json.JsonTools.mapper;
 
@@ -144,7 +146,10 @@ public class ManagedResourceHandler implements HttpHandler {
                         return;
                     }
 
-                    boolean sync = exchange.getQueryParameters().getOrDefault("sync", new LinkedList()).stream().anyMatch(s -> "true".equalsIgnoreCase((String) s));
+                    // True if defined and no false values.
+                    Map<String, Deque<String>> parameters = exchange.getQueryParameters();
+                    boolean sync = parameters.getOrDefault("sync", new LinkedList<>())
+                            .stream().noneMatch("false"::equalsIgnoreCase);
 
                     Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
