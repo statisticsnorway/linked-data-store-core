@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -113,7 +114,7 @@ public class QueryConnectionFetcher extends ConnectionFetcher<Map<String, Object
     private Connection<Map<String, Object>> search(String query, List<String> typeFilter,
                                                    ZonedDateTime snapshot, Range<String> range) {
         IndexBasedRange settings = IndexBasedRange.fromRange(range, MAX_SEARCH_LIMIT);
-        SearchResponse response = searchIndex.search(query, typeFilter, settings.from, settings.size).blockingGet();
+        SearchResponse response = searchIndex.search(query, new HashSet<>(typeFilter), settings.from, settings.size).blockingGet();
 
         LOG.info("Search query '{}' resulted in {} hits from search settings. Fetching results from {} to {}", query,
                 response.getTotalHits(), settings.from, settings.from + settings.size);
