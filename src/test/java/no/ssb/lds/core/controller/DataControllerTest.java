@@ -12,6 +12,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Ignore;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -51,7 +52,7 @@ public class DataControllerTest {
                 .port(server.getTestServerServicePort());
     }
 
-    @Test
+    @Test(enabled = false)
     public void testGetEmptyDomainList() throws IOException {
         HttpUrl listContactUrl = newUrl().addPathSegments("data/contact").build();
         Request listContactRequest = request.url(listContactUrl).build();
@@ -66,7 +67,7 @@ public class DataControllerTest {
         }
     }
 
-    @Test(dependsOnMethods = "testGetEmptyDomainList")
+    @Test(dependsOnMethods = "testGetEmptyDomainList", enabled = false)
     public void testPutDomain() throws IOException {
         HttpUrl putContact = newUrl()
                 .addPathSegments("data/contact/donald")
@@ -86,7 +87,8 @@ public class DataControllerTest {
         }
     }
 
-    @Test(dependsOnMethods = "testPutDomain")
+    @Ignore
+    @Test(dependsOnMethods = "testPutDomain", enabled = false)
     public void testGetDomainList() throws IOException {
         HttpUrl getContacts = newUrl().addPathSegments("data/contact").build();
         Request listContactRequest = request.url(getContacts).get().build();
@@ -101,7 +103,7 @@ public class DataControllerTest {
         }
     }
 
-    @Test(dependsOnMethods = "testPutDomain") //, invocationCount = 10, successPercentage = 90)
+    @Test(dependsOnMethods = "testPutDomain", enabled = false) //, invocationCount = 10, successPercentage = 90)
     public void testGetDomain() throws IOException {
         HttpUrl getContact = newUrl().addPathSegments("data/contact/donald").build();
         Request listContactRequest = request.url(getContact).get().build();
@@ -117,7 +119,7 @@ public class DataControllerTest {
         }
     }
 
-    @Test(dependsOnMethods = "testPutDomain")
+    @Test(dependsOnMethods = "testPutDomain", enabled = false)
     public void testGetMissingDomain() throws IOException {
         HttpUrl getContact = newUrl().addPathSegments("data/contact/missing").build();
         Request listContactRequest = request.url(getContact).get().build();
