@@ -15,6 +15,7 @@ import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.search.SearchIndex;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.controller.CORSHandler;
+import no.ssb.lds.core.controller.HealthCheckHandler;
 import no.ssb.lds.core.controller.NamespaceController;
 import no.ssb.lds.core.persistence.PersistenceConfigurator;
 import no.ssb.lds.core.saga.FileSagaLog;
@@ -93,6 +94,13 @@ public class UndertowApplication {
             GraphqlHttpHandler graphqlHttpHandler = new GraphqlHttpHandler(graphQL);
             pathHandler.addExactPath("/graphql", graphqlHttpHandler);
         }
+
+
+        HealthCheckHandler healthHandler = new HealthCheckHandler(persistence);
+        pathHandler.addExactPath(HealthCheckHandler.HEALTH_ALIVE_PATH, healthHandler);
+        ResponseCodeHandler aliveHandler = new ResponseCodeHandler(StatusCodes.OK);
+        pathHandler.addExactPath(HealthCheckHandler.HEALTH_READY_PATH, aliveHandler);
+        pathHandler.addExactPath(HealthCheckHandler.PING_PATH, aliveHandler);
 
         pathHandler.addPrefixPath("/", namespaceController);
 
