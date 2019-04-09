@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -59,7 +60,7 @@ public class QueryConnectionFetcher extends ConnectionFetcher<Map<String, Object
     @Override
     Connection<Map<String, Object>> getConnection(DataFetchingEnvironment environment, ConnectionParameters connectionParameters) {
         GraphQLContext context = environment.getContext();
-        return search(environment.getArgument("query"), context.getSnapshot(),
+        return search(environment.getArgument("query"), environment.getArgument("filter"), context.getSnapshot(),
                 connectionParameters.getRange());
     }
 
@@ -110,9 +111,11 @@ public class QueryConnectionFetcher extends ConnectionFetcher<Map<String, Object
 
     }
 
-    private Connection<Map<String, Object>> search(String query, ZonedDateTime snapshot, Range<String> range) {
+    private Connection<Map<String, Object>> search(String query, List<String> typeFilter,
+                                                   ZonedDateTime snapshot, Range<String> range) {
         IndexBasedRange settings = IndexBasedRange.fromRange(range, MAX_SEARCH_LIMIT);
-        SearchResponse response = searchIndex.search(query, settings.from, settings.size).blockingGet();
+        HashSet<String> filter = typeFilter != null ? new HashSet<>(typeFilter) : null;
+        SearchResponse response = searchIndex.search(query, filter, settings.from, settings.size).blockingGet();
 
         LOG.info("Search query '{}' resulted in {} hits from search settings. Fetching results from {} to {}", query,
                 response.getTotalHits(), settings.from, settings.from + settings.size);
