@@ -68,16 +68,6 @@ public class NamespaceController implements HttpHandler {
 
         cors.handleValidRequest();
 
-        if (requestPath.startsWith("/ping")) {
-            new PingController().handleRequest(exchange);
-            return;
-        }
-
-        if (requestPath.startsWith("/health/")) {
-            new LivenessReadinessController(persistence).handleRequest(exchange);
-            return;
-        }
-
         if (requestPath.equals(defaultNamespace) && exchange.getQueryParameters().containsKey("schema") && exchange.getQueryParameters().get("schema").getFirst().isBlank()) {
             List<String> managedDomains = specification.getManagedDomains().stream().sorted().map(md -> String.format("\"%s/%s?schema\"", defaultNamespace, md)).collect(Collectors.toList());
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
