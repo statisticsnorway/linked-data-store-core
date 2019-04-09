@@ -9,20 +9,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.HttpURLConnection;
+import java.util.Objects;
 
 /**
- * Handler that provides liveliness and health check.
+ * Handler that persistence health check.
  */
-public class LivenessReadinessController implements HttpHandler {
+public class HealthCheckHandler implements HttpHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(LivenessReadinessController.class);
-
+    public static final String PING_PATH = "/ping";
+    private static final Logger log = LoggerFactory.getLogger(HealthCheckHandler.class);
     public static final String HEALTH_ALIVE_PATH = "/health/alive";
     public static final String HEALTH_READY_PATH = "/health/ready";
     private final RxJsonPersistence persistence;
 
-    public LivenessReadinessController(RxJsonPersistence persistence) {
-        this.persistence = persistence;
+    public HealthCheckHandler(RxJsonPersistence persistence) {
+        this.persistence = Objects.requireNonNull(persistence);
     }
 
     @Override
@@ -35,6 +36,7 @@ public class LivenessReadinessController implements HttpHandler {
 
         try {
             // TODO: Extract to health() method in RxJsonPersistence interface.
+            // TODO: Check search indice, log and event provider.
             Transaction transaction = persistence.createTransaction(true);
             transaction.cancel();
             exchange.setStatusCode(HttpURLConnection.HTTP_OK);
