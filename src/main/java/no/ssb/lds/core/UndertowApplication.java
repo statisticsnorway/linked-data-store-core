@@ -8,11 +8,13 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.resource.ClassPathResourceManager;
+import io.undertow.util.StatusCodes;
 import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
 import no.ssb.config.DynamicConfiguration;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.search.SearchIndex;
 import no.ssb.lds.api.specification.Specification;
+import no.ssb.lds.core.controller.LivenessReadinessController;
 import no.ssb.lds.core.controller.NamespaceController;
 import no.ssb.lds.core.persistence.PersistenceConfigurator;
 import no.ssb.lds.core.saga.FileSagaLog;
@@ -86,6 +88,11 @@ public class UndertowApplication {
             GraphqlHttpHandler graphqlHttpHandler = new GraphqlHttpHandler(graphQL);
             pathHandler.addExactPath("/graphql", graphqlHttpHandler);
         }
+
+        LivenessReadinessController healthHandler = new LivenessReadinessController(persistence);
+        pathHandler.addPrefixPath(LivenessReadinessController.HEALTH_ALIVE_PATH, healthHandler);
+        ResponseCodeHandler aliveHandler = new ResponseCodeHandler(StatusCodes.OK);
+        pathHandler.addPrefixPath(LivenessReadinessController.HEALTH_READY_PATH, aliveHandler);
 
         pathHandler.addPrefixPath("/", namespaceController);
 

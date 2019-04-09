@@ -13,12 +13,12 @@ import java.net.HttpURLConnection;
 /**
  * Handler that provides liveliness and health check.
  */
-class LivenessReadinessController implements HttpHandler {
+public class LivenessReadinessController implements HttpHandler {
 
-    public static final String HEALTH_PATH = "/health";
-    public static final String HEALTH_ALIVE_PATH = HEALTH_PATH + "/alive";
-    public static final String HEALTH_READY_PATH = HEALTH_PATH + "/ready";
     private static final Logger log = LoggerFactory.getLogger(LivenessReadinessController.class);
+
+    public static final String HEALTH_ALIVE_PATH = "/health/alive";
+    public static final String HEALTH_READY_PATH = "/health/ready";
     private final RxJsonPersistence persistence;
 
     public LivenessReadinessController(RxJsonPersistence persistence) {
@@ -27,32 +27,27 @@ class LivenessReadinessController implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) {
-        if (exchange.getRequestPath().startsWith(HEALTH_ALIVE_PATH)) {
+        // Dispatch here since we are calling persistence.
+        if (exchange.isInIoThread()) {
+            exchange.dispatch(this);
+            return;
+        }
+
+        try {
+            // TODO: Extract to health() method in RxJsonPersistence interface.
+            Transaction transaction = persistence.createTransaction(true);
+            transaction.cancel();
             exchange.setStatusCode(HttpURLConnection.HTTP_OK);
-        } else if (exchange.getRequestPath().startsWith(HEALTH_READY_PATH)) {
-
-            // Dispatch here since we are calling persistence.
-            if (exchange.isInIoThread()) {
-                exchange.dispatch(this);
-                return;
+        } catch (PersistenceException e) {
+            exchange.setStatusCode(HttpURLConnection.HTTP_UNAVAILABLE);
+            if (log.isDebugEnabled()) {
+                log.debug("health check failed", e);
+            } else {
+                log.warn("health check failed: {}", e.getMessage());
             }
-
-            try {
-                // TODO: Extract to health() method in RxJsonPersistence interface.
-                Transaction transaction = persistence.createTransaction(true);
-                transaction.cancel();
-                exchange.setStatusCode(HttpURLConnection.HTTP_OK);
-            } catch (PersistenceException e) {
-                exchange.setStatusCode(HttpURLConnection.HTTP_UNAVAILABLE);
-                if (log.isDebugEnabled()) {
-                    log.debug("health check failed", e);
-                } else {
-                    log.warn("health check failed: {}", e.getMessage());
-                }
-            } catch (Exception e) {
-                exchange.setStatusCode(HttpURLConnection.HTTP_UNAVAILABLE);
-                log.warn("unexpected exception during health check {}", persistence, e);
-            }
+        } catch (Exception e) {
+            exchange.setStatusCode(HttpURLConnection.HTTP_UNAVAILABLE);
+            log.warn("unexpected exception during health check {}", persistence, e);
         }
     }
 }
