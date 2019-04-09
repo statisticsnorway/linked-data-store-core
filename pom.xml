@@ -4,7 +4,7 @@
 
     <groupId>no.ssb.lds</groupId>
     <artifactId>linked-data-store-core</artifactId>
-    <version>0.10-SNAPSHOT</version>
+    <version>0.11-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>LinkedDataStore Core</name>
@@ -88,19 +88,19 @@
         <dependency>
             <groupId>no.ssb.lds</groupId>
             <artifactId>linked-data-store-persistence-provider-api</artifactId>
-            <version>0.10</version>
+            <version>0.11</version>
         </dependency>
 
         <dependency>
             <groupId>no.ssb.lds</groupId>
             <artifactId>linked-data-store-search-provider-api</artifactId>
-            <version>0.2</version>
+            <version>0.3</version>
         </dependency>
 
         <dependency>
             <groupId>no.ssb.lds</groupId>
             <artifactId>linked-data-store-persistence-provider-memory</artifactId>
-            <version>0.6</version>
+            <version>0.7</version>
             <scope>test</scope>
         </dependency>
 
@@ -135,6 +135,7 @@
             <artifactId>json</artifactId>
             <version>20180813</version>
         </dependency>
+
         <dependency>
             <groupId>com.github.everit-org.json-schema</groupId>
             <artifactId>org.everit.json.schema</artifactId>
@@ -290,6 +291,15 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/com.squareup.okhttp3/okhttp-urlconnection -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp-urlconnection</artifactId>
+            <version>3.14.0</version>
+            <scope>test</scope>
+        </dependency>
+
+
     </dependencies>
 
     <profiles>
@@ -313,7 +323,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-javadoc-plugin</artifactId>
-                        <version>3.0.1</version>
+                        <version>3.1.0</version>
                         <configuration>
                             <encoding>UTF-8</encoding>
                             <additionalOptions>-Xdoclint:none</additionalOptions>

@@ -42,7 +42,7 @@ public class SagaExecutionCoordinatorWatchdogTest {
      * Configurations where saga.threadpool.queue.capacity >= saga.threadpool.core
      * will most likely provoke a deadlock.
      */
-    @Test
+    @Test(enabled = false)
     @ConfigurationOverride({
             "transaction.log.enabled", "false",
             "persistence.provider", "mem",

@@ -47,7 +47,7 @@ public class ManagedResourceHandlerTest {
         JSONAssert.assertEquals(body, actual, false);
     }
 
-    @Test
+    @Test(enabled = false)
     public void thatDELETEDoesRemoveResource() {
         createTestResource("provisionagreement", "m2", "{\"name\":\"pa-test-name\",\"contacts\":[\"/contact/c1\",\"/contact/c2\"]}");
         client.get("/data/provisionagreement/m2").expect200Ok();

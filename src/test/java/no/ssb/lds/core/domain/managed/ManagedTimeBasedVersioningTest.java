@@ -18,7 +18,7 @@ public class ManagedTimeBasedVersioningTest {
     @Inject
     private TestServer server;
 
-    @Test
+    @Test(enabled = false)
     public void thatCorrectVersionIsReturned() {
         String body2016 = "{\"name\":\"version2016\"}";
         String body2017 = "{\"name\":\"version2017\"}";

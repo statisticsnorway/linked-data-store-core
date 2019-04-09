@@ -21,7 +21,7 @@ public class NamespaceControllerTest {
         assertEquals(response, "Unsupported namespace: \"bad\"");
     }
 
-    @Test
+    @Test(enabled = false)
     public void thatPUTOnLegalNamespaceAndDocumentAcceptsWith200() {
         client.put("/data/contact/1", "{\"name\":\"John\",\"email\":\"john@company.com\"}").expect200Ok();
     }
