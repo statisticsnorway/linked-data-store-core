@@ -12,12 +12,13 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 
 /**
- * Handler that persistence health check.
+ * Handler checks persistence health.
  */
 public class HealthCheckHandler implements HttpHandler {
 
-    public static final String PING_PATH = "/ping";
     private static final Logger log = LoggerFactory.getLogger(HealthCheckHandler.class);
+
+    public static final String PING_PATH = "/ping";
     public static final String HEALTH_ALIVE_PATH = "/health/alive";
     public static final String HEALTH_READY_PATH = "/health/ready";
     private final RxJsonPersistence persistence;
@@ -36,7 +37,7 @@ public class HealthCheckHandler implements HttpHandler {
 
         try {
             // TODO: Extract to health() method in RxJsonPersistence interface.
-            // TODO: Check search indice, log and event provider.
+            // TODO: Check search index, log and event provider.
             Transaction transaction = persistence.createTransaction(true);
             transaction.cancel();
             exchange.setStatusCode(HttpURLConnection.HTTP_OK);
