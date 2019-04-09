@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 import no.ssb.concurrent.futureselector.SelectableFuture;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
@@ -26,7 +27,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Deque;
 import java.util.LinkedList;
+import java.util.Map;
 
 import static no.ssb.lds.api.persistence.json.JsonTools.mapper;
 
@@ -72,39 +75,33 @@ public class ManagedResourceHandler implements HttpHandler {
 
         boolean isManagedList = topLevelElement.id() == null;
 
+        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
+
         if (isManagedList && exchange.getQueryParameters().containsKey("schema")) {
             String jsonSchema = schemaRepository.getJsonSchema().getSchemaJson(resourceContext.getFirstElement().name());
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
             exchange.getResponseSender().send(jsonSchema, StandardCharsets.UTF_8);
             return;
         }
 
-        ArrayNode output = mapper.createArrayNode();
         try (Transaction tx = persistence.createTransaction(true)) {
             if (isManagedList) {
                 Iterable<JsonDocument> documents = persistence.readDocuments(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), Range.unbounded()).blockingIterable();
+                ArrayNode output = mapper.createArrayNode();
                 for (JsonDocument jsonDocument : documents) {
                     if (jsonDocument.deleted()) {
                         continue;
                     }
                     output.add(jsonDocument.jackson());
                 }
+                exchange.getResponseSender().send(JsonTools.toJson(output), StandardCharsets.UTF_8);
             } else {
                 JsonDocument jsonDocument = persistence.readDocument(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).blockingGet();
                 if (jsonDocument != null && !jsonDocument.deleted()) {
-                    output.add(jsonDocument.jackson());
+                    exchange.getResponseSender().send(JsonTools.toJson(jsonDocument.jackson()), StandardCharsets.UTF_8);
+                } else {
+                    exchange.setStatusCode(StatusCodes.NOT_FOUND);
                 }
             }
-        }
-        if (output.size() == 0) {
-            exchange.setStatusCode(404);
-        } else if (output.size() == 1) {
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
-            exchange.getResponseSender().send(JsonTools.toJson(output.get(0)), StandardCharsets.UTF_8);
-        } else {
-            // (output.length() > 1
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json; charset=utf-8");
-            exchange.getResponseSender().send(JsonTools.toJson(output), StandardCharsets.UTF_8);
         }
         exchange.endExchange();
     }
@@ -144,7 +141,10 @@ public class ManagedResourceHandler implements HttpHandler {
                         return;
                     }
 
-                    boolean sync = exchange.getQueryParameters().getOrDefault("sync", new LinkedList()).stream().anyMatch(s -> "true".equalsIgnoreCase((String) s));
+                    // True if defined and no false values.
+                    Map<String, Deque<String>> parameters = exchange.getQueryParameters();
+                    boolean sync = parameters.getOrDefault("sync", new LinkedList<>())
+                            .stream().noneMatch("false"::equalsIgnoreCase);
 
                     Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
@@ -152,12 +152,12 @@ public class ManagedResourceHandler implements HttpHandler {
                     SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), requestData);
                     SagaHandoffResult handoffResult = handoff.join();
 
-                    exchange.setStatusCode(200);
+                    exchange.setStatusCode(StatusCodes.CREATED);
                     exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
                     exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.executionId + "\"}");
                 },
                 (exchange1, e) -> {
-                    exchange.setStatusCode(500);
+                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                     exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
                     exchange.getResponseSender().send("Error: " + e.getMessage());
                     LOG.warn("", e);
@@ -169,7 +169,9 @@ public class ManagedResourceHandler implements HttpHandler {
         ResourceElement topLevelElement = resourceContext.getFirstElement();
         String managedDomain = topLevelElement.name();
 
-        boolean sync = exchange.getQueryParameters().getOrDefault("sync", new LinkedList()).stream().anyMatch(s -> "true".equalsIgnoreCase((String) s));
+        boolean sync = exchange.getQueryParameters()
+                .getOrDefault("sync", new LinkedList<>())
+                .stream().anyMatch(s -> "true".equalsIgnoreCase(s));
 
         Saga saga = sagaRepository.get(SagaRepository.SAGA_DELETE_MANAGED_RESOURCE);
 
@@ -177,7 +179,7 @@ public class ManagedResourceHandler implements HttpHandler {
         SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, resourceContext.getNamespace(), managedDomain, topLevelElement.id(), resourceContext.getTimestamp(), null);
         SagaHandoffResult handoffResult = handoff.join();
 
-        exchange.setStatusCode(200);
+        exchange.setStatusCode(StatusCodes.NO_CONTENT);
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
         exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.executionId + "\"}");
     }

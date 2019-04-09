@@ -3,6 +3,7 @@ package no.ssb.lds.core.controller;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.domain.embedded.EmbeddedResourceHandler;
@@ -60,7 +61,7 @@ class DataController implements HttpHandler {
                 try {
                     timestamp = ZonedDateTime.parse(timestampParam); // ISO-8601
                 } catch (DateTimeParseException e) {
-                    exchange.setStatusCode(400);
+                    exchange.setStatusCode(StatusCodes.BAD_REQUEST);
                     exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
                     exchange.getResponseSender().send("The 'timestamp' query-parameter must follow the ISO-8601 standard. Example of a valid formatted timestamp is '2018-12-06T11:05:31.000+01:00'");
                     return;
@@ -69,7 +70,7 @@ class DataController implements HttpHandler {
             }
             resourceContext = ResourceContext.createResourceContext(specification, exchange.getRelativePath(), timestamp);
         } catch (ResourceException e) {
-            exchange.setStatusCode(400);
+            exchange.setStatusCode(StatusCodes.BAD_REQUEST);
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
             exchange.getResponseSender().send(e.getMessage());
             return;
@@ -94,7 +95,7 @@ class DataController implements HttpHandler {
             return;
         }
 
-        exchange.setStatusCode(404);
+        exchange.setStatusCode(StatusCodes.NOT_FOUND);
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
         exchange.getResponseSender().send("Unsupported resource path: " + exchange.getRequestPath());
     }
