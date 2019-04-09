@@ -88,19 +88,19 @@
         <dependency>
             <groupId>no.ssb.lds</groupId>
             <artifactId>linked-data-store-persistence-provider-api</artifactId>
-            <version>0.11-SNAPSHOT</version>
+            <version>0.11</version>
         </dependency>
 
         <dependency>
             <groupId>no.ssb.lds</groupId>
             <artifactId>linked-data-store-search-provider-api</artifactId>
-            <version>0.3-SNAPSHOT</version>
+            <version>0.3</version>
         </dependency>
 
         <dependency>
             <groupId>no.ssb.lds</groupId>
             <artifactId>linked-data-store-persistence-provider-memory</artifactId>
-            <version>0.7-SNAPSHOT</version>
+            <version>0.7</version>
             <scope>test</scope>
         </dependency>
 
