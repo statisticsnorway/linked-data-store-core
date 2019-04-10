@@ -27,14 +27,12 @@ public class DeleteIndexSagaAdapter extends Adapter<JsonNode> {
 
     @Override
     public JsonNode executeAction(Object sagaInput, Map<SagaNode, Object> dependeesOutput) {
-        if (indexer != null) {
-            JsonNode input = (JsonNode) sagaInput;
-            String versionStr = input.get("version").textValue();
-            ZonedDateTime version = ZonedDateTime.parse(versionStr, DateTimeFormatter.ISO_ZONED_DATE_TIME);
-            indexer.delete(new JsonDocument(new DocumentKey(input.get("namespace").textValue(),
-                    input.get("entity").textValue(), input.get("id").textValue(), version), input.get("data")))
-                    .blockingAwait();
-        }
+        JsonNode input = (JsonNode) sagaInput;
+        String versionStr = input.get("version").textValue();
+        ZonedDateTime version = ZonedDateTime.parse(versionStr, DateTimeFormatter.ISO_ZONED_DATE_TIME);
+        indexer.delete(new JsonDocument(new DocumentKey(input.get("namespace").textValue(),
+                input.get("entity").textValue(), input.get("id").textValue(), version), input.get("data")))
+                .blockingAwait();
         return null;
     }
 }

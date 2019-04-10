@@ -150,7 +150,12 @@ public class UndertowApplication {
         SagaLog sagaLog = SagaLogInitializer.initializeSagaLog(configuration.evaluateToString("saga.log.type"), configuration.evaluateToString("saga.log.type.file.path"));
         String host = configuration.evaluateToString("http.host");
         SearchIndex searchIndex = SearchIndexConfigurator.configureSearchIndex(configuration);
-        SagaRepository sagaRepository = new SagaRepository(specification, persistence, searchIndex);
+        SagaRepository sagaRepository;
+        if (searchIndex != null) {
+            sagaRepository = new SagaRepository(specification, persistence, searchIndex);
+        } else {
+            sagaRepository = new SagaRepository(specification, persistence);
+        }
         final SagasObserver sagasObserver = new SagasObserver(sagaRepository).start();
         final AtomicLong nextWorkerId = new AtomicLong(1);
         int sagaThreadPoolQueueCapacity = configuration.evaluateToInt("saga.threadpool.queue.capacity");
