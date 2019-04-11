@@ -59,7 +59,7 @@ public class GraphQLIntegrationTest {
         Assert.assertEquals(result.get("data").get("Search").get("edges").size(), 1);
         Assert.assertEquals(result.get("data").get("Search").get("edges").get(0).get("node").get("name").textValue(), "Donald Duck");
         // Check that the entity is deleted from the index
-        client.delete("/data/contact/821aa");
+        client.delete("/data/contact/821aa?sync=true");
         result = executeGraphQLQuery("spec/demo/graphql/search_contact.json", "Duck");
         Assert.assertEquals(result.get("data").get("Search").get("edges").size(), 0);
     }
