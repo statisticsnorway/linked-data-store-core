@@ -22,6 +22,20 @@ public class SagaRepository {
 
     final AdapterLoader adapterLoader;
 
+    public SagaRepository(Specification specification, RxJsonPersistence persistence) {
+        register(Saga
+                .start(SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE).linkTo("persistence")
+                .id("persistence").adapter(PersistenceCreateOrOverwriteSagaAdapter.NAME).linkToEnd()
+                .end());
+        register(Saga.start(SAGA_DELETE_MANAGED_RESOURCE).linkTo("persistence")
+                .id("persistence").adapter(PersistenceDeleteSagaAdapter.NAME).linkToEnd()
+                .end());
+
+        adapterLoader = new AdapterLoader()
+                .register(new PersistenceCreateOrOverwriteSagaAdapter(persistence, specification))
+                .register(new PersistenceDeleteSagaAdapter(persistence));
+    }
+
     public SagaRepository(Specification specification, RxJsonPersistence persistence, SearchIndex indexer) {
         register(Saga
                 .start(SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE).linkTo("persistence", "search-index-update")

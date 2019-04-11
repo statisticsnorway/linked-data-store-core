@@ -59,7 +59,7 @@ public class GraphQLIntegrationTest {
         Assert.assertEquals(result.get("data").get("Search").get("edges").size(), 1);
         Assert.assertEquals(result.get("data").get("Search").get("edges").get(0).get("node").get("name").textValue(), "Donald Duck");
         // Check that the entity is deleted from the index
-        client.delete("/data/contact/821aa");
+        client.delete("/data/contact/821aa?sync=true");
         result = executeGraphQLQuery("spec/demo/graphql/search_contact.json", "Duck");
         Assert.assertEquals(result.get("data").get("Search").get("edges").size(), 0);
     }
@@ -104,7 +104,7 @@ public class GraphQLIntegrationTest {
     }
 
     private void putResource(String path, String resourceFilePath) {
-        client.put(path, FileAndClasspathReaderUtils.readFileOrClasspathResource(resourceFilePath));
+        client.put(path + "?sync=true", FileAndClasspathReaderUtils.readFileOrClasspathResource(resourceFilePath));
     }
 
     private void assertNoErrors(JsonNode responseRootNode) {
