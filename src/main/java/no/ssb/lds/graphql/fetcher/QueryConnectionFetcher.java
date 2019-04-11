@@ -117,7 +117,7 @@ public class QueryConnectionFetcher extends ConnectionFetcher<Map<String, Object
         HashSet<String> filter = typeFilter != null ? new HashSet<>(typeFilter) : null;
         SearchResponse response = searchIndex.search(query, filter, settings.from, settings.size).blockingGet();
 
-        LOG.info("Search query '{}' resulted in {} hits from search settings. Fetching results from {} to {}", query,
+        LOG.debug("Search query '{}' resulted in {} hits from search settings. Fetching results from {} to {}", query,
                 response.getTotalHits(), settings.from, settings.from + settings.size);
         List<Edge<Map<String, Object>>> edges = response.getResults().stream()
                 .map(result -> readDocument(result.getDocumentKey(), snapshot))
@@ -127,7 +127,7 @@ public class QueryConnectionFetcher extends ConnectionFetcher<Map<String, Object
                         ArrayList::addAll);
 
         if (edges.isEmpty()) {
-            LOG.info("Search query resulted in 0 documents.", query);
+            LOG.debug("Search query resulted in 0 documents.", query);
             PageInfo pageInfo = new DefaultPageInfo(null, null, false, false);
             return new DefaultConnection<>(Collections.emptyList(), pageInfo);
         }
