@@ -104,7 +104,7 @@ public class GraphQLIntegrationTest {
     }
 
     private void putResource(String path, String resourceFilePath) {
-        client.put(path, FileAndClasspathReaderUtils.readFileOrClasspathResource(resourceFilePath));
+        client.put(path + "?sync=true", FileAndClasspathReaderUtils.readFileOrClasspathResource(resourceFilePath));
     }
 
     private void assertNoErrors(JsonNode responseRootNode) {
