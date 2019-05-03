@@ -11,11 +11,9 @@ import graphql.schema.GraphQLOutputType;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeCollectingVisitor;
 import graphql.schema.GraphQLTypeReference;
-import graphql.schema.GraphQLTypeResolvingVisitor;
 import graphql.schema.GraphQLTypeUtil;
 import graphql.schema.GraphQLTypeVisitorStub;
 import graphql.schema.GraphQLUnionType;
-import graphql.schema.GraphQLUnmodifiedType;
 import graphql.schema.TypeTraverser;
 import graphql.schema.idl.SchemaPrinter;
 import graphql.util.TraversalControl;
@@ -28,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -128,18 +127,21 @@ public class SpecificationTraverser {
         new TypeTraverser().depthFirst(graphQLTypeCollectingVisitor, domains);
 
         Map<String, GraphQLType> typeMap = graphQLTypeCollectingVisitor.getResult();
-        GraphQLTypeResolvingVisitor typeResolvingVisitor = new GraphQLTypeResolvingVisitor(typeMap);
-        new TypeTraverser().depthFirst(typeResolvingVisitor, typeMap.values());
+        //GraphQLTypeResolvingVisitor typeResolvingVisitor = new GraphQLTypeResolvingVisitor(typeMap);
+        //new TypeTraverser().depthFirst(typeResolvingVisitor, typeMap.values());
 
+        // TODO: Recognize directives and add reverse link directives.
         // TODO: Extract to own class.
         new TypeTraverser().depthFirst(new GraphQLTypeVisitorStub() {
+
             @Override
             public TraversalControl visitGraphQLFieldDefinition(GraphQLFieldDefinition node, TraverserContext<GraphQLType> context) {
                 for (GraphQLDirective directive : node.getDirectives()) {
                     if (directive.getName().equals(LINK_DIRECTIVE.getName())) {
 
-                        GraphQLUnmodifiedType source = GraphQLTypeUtil.unwrapAll(context.getParentNode());
-                        GraphQLUnmodifiedType target = GraphQLTypeUtil.unwrapAll(node.getType());
+                        GraphQLType source = GraphQLTypeUtil.unwrapAll(context.getParentNode());
+                        GraphQLType target = GraphQLTypeUtil.unwrapType(node.getType()).peek();
+
 
                         System.out.println("Source: " + source);
                         System.out.println("Target: " + target);
@@ -147,6 +149,50 @@ public class SpecificationTraverser {
                     }
                 }
                 return TraversalControl.CONTINUE;
+            }
+        }, typeMap.values());
+
+        // TODO: Faking until link annotation is adjusted.
+        Map<String, Map<String, String>> reverseMap = new HashMap<>();
+        reverseMap.computeIfAbsent("RepresentedVariable", s -> new HashMap<>())
+                .put("instanceVariable", "InstanceVariable");
+        Map<String, Map<String, String>> linkMapMappedBy = new HashMap<>();
+        linkMapMappedBy.computeIfAbsent("InstanceVariable", s -> new HashMap<>())
+                .put("instanceVariable", "representedVariable");
+
+
+        new TypeTraverser().depthFirst(new GraphQLTypeVisitorStub() {
+            @Override
+            public TraversalControl visitGraphQLObjectType(GraphQLObjectType node, TraverserContext<GraphQLType> context) {
+                String typeName = node.getName();
+                // Skip if has no reverse links.
+                if (!reverseMap.containsKey(typeName) || reverseMap.get(typeName).isEmpty()) {
+                    return TraversalControl.CONTINUE;
+                }
+
+                Map<String, String> reverseLinks = reverseMap.get(typeName);
+                GraphQLObjectType.Builder nodeCopy = GraphQLObjectType.newObject(node);
+                for (String reverseRelationName : reverseLinks.keySet()) {
+
+                    String sourceTypeName = reverseLinks.get(reverseRelationName);
+                    String mappedBy = linkMapMappedBy.get(sourceTypeName).get(reverseRelationName);
+
+                    GraphQLOutputType sourceType = GraphQLNonNull.nonNull(
+                            GraphQLList.list(GraphQLTypeReference.typeRef(sourceTypeName)));
+
+                    GraphQLFieldDefinition fieldDefinition = GraphQLFieldDefinition.newFieldDefinition()
+                            .name(reverseRelationName)
+                            .type(sourceType)
+                            .withDirective(reverseLinkDirective(mappedBy))
+                            .build();
+
+                    nodeCopy.field(fieldDefinition);
+                }
+
+                typeMap.replace(typeName, node, nodeCopy.build());
+
+                return TraversalControl.CONTINUE;
+
             }
         }, typeMap.values());
 
@@ -273,6 +319,14 @@ public class SpecificationTraverser {
                         .name("searchable")
                         .type(GraphQLBoolean)
                         .value(searchable)
+                ).build();
+    }
+
+    private GraphQLDirective reverseLinkDirective(String mappedBy) {
+        return GraphQLDirective.newDirective(REVERSE_LINK_DIRECTIVE)
+                .argument(GraphQLArgument.newArgument()
+                        .name("mappedBy")
+                        .type(GraphQLString).value(mappedBy)
                 ).build();
     }
 
