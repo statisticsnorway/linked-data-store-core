@@ -1,9 +1,7 @@
 package no.ssb.lds.graphql.schemas;
 
-import graphql.introspection.Introspection;
 import graphql.schema.DataFetcher;
 import graphql.schema.GraphQLArgument;
-import graphql.schema.GraphQLDirective;
 import graphql.schema.GraphQLEnumType;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLList;
@@ -60,11 +58,6 @@ public class GraphqlSchemaBuilder {
     private final Set<String> unionTypes = new HashSet<>();
     private final Set<String> connectionTypes = new HashSet<>();
 
-    private final GraphQLDirective.Builder linkDirective = GraphQLDirective.newDirective()
-            .name("link")
-            .description("Defines links between attributes and objects")
-            .validLocation(Introspection.DirectiveLocation.FIELD_DEFINITION);
-
     private final RxJsonPersistence persistence;
     private final SearchIndex searchIndex;
     private final String namespace;
@@ -99,7 +92,7 @@ public class GraphqlSchemaBuilder {
     /**
      * Returns true if the element is nullable (has null as allowed type).
      */
-    private static Boolean isNullable(SpecificationElement element) {
+    public static Boolean isNullable(SpecificationElement element) {
         return elementJsonTypes(element).contains(JsonType.NULL);
     }
 
@@ -119,7 +112,7 @@ public class GraphqlSchemaBuilder {
      * <p>
      * Null type, since it is used to mark fields as nullable is ignored.
      */
-    private static JsonType elementJsonType(SpecificationElement element) {
+    public static JsonType elementJsonType(SpecificationElement element) {
         Set<JsonType> types = elementJsonTypes(element);
         types.remove(JsonType.NULL);
         if (types.size() != 1) {
@@ -130,7 +123,7 @@ public class GraphqlSchemaBuilder {
         return types.iterator().next();
     }
 
-    private static String getOneRefType(SpecificationElement property) {
+    public static String getOneRefType(SpecificationElement property) {
         Set<String> types = property.getRefTypes();
         if (types.size() != 1) {
             throw new IllegalArgumentException(format("More than one ref type for property %s", property.getName()));
@@ -317,7 +310,7 @@ public class GraphqlSchemaBuilder {
             case EMBEDDED:
                 return buildEmbeddedField(property);
             case REF:
-                return buildReferenceField(property).withDirective(linkDirective);
+                return buildReferenceField(property);
             case ROOT:
             case MANAGED:
             default:
