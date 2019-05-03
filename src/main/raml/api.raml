@@ -1,0 +1,133 @@
+#%RAML 1.0
+---
+title: Linked Datastore
+baseUri: https://lds.staging.ssbmod.net
+traits:
+  pageable:
+    description: Requests use cursor pagination.
+    responses:
+      200:
+        headers:
+          Link:
+            description: |
+              Resources supporting cursor pagination returns Link header URL
+              values you can use instead of constructing your own.
+              Possible `rel` values are: `next`, `previous`, `first` and `last`.
+            examples:
+              next: <<<resourcePath>>?first=n&after=cursor> ; rel=next
+              previous: <<<resourcePath>>?last=n&before=cursor> ; rel=previous
+    queryParameters:
+      first:
+        description: |
+          Limit the amount of element on the reponse. This parameter is only
+          valid when using the `after` parameter.
+        required: false
+        default: 30
+        type: integer
+      last:
+        description: |
+          Limit the amount of element on the reponse. This parameter is only
+          valid when using the `before` parameter.
+        required: false
+        type: integer
+      after:
+        description: |
+          A cursor value to start at. Using this parameter requires the `first`
+          parameter to be set.
+        type: string
+        required: false
+      before:
+        description: |
+          A cursor value to start at. Using this parameter requires the `last`
+          parameter to be set.
+        type: string
+        required: false
+/health/alive:
+  description: |
+    Health check endpoint. The result of the get call represents the
+    health of the sytems.
+  get:
+    responses:
+      200:
+        description: The service is healthy.
+      503:
+        description: The service is not healthy.
+      500:
+        description: Fatal error during health check.
+
+/health/ready:
+  get:
+    responses:
+      200:
+  description: |
+    Endpoint that always returns HTTP OK response code. Useful for instance for
+    automated deployment.
+/ping:
+  description: |
+    Deprecated. Use /health/ready instead.
+  get:
+    responses:
+      200:
+/graphql:
+  description: |
+    GraphQL endpoint. See the
+    [spec](https://graphql.org/learn/serving-over-http/).
+/{namespace}/schema:
+    uriParameters:
+      embed:
+        description: |
+          When set, returns the schemas embedded instead of a list
+          of links.
+    get:
+      description: Get all configured schemas.
+      responses:
+        200:
+          body:
+            application/json:
+              example: ["", ""]
+/{namespace}/{domain}/schema:
+  get:
+    description: Returns the JSON schema for this {domain}
+/{namespace}/{domain}:
+    get:
+      is: [ pageable ]
+      description: List all the objects of the {domain} type.
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                [{},{}]
+    /{domainId}:
+      get:
+        responses:
+          200:
+          404:
+      put:
+        body:
+          application/json:
+        responses:
+          200:
+          201:
+          400:
+          404:
+      delete:
+        responses:
+          # TODO: Use 204 No Content?
+          200:
+      /{property}:
+        get:
+        put:
+        delete:
+        /{subProperty}:
+          get:
+          put:
+          delete:
+        /{id}:
+          get:
+          put:
+          delete:
+/{namespace}/{domain}/versions:
+  get:
+    /{versionId}:
+      get:
