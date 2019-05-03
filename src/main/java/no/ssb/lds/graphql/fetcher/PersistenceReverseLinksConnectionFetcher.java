@@ -35,7 +35,7 @@ public class PersistenceReverseLinksConnectionFetcher extends ConnectionFetcher<
 
     private final RxJsonPersistence persistence;
 
-    public PersistenceReverseLinksConnectionFetcher(JsonNavigationPath relationPath, String sourceEntityName, String targetEntityName, String nameSpace, RxJsonPersistence persistence) {
+    public PersistenceReverseLinksConnectionFetcher(RxJsonPersistence persistence, String nameSpace, String sourceEntityName, JsonNavigationPath relationPath, String targetEntityName) {
         this.relationPath = relationPath;
         this.sourceEntityName = sourceEntityName;
         this.targetEntityName = targetEntityName;
