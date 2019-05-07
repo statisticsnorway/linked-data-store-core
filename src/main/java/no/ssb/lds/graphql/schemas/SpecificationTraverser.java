@@ -137,16 +137,15 @@ public class SpecificationTraverser {
         TRAVERSER.depthFirst(graphQLQueryVisitor, typeMap.values());
         typeMap.put("Query", graphQLQueryVisitor.getQuery());
 
+        // Add the search fields.
+        GraphQLQuerySearchVisitor graphQLQuerySearchVisitor = new GraphQLQuerySearchVisitor(typeMap,
+                graphQLQueryVisitor.getQuery());
+        TRAVERSER.depthFirst(graphQLQuerySearchVisitor, typeMap.values());
+        typeMap.put("Query", graphQLQuerySearchVisitor.getQuery());
+
         // Transform with pagination
         GraphQLPaginationVisitor graphQLPaginationVisitor = new GraphQLPaginationVisitor(typeMap);
         TRAVERSER.depthFirst(graphQLPaginationVisitor, typeMap.values());
-
-        // Add the search fields.
-        //GraphQLQuerySearchVisitor graphQLQuerySearchVisitor = new GraphQLQuerySearchVisitor();
-        //TRAVERSER.depthFirst(graphQLQueryVisitor, typeMap.values());
-        //typeMap.put("Query", graphQLQuerySearchVisitor.getQuery());
-
-        //TRAVERSER.depthFirst(graphQLTypeCollectingVisitor, typeMap.values());
 
         GraphQLTypeResolvingVisitor typeResolvingVisitor = new GraphQLTypeResolvingVisitor(typeMap);
         TRAVERSER.depthFirst(typeResolvingVisitor, typeMap.values());

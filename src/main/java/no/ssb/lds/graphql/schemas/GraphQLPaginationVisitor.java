@@ -50,6 +50,9 @@ public class GraphQLPaginationVisitor extends GraphQLTypeVisitorStub {
                 }
                 return value.equals(true);
             }
+            if ("search".equals(directive.getName())) {
+                return true;
+            }
         }
         return false;
     }
@@ -60,7 +63,8 @@ public class GraphQLPaginationVisitor extends GraphQLTypeVisitorStub {
         List<GraphQLFieldDefinition> fieldsWithPagination = new ArrayList<>();
         for (GraphQLFieldDefinition fieldDefinition : node.getFieldDefinitions()) {
             if (hasLinkWithPagination(fieldDefinition)) {
-                log.debug("Found link to {}", node.getName());
+                log.debug("Found link from {} to {} on field {}", node.getName(), fieldDefinition.getType().getName(),
+                        fieldDefinition.getName());
                 fieldsWithPagination.add(fieldDefinition);
             }
         }
