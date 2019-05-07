@@ -1,6 +1,5 @@
 package no.ssb.lds.graphql.schemas;
 
-import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLDirective;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLObjectType;
@@ -16,7 +15,7 @@ import java.util.Deque;
 import java.util.Map;
 import java.util.Objects;
 
-import static graphql.Scalars.GraphQLString;
+import static no.ssb.lds.graphql.directives.LinkDirective.newLinkDirective;
 
 public class FakeAnnotationVisitor extends GraphQLTypeVisitorStub {
 
@@ -38,13 +37,7 @@ public class FakeAnnotationVisitor extends GraphQLTypeVisitorStub {
                 GraphQLObjectType.Builder newObject = GraphQLObjectType.newObject((GraphQLObjectType) source);
                 GraphQLFieldDefinition.Builder newFieldDefinition = GraphQLFieldDefinition.newFieldDefinition(
                         (GraphQLFieldDefinition) field);
-                GraphQLDirective.Builder newDirective = GraphQLDirective.newDirective(node);
-                newDirective.argument(GraphQLArgument.newArgument()
-                        .name("reverseName")
-                        .type(GraphQLString)
-                        .value("instanceVariables")
-                        .build());
-                newFieldDefinition.withDirective(newDirective);
+                newFieldDefinition.withDirective(newLinkDirective(true, "instanceVariables"));
                 newObject.field(newFieldDefinition);
 
                 typeMap.replace(source.getName(), newObject.build());

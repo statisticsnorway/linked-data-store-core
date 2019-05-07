@@ -1,6 +1,5 @@
 package no.ssb.lds.graphql.schemas;
 
-import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLDirective;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLList;
@@ -13,16 +12,14 @@ import graphql.schema.GraphQLTypeUtil;
 import graphql.schema.GraphQLTypeVisitorStub;
 import graphql.util.TraversalControl;
 import graphql.util.TraverserContext;
+import no.ssb.lds.graphql.directives.LinkDirective;
+import no.ssb.lds.graphql.directives.ReverseLinkDirective;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-
-import static graphql.Scalars.GraphQLString;
-import static no.ssb.lds.graphql.schemas.SpecificationTraverser.LINK_DIRECTIVE;
-import static no.ssb.lds.graphql.schemas.SpecificationTraverser.REVERSE_LINK_DIRECTIVE;
 
 /**
  * Update the target of a link annotation with reverseLink.
@@ -38,10 +35,10 @@ public class GraphQLReverseLinkVisitor extends GraphQLTypeVisitorStub {
 
     @Override
     public TraversalControl visitGraphQLFieldDefinition(GraphQLFieldDefinition node, TraverserContext<GraphQLType> context) {
-        Optional<GraphQLDirective> linkDirective = getLinkDirective(node);
+        Optional<LinkDirective> linkDirective = getLinkDirective(node);
         if (linkDirective.isPresent()) {
             log.debug("Found @link annotation on {}", node.getName());
-            Optional<String> reverseName = getReverseName(linkDirective.get());
+            Optional<String> reverseName = linkDirective.get().getReverseName();
             if (reverseName.isPresent()) {
                 addReverseField(node, context, reverseName.get());
             }
@@ -83,7 +80,7 @@ public class GraphQLReverseLinkVisitor extends GraphQLTypeVisitorStub {
         GraphQLFieldDefinition fieldDefinition = GraphQLFieldDefinition.newFieldDefinition()
                 .name(reverseName)
                 .type(sourceType)
-                .withDirective(reverseLinkDirective(node.getName()))
+                .withDirective(ReverseLinkDirective.newReverseLinkDirective(true, node.getName()))
                 .build();
 
         log.debug("Adding reverseLink {} from target {} to source {}", fieldDefinition, targetName, sourceName);
@@ -93,30 +90,14 @@ public class GraphQLReverseLinkVisitor extends GraphQLTypeVisitorStub {
     }
 
     /**
-     * Get the reverse name.
-     */
-    private Optional<String> getReverseName(GraphQLDirective linkDirective) {
-        return Optional.ofNullable(linkDirective.getArgument("reverseName"))
-                .map(graphQLArgument -> (String) graphQLArgument.getValue());
-    }
-
-    /**
      * Checks that the node has a link directive.
      */
-    private Optional<GraphQLDirective> getLinkDirective(GraphQLFieldDefinition node) {
+    private Optional<LinkDirective> getLinkDirective(GraphQLFieldDefinition node) {
         for (GraphQLDirective directive : node.getDirectives()) {
-            if (LINK_DIRECTIVE.getName().equals(directive.getName())) {
-                return Optional.of(directive);
+            if (directive instanceof LinkDirective) {
+                return Optional.of((LinkDirective) directive);
             }
         }
         return Optional.empty();
-    }
-
-    private GraphQLDirective reverseLinkDirective(String mappedBy) {
-        return GraphQLDirective.newDirective(REVERSE_LINK_DIRECTIVE)
-                .argument(GraphQLArgument.newArgument()
-                        .name("mappedBy")
-                        .type(GraphQLString).value(mappedBy)
-                ).build();
     }
 }

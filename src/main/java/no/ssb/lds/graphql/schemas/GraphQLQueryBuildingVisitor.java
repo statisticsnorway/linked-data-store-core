@@ -23,12 +23,12 @@ public class GraphQLQueryBuildingVisitor extends GraphQLTypeVisitorStub {
 
     private final GraphQLObjectType.Builder query;
 
-    public GraphQLQueryBuildingVisitor() {
-        query = GraphQLObjectType.newObject();
+    public GraphQLQueryBuildingVisitor(GraphQLObjectType.Builder originalQuery) {
+        query = originalQuery;
     }
 
     public GraphQLQueryBuildingVisitor(GraphQLObjectType originalQuery) {
-        query = GraphQLObjectType.newObject(originalQuery);
+        this(GraphQLObjectType.newObject(originalQuery));
     }
 
     private static boolean hasDomainDirective(GraphQLObjectType node) {
@@ -67,7 +67,7 @@ public class GraphQLQueryBuildingVisitor extends GraphQLTypeVisitorStub {
     }
 
     public GraphQLObjectType getQuery() {
-        return query.name("Query").build();
+        return query.build();
     }
 
     private GraphQLFieldDefinition createNaryField(GraphQLObjectType type) {

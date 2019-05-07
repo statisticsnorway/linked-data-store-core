@@ -11,7 +11,7 @@ import no.ssb.lds.core.search.SearchIndexConfigurator;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import org.testng.annotations.Test;
 
-public class GraphqlSchemaBuilderTest {
+public class OldGraphqlSchemaBuilderTest {
 
     @Test
     public void testSchemaConversion() {
@@ -55,7 +55,7 @@ public class GraphqlSchemaBuilderTest {
                 .values("search.index.provider", "testSearchIndex")
                 .build();
         SearchIndex searchIndex = SearchIndexConfigurator.configureSearchIndex(configuration);
-        GraphqlSchemaBuilder builder = new GraphqlSchemaBuilder(specification, fakePersistence, searchIndex,
+        OldGraphqlSchemaBuilder builder = new OldGraphqlSchemaBuilder(specification, fakePersistence, searchIndex,
                 "/ns");
         GraphQLSchema schema = builder.getSchema();
 

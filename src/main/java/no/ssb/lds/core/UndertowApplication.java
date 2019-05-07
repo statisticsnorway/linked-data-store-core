@@ -26,7 +26,7 @@ import no.ssb.lds.core.saga.SagasObserver;
 import no.ssb.lds.core.search.SearchIndexConfigurator;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import no.ssb.lds.graphql.GraphqlHttpHandler;
-import no.ssb.lds.graphql.schemas.GraphqlSchemaBuilder;
+import no.ssb.lds.graphql.schemas.OldGraphqlSchemaBuilder;
 import no.ssb.saga.execution.sagalog.SagaLog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,7 +84,7 @@ public class UndertowApplication {
 
         PathHandler pathHandler = Handlers.path();
         if (graphqlEnabled) {
-            GraphQL graphQL = GraphQL.newGraphQL(new GraphqlSchemaBuilder(specification, persistence, searchIndex, namespace)
+            GraphQL graphQL = GraphQL.newGraphQL(new OldGraphqlSchemaBuilder(specification, persistence, searchIndex, namespace)
                     .getSchema()).build();
 
             pathHandler.addExactPath("/graphiql", Handlers.resource(new ClassPathResourceManager(

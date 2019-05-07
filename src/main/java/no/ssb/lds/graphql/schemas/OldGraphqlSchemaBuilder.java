@@ -49,9 +49,10 @@ import static java.util.Optional.ofNullable;
 /**
  * Converts a LDS specification to GraphQL schema.
  */
-public class GraphqlSchemaBuilder {
+@Deprecated
+public class OldGraphqlSchemaBuilder {
 
-    private static final Logger log = LoggerFactory.getLogger(GraphqlSchemaBuilder.class);
+    private static final Logger log = LoggerFactory.getLogger(OldGraphqlSchemaBuilder.class);
     private final Specification specification;
 
     // Keep track of the types we registered.
@@ -62,8 +63,8 @@ public class GraphqlSchemaBuilder {
     private final SearchIndex searchIndex;
     private final String namespace;
 
-    public GraphqlSchemaBuilder(Specification specification, RxJsonPersistence persistence, SearchIndex searchIndex,
-                                String namespace) {
+    public OldGraphqlSchemaBuilder(Specification specification, RxJsonPersistence persistence, SearchIndex searchIndex,
+                                   String namespace) {
         this.specification = Objects.requireNonNull(specification);
         this.persistence = Objects.requireNonNull(persistence);
         this.namespace = Objects.requireNonNull(namespace);
@@ -79,7 +80,7 @@ public class GraphqlSchemaBuilder {
      */
     public static void main(String... argv) {
         JsonSchemaBasedSpecification spec = JsonSchemaBasedSpecification.create(argv[0]);
-        GraphqlSchemaBuilder builder = new GraphqlSchemaBuilder(
+        OldGraphqlSchemaBuilder builder = new OldGraphqlSchemaBuilder(
                 spec,
                 new EmptyPersistence(),
                 null,
