@@ -1,0 +1,144 @@
+package no.ssb.lds.graphql.schemas;
+
+import graphql.schema.GraphQLArgument;
+import graphql.schema.GraphQLDirective;
+import graphql.schema.GraphQLFieldDefinition;
+import graphql.schema.GraphQLList;
+import graphql.schema.GraphQLNonNull;
+import graphql.schema.GraphQLObjectType;
+import graphql.schema.GraphQLOutputType;
+import graphql.schema.GraphQLType;
+import graphql.schema.GraphQLTypeUtil;
+import graphql.schema.GraphQLTypeVisitorStub;
+import graphql.util.TraversalControl;
+import graphql.util.TraverserContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+import static graphql.Scalars.GraphQLBoolean;
+import static graphql.Scalars.GraphQLInt;
+import static graphql.Scalars.GraphQLString;
+
+/**
+ * Add a @pagination annotation to all fields marked with @link or @reverseLink.
+ */
+public class GraphQLPaginationVisitor extends GraphQLTypeVisitorStub {
+
+    private static final Logger log = LoggerFactory.getLogger(GraphQLPaginationVisitor.class);
+    private final Map<String, GraphQLType> typeMap;
+
+    public GraphQLPaginationVisitor(Map<String, GraphQLType> typeMap) {
+        this.typeMap = Objects.requireNonNull(typeMap);
+    }
+
+    private static boolean hasLinkWithPagination(GraphQLFieldDefinition node) {
+        for (GraphQLDirective directive : node.getDirectives()) {
+            if ("link".equals(directive.getName()) || "reverseLink".equals(directive.getName())) {
+                GraphQLArgument pagination = directive.getArgument("pagination");
+                Object value = pagination.getValue();
+                return value.equals(true);
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public TraversalControl visitGraphQLObjectType(GraphQLObjectType node, TraverserContext<GraphQLType> context) {
+
+        List<GraphQLFieldDefinition> fieldsWithPagination = new ArrayList<>();
+        for (GraphQLFieldDefinition fieldDefinition : node.getFieldDefinitions()) {
+            if (hasLinkWithPagination(fieldDefinition)) {
+                log.debug("Found link to {}", node.getName());
+                fieldsWithPagination.add(fieldDefinition);
+            }
+        }
+        if (fieldsWithPagination.isEmpty()) {
+            log.debug("No fields marked with pagination in {}", node);
+            return TraversalControl.CONTINUE;
+        }
+
+        log.debug("Transforming {} to pagination fields", fieldsWithPagination);
+
+        GraphQLObjectType.Builder newObject = GraphQLObjectType.newObject(node);
+        for (GraphQLFieldDefinition fieldDefinition : fieldsWithPagination) {
+            newObject.field(createConnectionField(node, fieldDefinition));
+        }
+
+        typeMap.replace(node.getName(), node, newObject.build());
+
+        return TraversalControl.CONTINUE;
+    }
+
+    private GraphQLFieldDefinition createConnectionField(GraphQLObjectType from, GraphQLFieldDefinition field) {
+        GraphQLType to = GraphQLTypeUtil.unwrapType(field.getType()).pop();
+        GraphQLFieldDefinition.Builder newFieldDefinition = GraphQLFieldDefinition.newFieldDefinition(field);
+        return newFieldDefinition
+                .argument(GraphQLArgument.newArgument().name("first").type(GraphQLInt).build())
+                .argument(GraphQLArgument.newArgument().name("after").type(GraphQLString).build())
+                .argument(GraphQLArgument.newArgument().name("last").type(GraphQLInt).build())
+                .argument(GraphQLArgument.newArgument().name("before").type(GraphQLString).build())
+                .type((GraphQLOutputType) createConnectionType(from, to))
+                .build();
+    }
+
+    private GraphQLType createConnectionType(GraphQLObjectType from, GraphQLType to) {
+        String connectionTypeName = from.getName() + to.getName() + "Connection";
+        if (!typeMap.containsKey(connectionTypeName)) {
+            GraphQLFieldDefinition.Builder pageInfoField = GraphQLFieldDefinition.newFieldDefinition()
+                    .type(GraphQLNonNull.nonNull(createPageInfoType())).name("pageInfo");
+
+            GraphQLFieldDefinition.Builder edgesField = GraphQLFieldDefinition.newFieldDefinition()
+                    .type(GraphQLNonNull.nonNull(
+                            GraphQLList.list(GraphQLNonNull.nonNull(
+                                    createEdgeType(from, to))
+                            ))
+                    )
+                    .name("edges");
+
+            GraphQLObjectType.Builder connectionType = GraphQLObjectType.newObject()
+                    .name(connectionTypeName)
+                    .field(edgesField)
+                    .field(pageInfoField);
+
+            typeMap.put(connectionTypeName, connectionType.build());
+        }
+        return typeMap.get(connectionTypeName);
+    }
+
+    private GraphQLType createEdgeType(GraphQLType from, GraphQLType to) {
+        String edgeTypeName = from.getName() + to.getName() + "Edge";
+        if (!typeMap.containsKey(edgeTypeName)) {
+
+            GraphQLFieldDefinition.Builder nodeField = GraphQLFieldDefinition.newFieldDefinition()
+                    .type(GraphQLNonNull.nonNull(to)).name("node");
+
+            GraphQLFieldDefinition.Builder cursorField = GraphQLFieldDefinition.newFieldDefinition()
+                    .type(GraphQLNonNull.nonNull(GraphQLString)).name("cursor");
+
+            GraphQLObjectType.Builder edgeType = GraphQLObjectType.newObject()
+                    .name(edgeTypeName)
+                    .field(cursorField)
+                    .field(nodeField);
+
+            typeMap.put(edgeTypeName, edgeType.build());
+        }
+        return typeMap.get(edgeTypeName);
+    }
+
+    private GraphQLType createPageInfoType() {
+        if (!typeMap.containsKey("PageInfo")) {
+            GraphQLObjectType pageInfoType = GraphQLObjectType.newObject()
+                    .name("PageInfo")
+                    .field(GraphQLFieldDefinition.newFieldDefinition().name("hasNextPage").type(GraphQLNonNull.nonNull(GraphQLBoolean)))
+                    .field(GraphQLFieldDefinition.newFieldDefinition().name("hasPreviousPage").type(GraphQLNonNull.nonNull(GraphQLBoolean)))
+                    .build();
+            typeMap.put("PageInfo", pageInfoType);
+        }
+        return typeMap.get("PageInfo");
+    }
+}
