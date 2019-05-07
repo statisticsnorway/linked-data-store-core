@@ -11,6 +11,7 @@ import graphql.schema.GraphQLOutputType;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeCollectingVisitor;
 import graphql.schema.GraphQLTypeReference;
+import graphql.schema.GraphQLTypeResolvingVisitor;
 import graphql.schema.GraphQLTypeUtil;
 import graphql.schema.GraphQLTypeVisitorStub;
 import graphql.schema.GraphQLUnionType;
@@ -130,7 +131,7 @@ public class SpecificationTraverser {
         //GraphQLTypeResolvingVisitor typeResolvingVisitor = new GraphQLTypeResolvingVisitor(typeMap);
         //new TypeTraverser().depthFirst(typeResolvingVisitor, typeMap.values());
 
-        // TODO: Recognize directives and add reverse link directives.
+        // TODO: Recognize link directives and add reverse link directives.
         // TODO: Extract to own class.
         new TypeTraverser().depthFirst(new GraphQLTypeVisitorStub() {
 
@@ -143,8 +144,8 @@ public class SpecificationTraverser {
                         GraphQLType target = GraphQLTypeUtil.unwrapType(node.getType()).peek();
 
 
-                        System.out.println("Source: " + source);
-                        System.out.println("Target: " + target);
+                        System.out.print("Source: " + source.getName());
+                        System.out.println(", Target: " + target.getName());
                         return TraversalControl.CONTINUE;
                     }
                 }
@@ -196,7 +197,16 @@ public class SpecificationTraverser {
             }
         }, typeMap.values());
 
-        return typeMap.values();
+        GraphQLQueryBuildingVisitor graphQLQueryVisitor = new GraphQLQueryBuildingVisitor();
+        new TypeTraverser().depthFirst(graphQLQueryVisitor, typeMap.values());
+        typeMap.put("Query", graphQLQueryVisitor.getQuery());
+
+        new TypeTraverser().depthFirst(graphQLTypeCollectingVisitor, typeMap.values());
+
+        GraphQLTypeResolvingVisitor typeResolvingVisitor = new GraphQLTypeResolvingVisitor(typeMap);
+        new TypeTraverser().depthFirst(typeResolvingVisitor, typeMap.values());
+
+        return graphQLTypeCollectingVisitor.getResult().values();
     }
 
     private GraphQLObjectType.Builder createGraphQLObject(SpecificationElement specification) {
