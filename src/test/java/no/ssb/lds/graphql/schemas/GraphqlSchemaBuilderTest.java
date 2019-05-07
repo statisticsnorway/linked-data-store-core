@@ -17,36 +17,36 @@ public class GraphqlSchemaBuilderTest {
     public void testSchemaConversion() {
 
         Specification specification = JsonSchemaBasedSpecification.create(
-                "no/ssb/lds/graphql/schemas/Agent.json",
-                "no/ssb/lds/graphql/schemas/AgentInRole.json",
+                "no/ssb/lds/graphql/schemas/examples/Agent.json",
+                "no/ssb/lds/graphql/schemas/examples/AgentInRole.json",
 
-                "no/ssb/lds/graphql/schemas/AttributeComponent.json",
-                "no/ssb/lds/graphql/schemas/RepresentedVariable.json",
-                "no/ssb/lds/graphql/schemas/Variable.json",
-                "no/ssb/lds/graphql/schemas/UnitType.json",
-                "no/ssb/lds/graphql/schemas/SubstantiveValueDomain.json",
-                "no/ssb/lds/graphql/schemas/ComponentRelationship.json",
-                "no/ssb/lds/graphql/schemas/DataResource.json",
-                "no/ssb/lds/graphql/schemas/DescribedValueDomain.json",
-                "no/ssb/lds/graphql/schemas/DimentionalDataSet.json",
-                "no/ssb/lds/graphql/schemas/DimentionalDataStructure.json",
-                "no/ssb/lds/graphql/schemas/EnumeratedValueDomain.json",
-                "no/ssb/lds/graphql/schemas/ExchangeChannel.json",
-                "no/ssb/lds/graphql/schemas/IdentifierComponent.json",
-                "no/ssb/lds/graphql/schemas/InformationProvider.json",
-                "no/ssb/lds/graphql/schemas/InstanceVariable.json",
-                "no/ssb/lds/graphql/schemas/LogicalRecord.json",
-                "no/ssb/lds/graphql/schemas/MeasureComponent.json",
-                "no/ssb/lds/graphql/schemas/Population.json",
-                "no/ssb/lds/graphql/schemas/Protocol.json",
-                "no/ssb/lds/graphql/schemas/ProvisionAgreement.json",
-                "no/ssb/lds/graphql/schemas/RecordRelationship.json",
+                "no/ssb/lds/graphql/schemas/examples/AttributeComponent.json",
+                "no/ssb/lds/graphql/schemas/examples/RepresentedVariable.json",
+                "no/ssb/lds/graphql/schemas/examples/Variable.json",
+                "no/ssb/lds/graphql/schemas/examples/UnitType.json",
+                "no/ssb/lds/graphql/schemas/examples/SubstantiveValueDomain.json",
+                "no/ssb/lds/graphql/schemas/examples/ComponentRelationship.json",
+                "no/ssb/lds/graphql/schemas/examples/DataResource.json",
+                "no/ssb/lds/graphql/schemas/examples/DescribedValueDomain.json",
+                "no/ssb/lds/graphql/schemas/examples/DimentionalDataSet.json",
+                "no/ssb/lds/graphql/schemas/examples/DimentionalDataStructure.json",
+                "no/ssb/lds/graphql/schemas/examples/EnumeratedValueDomain.json",
+                "no/ssb/lds/graphql/schemas/examples/ExchangeChannel.json",
+                "no/ssb/lds/graphql/schemas/examples/IdentifierComponent.json",
+                "no/ssb/lds/graphql/schemas/examples/InformationProvider.json",
+                "no/ssb/lds/graphql/schemas/examples/InstanceVariable.json",
+                "no/ssb/lds/graphql/schemas/examples/LogicalRecord.json",
+                "no/ssb/lds/graphql/schemas/examples/MeasureComponent.json",
+                "no/ssb/lds/graphql/schemas/examples/Population.json",
+                "no/ssb/lds/graphql/schemas/examples/Protocol.json",
+                "no/ssb/lds/graphql/schemas/examples/ProvisionAgreement.json",
+                "no/ssb/lds/graphql/schemas/examples/RecordRelationship.json",
 
-                "no/ssb/lds/graphql/schemas/SentinelValueDomain.json",
-                "no/ssb/lds/graphql/schemas/UnitDataSet.json",
-                "no/ssb/lds/graphql/schemas/UnitDataStructure.json",
+                "no/ssb/lds/graphql/schemas/examples/SentinelValueDomain.json",
+                "no/ssb/lds/graphql/schemas/examples/UnitDataSet.json",
+                "no/ssb/lds/graphql/schemas/examples/UnitDataStructure.json",
 
-                "no/ssb/lds/graphql/schemas/Role.json"
+                "no/ssb/lds/graphql/schemas/examples/Role.json"
 
         );
         RxJsonPersistence fakePersistence = new EmptyPersistence();
