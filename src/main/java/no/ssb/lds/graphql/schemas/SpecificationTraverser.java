@@ -12,13 +12,9 @@ import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeCollectingVisitor;
 import graphql.schema.GraphQLTypeReference;
 import graphql.schema.GraphQLTypeResolvingVisitor;
-import graphql.schema.GraphQLTypeUtil;
-import graphql.schema.GraphQLTypeVisitorStub;
 import graphql.schema.GraphQLUnionType;
 import graphql.schema.TypeTraverser;
 import graphql.schema.idl.SchemaPrinter;
-import graphql.util.TraversalControl;
-import graphql.util.TraverserContext;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.api.specification.SpecificationElement;
 import no.ssb.lds.api.specification.SpecificationElementType;
@@ -27,7 +23,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -57,6 +52,7 @@ public class SpecificationTraverser {
             .argument(GraphQLArgument.newArgument().name("reverseName").type(GraphQLString).build())
             .build();
     private static final Logger log = LoggerFactory.getLogger(SpecificationTraverser.class);
+    public static final TypeTraverser TRAVERSER = new TypeTraverser();
     public final GraphQLDirective DOMAIN_DIRECTIVE = GraphQLDirective.newDirective()
             .name("domain")
             .argument(GraphQLArgument.newArgument().name("searchable").defaultValue(true).type(GraphQLBoolean).build())
@@ -64,7 +60,8 @@ public class SpecificationTraverser {
                     Introspection.DirectiveLocation.OBJECT
             )
             .build();
-    public final GraphQLDirective REVERSE_LINK_DIRECTIVE = GraphQLDirective.newDirective()
+
+    public static final GraphQLDirective REVERSE_LINK_DIRECTIVE = GraphQLDirective.newDirective()
             .name("reverseLink")
             .argument(GraphQLArgument.newArgument().name("mappedBy").type(GraphQLNonNull.nonNull(GraphQLString)).build())
             .argument(GraphQLArgument.newArgument().name("pagination").type(GraphQLBoolean).build())
@@ -124,87 +121,35 @@ public class SpecificationTraverser {
             log.debug("First pass schema: \n{}", builder);
         }
 
+        // First, collect all the types.
         GraphQLTypeCollectingVisitor graphQLTypeCollectingVisitor = new GraphQLTypeCollectingVisitor();
-        new TypeTraverser().depthFirst(graphQLTypeCollectingVisitor, domains);
-
+        TRAVERSER.depthFirst(graphQLTypeCollectingVisitor, domains);
         Map<String, GraphQLType> typeMap = graphQLTypeCollectingVisitor.getResult();
-        //GraphQLTypeResolvingVisitor typeResolvingVisitor = new GraphQLTypeResolvingVisitor(typeMap);
-        //new TypeTraverser().depthFirst(typeResolvingVisitor, typeMap.values());
 
-        // TODO: Recognize link directives and add reverse link directives.
-        // TODO: Extract to own class.
-        new TypeTraverser().depthFirst(new GraphQLTypeVisitorStub() {
+        // Fake reverseName until the annotation is finalized.
+        TRAVERSER.depthFirst(new FakeAnnotationVisitor(typeMap), typeMap.values());
 
-            @Override
-            public TraversalControl visitGraphQLFieldDefinition(GraphQLFieldDefinition node, TraverserContext<GraphQLType> context) {
-                for (GraphQLDirective directive : node.getDirectives()) {
-                    if (directive.getName().equals(LINK_DIRECTIVE.getName())) {
+        // Add the reverse links.
+        TRAVERSER.depthFirst(new GraphQLReverseLinkVisitor(typeMap), typeMap.values());
 
-                        GraphQLType source = GraphQLTypeUtil.unwrapAll(context.getParentNode());
-                        GraphQLType target = GraphQLTypeUtil.unwrapType(node.getType()).peek();
-
-
-                        System.out.print("Source: " + source.getName());
-                        System.out.println(", Target: " + target.getName());
-                        return TraversalControl.CONTINUE;
-                    }
-                }
-                return TraversalControl.CONTINUE;
-            }
-        }, typeMap.values());
-
-        // TODO: Faking until link annotation is adjusted.
-        Map<String, Map<String, String>> reverseMap = new HashMap<>();
-        reverseMap.computeIfAbsent("RepresentedVariable", s -> new HashMap<>())
-                .put("instanceVariable", "InstanceVariable");
-        Map<String, Map<String, String>> linkMapMappedBy = new HashMap<>();
-        linkMapMappedBy.computeIfAbsent("InstanceVariable", s -> new HashMap<>())
-                .put("instanceVariable", "representedVariable");
-
-
-        new TypeTraverser().depthFirst(new GraphQLTypeVisitorStub() {
-            @Override
-            public TraversalControl visitGraphQLObjectType(GraphQLObjectType node, TraverserContext<GraphQLType> context) {
-                String typeName = node.getName();
-                // Skip if has no reverse links.
-                if (!reverseMap.containsKey(typeName) || reverseMap.get(typeName).isEmpty()) {
-                    return TraversalControl.CONTINUE;
-                }
-
-                Map<String, String> reverseLinks = reverseMap.get(typeName);
-                GraphQLObjectType.Builder nodeCopy = GraphQLObjectType.newObject(node);
-                for (String reverseRelationName : reverseLinks.keySet()) {
-
-                    String sourceTypeName = reverseLinks.get(reverseRelationName);
-                    String mappedBy = linkMapMappedBy.get(sourceTypeName).get(reverseRelationName);
-
-                    GraphQLOutputType sourceType = GraphQLNonNull.nonNull(
-                            GraphQLList.list(GraphQLTypeReference.typeRef(sourceTypeName)));
-
-                    GraphQLFieldDefinition fieldDefinition = GraphQLFieldDefinition.newFieldDefinition()
-                            .name(reverseRelationName)
-                            .type(sourceType)
-                            .withDirective(reverseLinkDirective(mappedBy))
-                            .build();
-
-                    nodeCopy.field(fieldDefinition);
-                }
-
-                typeMap.replace(typeName, node, nodeCopy.build());
-
-                return TraversalControl.CONTINUE;
-
-            }
-        }, typeMap.values());
-
+        // Create the query fields.
         GraphQLQueryBuildingVisitor graphQLQueryVisitor = new GraphQLQueryBuildingVisitor();
-        new TypeTraverser().depthFirst(graphQLQueryVisitor, typeMap.values());
+        TRAVERSER.depthFirst(graphQLQueryVisitor, typeMap.values());
         typeMap.put("Query", graphQLQueryVisitor.getQuery());
 
-        new TypeTraverser().depthFirst(graphQLTypeCollectingVisitor, typeMap.values());
+        // Transform with pagination
+        GraphQLPaginationVisitor graphQLPaginationVisitor = new GraphQLPaginationVisitor(typeMap);
+        TRAVERSER.depthFirst(graphQLPaginationVisitor, typeMap.values());
+
+        // Add the search fields.
+        //GraphQLQuerySearchVisitor graphQLQuerySearchVisitor = new GraphQLQuerySearchVisitor();
+        //TRAVERSER.depthFirst(graphQLQueryVisitor, typeMap.values());
+        //typeMap.put("Query", graphQLQuerySearchVisitor.getQuery());
+
+        //TRAVERSER.depthFirst(graphQLTypeCollectingVisitor, typeMap.values());
 
         GraphQLTypeResolvingVisitor typeResolvingVisitor = new GraphQLTypeResolvingVisitor(typeMap);
-        new TypeTraverser().depthFirst(typeResolvingVisitor, typeMap.values());
+        TRAVERSER.depthFirst(typeResolvingVisitor, typeMap.values());
 
         return graphQLTypeCollectingVisitor.getResult().values();
     }
@@ -329,14 +274,6 @@ public class SpecificationTraverser {
                         .name("searchable")
                         .type(GraphQLBoolean)
                         .value(searchable)
-                ).build();
-    }
-
-    private GraphQLDirective reverseLinkDirective(String mappedBy) {
-        return GraphQLDirective.newDirective(REVERSE_LINK_DIRECTIVE)
-                .argument(GraphQLArgument.newArgument()
-                        .name("mappedBy")
-                        .type(GraphQLString).value(mappedBy)
                 ).build();
     }
 

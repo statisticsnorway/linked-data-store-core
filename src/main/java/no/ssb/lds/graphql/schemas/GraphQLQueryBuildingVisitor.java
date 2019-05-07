@@ -7,28 +7,21 @@ import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLNonNull;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLType;
-import graphql.schema.GraphQLTypeReference;
 import graphql.schema.GraphQLTypeVisitorStub;
 import graphql.util.TraversalControl;
 import graphql.util.TraverserContext;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import static graphql.Scalars.GraphQLBoolean;
 import static graphql.Scalars.GraphQLID;
-import static graphql.Scalars.GraphQLInt;
-import static graphql.Scalars.GraphQLString;
 
 /**
  * A visitor that adds root fields to a Query definition
  * <p>
- * The visitor uses the object types marked with the @link annotations.
+ * The visitor uses the object types marked with the @domain annotations.
  */
 public class GraphQLQueryBuildingVisitor extends GraphQLTypeVisitorStub {
 
     private final GraphQLObjectType.Builder query;
-    private final Set<String> types = new HashSet<>();
 
     public GraphQLQueryBuildingVisitor() {
         query = GraphQLObjectType.newObject();
@@ -38,7 +31,7 @@ public class GraphQLQueryBuildingVisitor extends GraphQLTypeVisitorStub {
         query = GraphQLObjectType.newObject(originalQuery);
     }
 
-    private static boolean hasLinkDirective(GraphQLObjectType node) {
+    private static boolean hasDomainDirective(GraphQLObjectType node) {
         for (GraphQLDirective directive : node.getDirectives()) {
             if ("domain".equals(directive.getName())) {
                 return true;
@@ -47,7 +40,20 @@ public class GraphQLQueryBuildingVisitor extends GraphQLTypeVisitorStub {
         return false;
     }
 
-    private static GraphQLFieldDefinition createUnaryField(GraphQLObjectType type) {
+    private GraphQLDirective createLinkDirective(boolean pagination) {
+        GraphQLDirective.Builder link = GraphQLDirective.newDirective()
+                .name("link");
+        if (!pagination) {
+            link.argument(GraphQLArgument.newArgument()
+                    .name("pagination")
+                    .type(GraphQLBoolean)
+                    .value(pagination)
+                    .build());
+        }
+        return link.build();
+    }
+
+    private GraphQLFieldDefinition createUnaryField(GraphQLObjectType type) {
         return GraphQLFieldDefinition.newFieldDefinition()
                 .name(type.getName() + "ById")
                 .argument(
@@ -56,6 +62,7 @@ public class GraphQLQueryBuildingVisitor extends GraphQLTypeVisitorStub {
                                 .type(new GraphQLNonNull(GraphQLID))
                                 .build()
                 )
+                .withDirective(createLinkDirective(false))
                 .type(GraphQLNonNull.nonNull(type)).build();
     }
 
@@ -63,60 +70,21 @@ public class GraphQLQueryBuildingVisitor extends GraphQLTypeVisitorStub {
         return query.name("Query").build();
     }
 
-    private GraphQLFieldDefinition createConnectionField(GraphQLObjectType type) {
+    private GraphQLFieldDefinition createNaryField(GraphQLObjectType type) {
 
-        GraphQLFieldDefinition.Builder pageInfoField = GraphQLFieldDefinition.newFieldDefinition()
-                .name("pageInfo").type(GraphQLNonNull.nonNull(createPageInfoType()));
-
-        // Create root connection
-        GraphQLFieldDefinition.Builder cursorField = GraphQLFieldDefinition.newFieldDefinition()
-                .type(GraphQLNonNull.nonNull(GraphQLString)).name("cursor");
-
-        GraphQLFieldDefinition.Builder nodeField = GraphQLFieldDefinition.newFieldDefinition()
-                .type(GraphQLNonNull.nonNull(type)).name("node");
-
-        GraphQLObjectType.Builder edgeType = GraphQLObjectType.newObject()
-                .name(type.getName() + "Edge")
-                .field(cursorField)
-                .field(nodeField);
-
-        GraphQLFieldDefinition.Builder edgesField = GraphQLFieldDefinition.newFieldDefinition()
-                .name("edges")
-                .type(GraphQLNonNull.nonNull(GraphQLList.list(GraphQLNonNull.nonNull(edgeType.build()))));
-
-
-        GraphQLObjectType.Builder connectionType = GraphQLObjectType.newObject()
-                .name(type.getName() + "Connection")
-                .field(edgesField)
-                .field(pageInfoField);
         return GraphQLFieldDefinition.newFieldDefinition()
                 .name(type.getName())
-                .argument(GraphQLArgument.newArgument().name("first").type(GraphQLInt).build())
-                .argument(GraphQLArgument.newArgument().name("after").type(GraphQLString).build())
-                .argument(GraphQLArgument.newArgument().name("last").type(GraphQLInt).build())
-                .argument(GraphQLArgument.newArgument().name("before").type(GraphQLString).build())
-                .type(connectionType.build())
+                .withDirective(createLinkDirective(true))
+                .type(GraphQLNonNull.nonNull(GraphQLList.list(GraphQLNonNull.nonNull(type))))
                 .build();
     }
 
-    private GraphQLType createPageInfoType() {
-        if (types.contains("PageInfo")) {
-            return GraphQLTypeReference.typeRef("PageInfo");
-        } else {
-            types.add("PageInfo");
-            return GraphQLObjectType.newObject()
-                    .name("PageInfo")
-                    .field(GraphQLFieldDefinition.newFieldDefinition().name("hasNextPage").type(GraphQLNonNull.nonNull(GraphQLBoolean)))
-                    .field(GraphQLFieldDefinition.newFieldDefinition().name("hasPreviousPage").type(GraphQLNonNull.nonNull(GraphQLBoolean)))
-                    .build();
-        }
-    }
 
     @Override
     public TraversalControl visitGraphQLObjectType(GraphQLObjectType node, TraverserContext<GraphQLType> context) {
-        if (hasLinkDirective(node)) {
+        if (hasDomainDirective(node)) {
             query.field(createUnaryField(node));
-            query.field(createConnectionField(node));
+            query.field(createNaryField(node));
         }
         return TraversalControl.CONTINUE;
     }
