@@ -40,7 +40,14 @@ public class GraphQLPaginationVisitor extends GraphQLTypeVisitorStub {
         for (GraphQLDirective directive : node.getDirectives()) {
             if ("link".equals(directive.getName()) || "reverseLink".equals(directive.getName())) {
                 GraphQLArgument pagination = directive.getArgument("pagination");
+                // TODO: Figure out how arguments are supposed to be used.
+                if (pagination == null) {
+                    return false;
+                }
                 Object value = pagination.getValue();
+                if (value == null) {
+                    return false;
+                }
                 return value.equals(true);
             }
         }
