@@ -80,7 +80,7 @@ public class GraphQLPaginationVisitor extends GraphQLTypeVisitorStub {
             newObject.field(createConnectionField(node, fieldDefinition));
         }
 
-        typeMap.replace(node.getName(), node, newObject.build());
+        typeMap.put(node.getName(), newObject.build());
 
         return TraversalControl.CONTINUE;
     }
