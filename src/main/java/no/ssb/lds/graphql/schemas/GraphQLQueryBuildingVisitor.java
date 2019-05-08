@@ -10,8 +10,8 @@ import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeVisitorStub;
 import graphql.util.TraversalControl;
 import graphql.util.TraverserContext;
+import no.ssb.lds.graphql.directives.LinkDirective;
 
-import static graphql.Scalars.GraphQLBoolean;
 import static graphql.Scalars.GraphQLID;
 
 /**
@@ -40,19 +40,6 @@ public class GraphQLQueryBuildingVisitor extends GraphQLTypeVisitorStub {
         return false;
     }
 
-    private GraphQLDirective createLinkDirective(boolean pagination) {
-        GraphQLDirective.Builder link = GraphQLDirective.newDirective()
-                .name("link");
-        if (!pagination) {
-            link.argument(GraphQLArgument.newArgument()
-                    .name("pagination")
-                    .type(GraphQLBoolean)
-                    .value(pagination)
-                    .build());
-        }
-        return link.build();
-    }
-
     private GraphQLFieldDefinition createUnaryField(GraphQLObjectType type) {
         return GraphQLFieldDefinition.newFieldDefinition()
                 .name(type.getName() + "ById")
@@ -62,7 +49,7 @@ public class GraphQLQueryBuildingVisitor extends GraphQLTypeVisitorStub {
                                 .type(new GraphQLNonNull(GraphQLID))
                                 .build()
                 )
-                .withDirective(createLinkDirective(false))
+                .withDirective(LinkDirective.newLinkDirective(false))
                 .type(GraphQLNonNull.nonNull(type)).build();
     }
 
@@ -74,7 +61,7 @@ public class GraphQLQueryBuildingVisitor extends GraphQLTypeVisitorStub {
 
         return GraphQLFieldDefinition.newFieldDefinition()
                 .name(type.getName())
-                .withDirective(createLinkDirective(true))
+                .withDirective(LinkDirective.newLinkDirective(true))
                 .type(GraphQLNonNull.nonNull(GraphQLList.list(GraphQLNonNull.nonNull(type))))
                 .build();
     }

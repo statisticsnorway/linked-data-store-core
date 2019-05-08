@@ -7,12 +7,14 @@ import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeCollectingVisitor;
 import graphql.schema.GraphQLTypeResolvingVisitor;
 import graphql.schema.TypeTraverser;
+import graphql.schema.idl.SchemaPrinter;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.search.SearchIndex;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import no.ssb.lds.graphql.directives.DomainDirective;
 import no.ssb.lds.graphql.directives.LinkDirective;
+import no.ssb.lds.graphql.directives.ReverseLinkDirective;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,8 +25,9 @@ import java.util.Set;
 
 public class GraphQLSchemaBuilder {
 
-    private static final Logger log = LoggerFactory.getLogger(OldGraphqlSchemaBuilder.class);
+    private static final Logger log = LoggerFactory.getLogger(GraphQLSchemaBuilder.class);
     private static final TypeTraverser TRAVERSER = new TypeTraverser();
+    private static final SchemaPrinter PRINTER = new SchemaPrinter();
 
     private static final String QUERY_NAME = "Query";
 
@@ -53,7 +56,7 @@ public class GraphQLSchemaBuilder {
     }
 
     private static String printSchema(GraphQLType type) {
-        return "";
+        return PRINTER.print(type);
     }
 
     private static String printSchema(Collection<GraphQLType> types) {
@@ -125,7 +128,8 @@ public class GraphQLSchemaBuilder {
 
         Set<GraphQLDirective> directives = Set.of(
                 DomainDirective.INSTANCE,
-                LinkDirective.INSTANCE
+                LinkDirective.INSTANCE,
+                ReverseLinkDirective.INSTANCE
         );
 
         return GraphQLSchema.newSchema()

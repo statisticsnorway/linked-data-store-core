@@ -11,7 +11,7 @@ import static graphql.introspection.Introspection.DirectiveLocation;
 
 public class DomainDirective extends GraphQLDirective {
 
-    private static final String NAME = "domain";
+    public static final String NAME = "domain";
     private static final String SEARCHABLE_NAME = "searchable";
     private static final GraphQLArgument SEARCHABLE_ARGUMENT = GraphQLArgument.newArgument()
             .name(SEARCHABLE_NAME)

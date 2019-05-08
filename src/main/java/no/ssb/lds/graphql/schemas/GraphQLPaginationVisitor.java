@@ -36,7 +36,7 @@ public class GraphQLPaginationVisitor extends GraphQLTypeVisitorStub {
         this.typeMap = Objects.requireNonNull(typeMap);
     }
 
-    private static boolean hasLinkWithPagination(GraphQLFieldDefinition node) {
+    public static boolean hasLinkWithPagination(GraphQLFieldDefinition node) {
         for (GraphQLDirective directive : node.getDirectives()) {
             if ("link".equals(directive.getName()) || "reverseLink".equals(directive.getName())) {
                 GraphQLArgument pagination = directive.getArgument("pagination");
@@ -63,7 +63,7 @@ public class GraphQLPaginationVisitor extends GraphQLTypeVisitorStub {
         List<GraphQLFieldDefinition> fieldsWithPagination = new ArrayList<>();
         for (GraphQLFieldDefinition fieldDefinition : node.getFieldDefinitions()) {
             if (hasLinkWithPagination(fieldDefinition)) {
-                log.debug("Found link from {} to {} on field {}", node.getName(), fieldDefinition.getType().getName(),
+                log.debug("Found link from {} to {} on field {}", node.getName(), GraphQLTypeUtil.simplePrint(fieldDefinition.getType()),
                         fieldDefinition.getName());
                 fieldsWithPagination.add(fieldDefinition);
             }
@@ -73,7 +73,7 @@ public class GraphQLPaginationVisitor extends GraphQLTypeVisitorStub {
             return TraversalControl.CONTINUE;
         }
 
-        log.debug("Transforming {} to pagination fields", fieldsWithPagination);
+        log.info("Transforming {} fields to pagination fields", fieldsWithPagination.size());
 
         GraphQLObjectType.Builder newObject = GraphQLObjectType.newObject(node);
         for (GraphQLFieldDefinition fieldDefinition : fieldsWithPagination) {

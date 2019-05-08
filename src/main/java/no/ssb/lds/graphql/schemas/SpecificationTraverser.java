@@ -43,14 +43,6 @@ public class SpecificationTraverser {
 
     private static final Logger log = LoggerFactory.getLogger(SpecificationTraverser.class);
 
-    public final GraphQLDirective DOMAIN_DIRECTIVE = GraphQLDirective.newDirective()
-            .name("domain")
-            .argument(GraphQLArgument.newArgument().name("searchable").defaultValue(true).type(GraphQLBoolean).build())
-            .validLocations(
-                    Introspection.DirectiveLocation.OBJECT
-            )
-            .build();
-
     private final Specification specification;
     private Set<String> unionTypes = new HashSet<>();
 
