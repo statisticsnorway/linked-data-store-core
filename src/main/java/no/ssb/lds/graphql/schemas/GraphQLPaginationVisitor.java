@@ -73,7 +73,7 @@ public class GraphQLPaginationVisitor extends GraphQLTypeVisitorStub {
             return TraversalControl.CONTINUE;
         }
 
-        log.info("Transforming {} fields to pagination fields", fieldsWithPagination.size());
+        log.debug("Transforming {} fields to pagination fields", fieldsWithPagination.size());
 
         GraphQLObjectType.Builder newObject = GraphQLObjectType.newObject(node);
         for (GraphQLFieldDefinition fieldDefinition : fieldsWithPagination) {
