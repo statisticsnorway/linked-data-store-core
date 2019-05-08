@@ -60,7 +60,7 @@ public class PersistenceReverseLinksConnectionFetcher extends ConnectionFetcher<
             String targetId = getIdFromSource(environment);
 
             Flowable<JsonDocument> documents = persistence.readSourceDocuments(tx, parameters.getSnapshot(), nameSpace,
-                    targetEntityName, targetId, relationPath, targetEntityName, parameters.getRange());
+                    targetEntityName, targetId, relationPath, sourceEntityName, parameters.getRange());
 
             List<Edge<Map<String, Object>>> edges = documents.map(document -> toEdge(document)).toList()
                     .blockingGet();
