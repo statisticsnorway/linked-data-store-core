@@ -106,9 +106,13 @@ public class GraphQLSchemaBuilder {
         log.info("Creating root \"Query\" search field and search types");
         GraphQLQuerySearchVisitor graphQLQuerySearchVisitor = new GraphQLQuerySearchVisitor(typeMap, query);
         TRAVERSER.depthFirst(graphQLQuerySearchVisitor, typeMap.values());
+        GraphQLType queryWithSearch = graphQLQuerySearchVisitor.getQuery();
         if (log.isDebugEnabled()) {
-            log.debug("Query:\n{}", printSchema(graphQLQueryVisitor.getQuery()));
+            log.debug("Query:\n{}", printSchema(queryWithSearch));
         }
+
+        // Done with the query at this point so add it to the type map for the next passes.
+        typeMap.put("Query", query.build());
 
         // Transform with pagination
         log.info("Transforming paginated links to relay connections");
@@ -132,8 +136,10 @@ public class GraphQLSchemaBuilder {
                 ReverseLinkDirective.INSTANCE
         );
 
+        GraphQLType queryType = typeMap.remove("Query");
+
         return GraphQLSchema.newSchema()
-                .query(query)
+                .query((GraphQLObjectType) queryType)
                 .additionalTypes(new HashSet<>(typeMap.values()))
                 .additionalDirectives(directives)
                 .build();
