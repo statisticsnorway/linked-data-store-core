@@ -2,6 +2,7 @@ package no.ssb.lds.core;
 
 import com.netflix.hystrix.HystrixThreadPoolProperties;
 import graphql.GraphQL;
+import graphql.schema.GraphQLSchema;
 import io.undertow.Handlers;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
@@ -26,6 +27,7 @@ import no.ssb.lds.core.saga.SagasObserver;
 import no.ssb.lds.core.search.SearchIndexConfigurator;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import no.ssb.lds.graphql.GraphqlHttpHandler;
+import no.ssb.lds.graphql.schemas.GraphQLSchemaBuilder;
 import no.ssb.lds.graphql.schemas.OldGraphqlSchemaBuilder;
 import no.ssb.saga.execution.sagalog.SagaLog;
 import org.slf4j.Logger;
@@ -84,8 +86,9 @@ public class UndertowApplication {
 
         PathHandler pathHandler = Handlers.path();
         if (graphqlEnabled) {
-            GraphQL graphQL = GraphQL.newGraphQL(new OldGraphqlSchemaBuilder(specification, persistence, searchIndex, namespace)
-                    .getSchema()).build();
+            GraphQLSchemaBuilder schemaBuilder = new GraphQLSchemaBuilder(namespace, specification, persistence, searchIndex);
+            GraphQLSchema schema = schemaBuilder.getGraphQL();
+            GraphQL graphQL = GraphQL.newGraphQL(schema).build();
 
             pathHandler.addExactPath("/graphiql", Handlers.resource(new ClassPathResourceManager(
                     Thread.currentThread().getContextClassLoader(), "no/ssb/lds/graphql/graphiql"
