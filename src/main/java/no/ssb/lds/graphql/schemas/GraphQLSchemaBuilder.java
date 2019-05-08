@@ -91,8 +91,13 @@ public class GraphQLSchemaBuilder {
         TRAVERSER.depthFirst(new FakeAnnotationVisitor(typeMap), typeMap.values());
 
         // Add the reverse links.
-        log.info("Computing reverse links");
+
         TRAVERSER.depthFirst(new GraphQLReverseLinkVisitor(typeMap), typeMap.values());
+        if (log.isDebugEnabled()) {
+            log.debug("Computing reverse links:\n{}", printSchema(typeMap.values()));
+        } else {
+            log.info("Computing reverse links");
+        }
 
         // Create the query fields.
         log.info("Creating root \"Query\" fields");
@@ -114,13 +119,13 @@ public class GraphQLSchemaBuilder {
         // Done with the query at this point so add it to the type map for the next passes.
         typeMap.put("Query", query.build());
 
+        log.info("Replacing all type with references");
+        TRAVERSER.depthFirst(new GraphQLTypeReferencerVisitor(typeMap), typeMap.values());
+
         // Transform with pagination
         log.info("Transforming paginated links to relay connections");
         GraphQLPaginationVisitor graphQLPaginationVisitor = new GraphQLPaginationVisitor(typeMap);
         TRAVERSER.depthFirst(graphQLPaginationVisitor, typeMap.values());
-
-        log.info("Replacing all type with references");
-        TRAVERSER.depthFirst(new GraphQLTypeReferencerVisitor(typeMap), typeMap.values());
 
         log.info("Resolving type references");
         GraphQLTypeResolvingVisitor typeResolvingVisitor = new GraphQLTypeResolvingVisitor(typeMap);
