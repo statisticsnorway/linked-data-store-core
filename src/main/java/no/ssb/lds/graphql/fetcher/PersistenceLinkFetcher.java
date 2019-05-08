@@ -9,6 +9,7 @@ import no.ssb.lds.graphql.GraphQLContext;
 
 import java.time.ZonedDateTime;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,10 +21,10 @@ public class PersistenceLinkFetcher implements DataFetcher<Map<String, Object>> 
     private final String namespace;
 
     public PersistenceLinkFetcher(RxJsonPersistence persistence, String namespace, String field, String target) {
-        this.field = field;
-        this.persistence = persistence;
-        this.pattern = Pattern.compile("/(?<type>" + target + ")/(?<id>.*)");
-        this.namespace = namespace;
+        this.field = Objects.requireNonNull(field);
+        this.persistence = Objects.requireNonNull(persistence);
+        this.pattern = Pattern.compile("/(?<type>" + Objects.requireNonNull(target) + ")/(?<id>.*)");
+        this.namespace = Objects.requireNonNull(namespace);
     }
 
     @Override

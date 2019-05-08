@@ -16,6 +16,7 @@ import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Reverse link fetcher.
@@ -36,11 +37,11 @@ public class PersistenceReverseLinksConnectionFetcher extends ConnectionFetcher<
     private final RxJsonPersistence persistence;
 
     public PersistenceReverseLinksConnectionFetcher(RxJsonPersistence persistence, String nameSpace, String sourceEntityName, JsonNavigationPath relationPath, String targetEntityName) {
-        this.relationPath = relationPath;
-        this.sourceEntityName = sourceEntityName;
-        this.targetEntityName = targetEntityName;
-        this.nameSpace = nameSpace;
-        this.persistence = persistence;
+        this.relationPath = Objects.requireNonNull(relationPath);
+        this.sourceEntityName = Objects.requireNonNull(sourceEntityName);
+        this.targetEntityName = Objects.requireNonNull(targetEntityName);
+        this.nameSpace = Objects.requireNonNull(nameSpace);
+        this.persistence = Objects.requireNonNull(persistence);
     }
 
     /**
