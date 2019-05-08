@@ -10,6 +10,7 @@ import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeReference;
 import graphql.schema.GraphQLTypeUtil;
 import graphql.schema.GraphQLTypeVisitorStub;
+import graphql.schema.GraphQLUnionType;
 import graphql.util.TraversalControl;
 import graphql.util.TraverserContext;
 import org.slf4j.Logger;
@@ -17,6 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Stack;
 
 /**
@@ -32,38 +34,49 @@ public class GraphQLTypeReferencerVisitor extends GraphQLTypeVisitorStub {
     }
 
     @Override
+    public TraversalControl visitGraphQLUnionType(GraphQLUnionType node, TraverserContext<GraphQLType> context) {
+        GraphQLUnionType.Builder newUnionType = GraphQLUnionType.newUnionType(node);
+        for (GraphQLOutputType type : node.getTypes()) {
+            if (!(type instanceof GraphQLTypeReference)) {
+                newUnionType.possibleType(GraphQLTypeReference.typeRef(type.getName()));
+            }
+        }
+        typeMap.put(node.getName(), newUnionType.build());
+        return TraversalControl.CONTINUE;
+    }
+
+    @Override
     public TraversalControl visitGraphQLObjectType(GraphQLObjectType node, TraverserContext<GraphQLType> context) {
         GraphQLObjectType.Builder newObject = GraphQLObjectType.newObject(node);
         for (GraphQLFieldDefinition fieldDefinition : node.getFieldDefinitions()) {
-            Stack<GraphQLType> types = GraphQLTypeUtil.unwrapType(fieldDefinition.getType());
-            GraphQLType current = types.pop();
-            if (current instanceof GraphQLTypeReference) {
-                log.debug("field {} of {} was already a reference", fieldDefinition.getName(), node.getName());
-                break;
-            }
-            if (current instanceof GraphQLScalarType) {
-                break;
-            }
-            if (!typeMap.containsKey(current.getName())) {
-                throw new AssertionError("type was not in type map");
-            }
-            log.debug("replacing field {} with a reference to {}",
-                    GraphQLTypeUtil.simplePrint(fieldDefinition.getType()), current.getName());
-            GraphQLOutputType newType = GraphQLTypeReference.typeRef(current.getName());
-            while (!types.empty()) {
-                current = types.pop();
-                if (GraphQLTypeUtil.isList(current)) {
-                    newType = GraphQLList.list(newType);
-                } else if (GraphQLTypeUtil.isNonNull(current)) {
-                    newType = GraphQLNonNull.nonNull(newType);
-                } else {
-                    throw new AssertionError("non wrapped type up the stack");
-                }
-            }
-
-            newObject.field(GraphQLFieldDefinition.newFieldDefinition(fieldDefinition).type(newType).build());
+            convertToReference(fieldDefinition.getType()).ifPresent(reference -> {
+                newObject.field(GraphQLFieldDefinition.newFieldDefinition(fieldDefinition).type(reference).build());
+            });
         }
         typeMap.put(node.getName(), newObject.build());
-        return super.visitGraphQLObjectType(node, context);
+        return TraversalControl.CONTINUE;
+    }
+
+    private Optional<GraphQLOutputType> convertToReference(GraphQLType type) {
+        Stack<GraphQLType> types = GraphQLTypeUtil.unwrapType(type);
+        GraphQLType current = types.pop();
+        if (current instanceof GraphQLTypeReference || current instanceof GraphQLScalarType) {
+            return Optional.empty();
+        }
+        if (!typeMap.containsKey(current.getName())) {
+            throw new AssertionError("type was not in type map");
+        }
+        GraphQLOutputType newType = GraphQLTypeReference.typeRef(current.getName());
+        while (!types.empty()) {
+            current = types.pop();
+            if (GraphQLTypeUtil.isList(current)) {
+                newType = GraphQLList.list(newType);
+            } else if (GraphQLTypeUtil.isNonNull(current)) {
+                newType = GraphQLNonNull.nonNull(newType);
+            } else {
+                throw new AssertionError("non wrapped type up the stack");
+            }
+        }
+        return Optional.of(newType);
     }
 }
