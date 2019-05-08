@@ -136,12 +136,16 @@ public class GraphQLSchemaBuilder {
                 ReverseLinkDirective.INSTANCE
         );
 
+        GraphQLFetcherSetupVisitor fetcherSetupVisitor = new GraphQLFetcherSetupVisitor(persistence, namespace);
+        TRAVERSER.depthFirst(fetcherSetupVisitor, typeMap.values());
+
         GraphQLType queryType = typeMap.remove("Query");
 
         return GraphQLSchema.newSchema()
                 .query((GraphQLObjectType) queryType)
                 .additionalTypes(new HashSet<>(typeMap.values()))
                 .additionalDirectives(directives)
+                .codeRegistry(fetcherSetupVisitor.getRegistry())
                 .build();
     }
 
