@@ -112,6 +112,9 @@ public class GraphQLSchemaBuilder {
         GraphQLPaginationVisitor graphQLPaginationVisitor = new GraphQLPaginationVisitor(typeMap);
         TRAVERSER.depthFirst(graphQLPaginationVisitor, typeMap.values());
 
+        log.info("Replacing all type with references");
+        TRAVERSER.depthFirst(new GraphQLTypeReferencerVisitor(typeMap), typeMap.values());
+
         log.info("Resolving type references");
         GraphQLTypeResolvingVisitor typeResolvingVisitor = new GraphQLTypeResolvingVisitor(typeMap);
         TRAVERSER.depthFirst(typeResolvingVisitor, typeMap.values());
