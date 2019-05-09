@@ -14,6 +14,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import static no.ssb.lds.graphql.directives.LinkDirective.newLinkDirective;
 
@@ -41,8 +42,32 @@ public class FakeAnnotationVisitor extends GraphQLTypeVisitorStub {
                 newObject.field(newFieldDefinition);
 
                 typeMap.replace(source.getName(), newObject.build());
-                return TraversalControl.QUIT;
             }
+
+            if (field.getName().equals("logicalRecords") && source.getName().equals("UnitDataStructure")) {
+                GraphQLObjectType.Builder newObject = GraphQLObjectType.newObject((GraphQLObjectType) source);
+                GraphQLFieldDefinition.Builder newFieldDefinition = GraphQLFieldDefinition.newFieldDefinition(
+                        (GraphQLFieldDefinition) field);
+                newFieldDefinition.withDirective(newLinkDirective(true, "unitDataStructures"));
+                newObject.field(newFieldDefinition);
+
+                typeMap.replace(source.getName(), newObject.build());
+            }
+
+            // Reverse links on one to many relations.
+            if (source.getName().equals("LogicalRecord")) {
+                Set<String> componentFields = Set.of("identifierComponents", "measureComponents", "attributeComponents");
+                if (componentFields.contains(field.getName())) {
+                    GraphQLObjectType.Builder newObject = GraphQLObjectType.newObject((GraphQLObjectType) source);
+                    GraphQLFieldDefinition.Builder newFieldDefinition = GraphQLFieldDefinition.newFieldDefinition(
+                            (GraphQLFieldDefinition) field);
+                    newFieldDefinition.withDirective(newLinkDirective(true, "logicalRecords"));
+                    newObject.field(newFieldDefinition);
+
+                    typeMap.replace(source.getName(), newObject.build());
+                }
+            }
+
         }
         return TraversalControl.CONTINUE;
     }
