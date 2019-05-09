@@ -98,7 +98,10 @@ public class GraphQLPaginationVisitor extends GraphQLTypeVisitorStub {
     }
 
     private GraphQLType createConnectionType(GraphQLObjectType from, GraphQLType to) {
-        String connectionTypeName = from.getName() + to.getName() + "Connection";
+        // We do not use Relay Connection name convertion to reduce the amount of
+        // types.
+        // String connectionTypeName = from.getName() + to.getName() + "Connection";
+        String connectionTypeName = to.getName() + "Connection";
         if (!typeMap.containsKey(connectionTypeName)) {
             GraphQLFieldDefinition.Builder pageInfoField = GraphQLFieldDefinition.newFieldDefinition()
                     .type(GraphQLNonNull.nonNull(createPageInfoType())).name("pageInfo");
