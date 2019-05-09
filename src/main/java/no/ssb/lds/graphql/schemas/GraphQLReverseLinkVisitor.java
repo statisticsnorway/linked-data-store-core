@@ -12,17 +12,27 @@ import graphql.schema.GraphQLTypeUtil;
 import graphql.schema.GraphQLTypeVisitorStub;
 import graphql.util.TraversalControl;
 import graphql.util.TraverserContext;
+import no.ssb.lds.api.json.JsonNavigationPath;
 import no.ssb.lds.graphql.directives.LinkDirective;
 import no.ssb.lds.graphql.directives.ReverseLinkDirective;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import static no.ssb.lds.graphql.directives.DomainDirective.hasDomainDirective;
+
 /**
- * Update the target of a link annotation with reverseLink.
+ * Update the target of a link annotation with a corresponding reverseLink annotation.
+ *
+ * The reverseLink contains a mappedBy attribute that is the path to the field of the link annotation.
  */
 public class GraphQLReverseLinkVisitor extends GraphQLTypeVisitorStub {
 
@@ -62,6 +72,32 @@ public class GraphQLReverseLinkVisitor extends GraphQLTypeVisitorStub {
         }
     }
 
+    private Collection<String> computePath(GraphQLFieldDefinition node, TraverserContext<GraphQLType> context) {
+        List<GraphQLType> types = new ArrayList<>();
+        types.add(node.getType());
+        types.add(node);
+        types.addAll(context.getParentNodes());
+        Deque<String> parts = new ArrayDeque<>();
+        for (GraphQLType type : types) {
+            if (type instanceof GraphQLNonNull) {
+                type = ((GraphQLNonNull) type).getWrappedType();
+            }
+            if (type instanceof GraphQLList) {
+                parts.addFirst("[]");
+            }
+            if (type instanceof GraphQLFieldDefinition) {
+                parts.addFirst(type.getName());
+            }
+            if (type instanceof GraphQLObjectType) {
+                if (hasDomainDirective((GraphQLObjectType) type)) {
+                    break;
+                }
+            }
+        }
+        parts.addFirst("$");
+        return parts;
+    }
+
     private boolean addReverseField(GraphQLFieldDefinition node, TraverserContext<GraphQLType> context, String reverseName) {
         String sourceName = GraphQLTypeUtil.unwrapAll(context.getParentNode()).getName();
         String targetName = GraphQLTypeUtil.unwrapType(node.getType()).peek().getName();
@@ -76,11 +112,14 @@ public class GraphQLReverseLinkVisitor extends GraphQLTypeVisitorStub {
         GraphQLOutputType sourceType = GraphQLNonNull.nonNull(
                 GraphQLList.list(GraphQLNonNull.nonNull(GraphQLTypeReference.typeRef(source.getName()))));
 
+        Collection<String> parts = computePath(node, context);
+        JsonNavigationPath mappedBy = JsonNavigationPath.from(parts);
+
         // Annotate reverse link
         GraphQLFieldDefinition fieldDefinition = GraphQLFieldDefinition.newFieldDefinition()
                 .name(reverseName)
                 .type(sourceType)
-                .withDirective(ReverseLinkDirective.newReverseLinkDirective(true, node.getName()))
+                .withDirective(ReverseLinkDirective.newReverseLinkDirective(true, mappedBy.serialize()))
                 .build();
 
         log.debug("Adding reverseLink {} from target {} to source {}", fieldDefinition, targetName, sourceName);

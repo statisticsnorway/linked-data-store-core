@@ -1,7 +1,6 @@
 package no.ssb.lds.graphql.schemas;
 
 import graphql.schema.GraphQLArgument;
-import graphql.schema.GraphQLDirective;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLNonNull;
@@ -13,6 +12,7 @@ import graphql.util.TraverserContext;
 import no.ssb.lds.graphql.directives.LinkDirective;
 
 import static graphql.Scalars.GraphQLID;
+import static no.ssb.lds.graphql.directives.DomainDirective.hasDomainDirective;
 
 /**
  * A visitor that adds root fields to a Query definition
@@ -29,15 +29,6 @@ public class GraphQLQueryBuildingVisitor extends GraphQLTypeVisitorStub {
 
     public GraphQLQueryBuildingVisitor(GraphQLObjectType originalQuery) {
         this(GraphQLObjectType.newObject(originalQuery));
-    }
-
-    private static boolean hasDomainDirective(GraphQLObjectType node) {
-        for (GraphQLDirective directive : node.getDirectives()) {
-            if ("domain".equals(directive.getName())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private GraphQLFieldDefinition createUnaryField(GraphQLObjectType type) {

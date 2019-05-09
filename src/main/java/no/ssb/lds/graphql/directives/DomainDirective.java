@@ -2,6 +2,7 @@ package no.ssb.lds.graphql.directives;
 
 import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLDirective;
+import graphql.schema.GraphQLDirectiveContainer;
 
 import java.util.EnumSet;
 import java.util.List;
@@ -40,6 +41,15 @@ public class DomainDirective extends GraphQLDirective {
                 List.of(SEARCHABLE_ARGUMENT.transform(builder -> builder.value(searchable))),
                 true, true, true
         );
+    }
+
+    public static Boolean hasDomainDirective(GraphQLDirectiveContainer container) {
+        for (GraphQLDirective directive : container.getDirectives()) {
+            if (directive.getName().equals(DomainDirective.NAME)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public Boolean isSearchable() {

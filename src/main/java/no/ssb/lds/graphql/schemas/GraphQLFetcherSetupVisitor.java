@@ -9,7 +9,6 @@ import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLOutputType;
 import graphql.schema.GraphQLType;
-import graphql.schema.GraphQLTypeUtil;
 import graphql.schema.GraphQLTypeVisitorStub;
 import graphql.schema.GraphQLUnionType;
 import graphql.schema.GraphQLUnmodifiedType;
@@ -18,7 +17,6 @@ import graphql.util.TraverserContext;
 import no.ssb.lds.api.json.JsonNavigationPath;
 import no.ssb.lds.api.persistence.DocumentKey;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
-import no.ssb.lds.graphql.directives.DomainDirective;
 import no.ssb.lds.graphql.directives.LinkDirective;
 import no.ssb.lds.graphql.directives.ReverseLinkDirective;
 import no.ssb.lds.graphql.fetcher.PersistenceFetcher;
@@ -31,19 +29,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Deque;
-import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
 import static graphql.schema.GraphQLTypeUtil.isList;
 import static graphql.schema.GraphQLTypeUtil.isNotWrapped;
-import static graphql.schema.GraphQLTypeUtil.isWrapped;
 import static graphql.schema.GraphQLTypeUtil.simplePrint;
 import static graphql.schema.GraphQLTypeUtil.unwrapAll;
 import static graphql.schema.GraphQLTypeUtil.unwrapType;
+import static no.ssb.lds.graphql.directives.DomainDirective.hasDomainDirective;
 
 public class GraphQLFetcherSetupVisitor extends GraphQLTypeVisitorStub {
 
@@ -80,15 +75,6 @@ public class GraphQLFetcherSetupVisitor extends GraphQLTypeVisitorStub {
         Stack<GraphQLType> types = unwrapType(type);
         for (GraphQLType currentType : types) {
             if (isNotWrapped(currentType) && currentType.getName().endsWith("Connection")) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static Boolean hasDomainDirective(GraphQLDirectiveContainer container) {
-        for (GraphQLDirective directive : container.getDirectives()) {
-            if (directive.getName().equals(DomainDirective.NAME)) {
                 return true;
             }
         }
@@ -191,7 +177,7 @@ public class GraphQLFetcherSetupVisitor extends GraphQLTypeVisitorStub {
     private JsonNavigationPath getReverseJsonNavigationPath(GraphQLFieldDefinition field, TraverserContext<GraphQLType> context) {
         String mappedBy = (String) field.getDirective(ReverseLinkDirective.NAME)
                 .getArgument(ReverseLinkDirective.MAPPED_BY_NAME).getValue();
-        return JsonNavigationPath.from("$", mappedBy);
+        return JsonNavigationPath.from(mappedBy);
     }
 
     private JsonNavigationPath getJsonNavigationPath(GraphQLFieldDefinition field, TraverserContext<GraphQLType> context) {
