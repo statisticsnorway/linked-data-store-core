@@ -42,7 +42,7 @@ public class TestSpecificationElement implements SpecificationElement {
 
     @Override
     public String getDescription() {
-        return null;
+        return "Description: " + toString();
     }
 
     @Override

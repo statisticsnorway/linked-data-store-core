@@ -1,8 +1,5 @@
 package no.ssb.lds.graphql.schemas;
 
-import graphql.introspection.Introspection;
-import graphql.schema.GraphQLArgument;
-import graphql.schema.GraphQLDirective;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLNonNull;
@@ -30,6 +27,7 @@ import static graphql.Scalars.GraphQLFloat;
 import static graphql.Scalars.GraphQLLong;
 import static graphql.Scalars.GraphQLString;
 import static java.lang.String.format;
+import static no.ssb.lds.api.specification.SpecificationElementType.MANAGED;
 import static no.ssb.lds.graphql.directives.DomainDirective.newDomainDirective;
 import static no.ssb.lds.graphql.schemas.OldGraphqlSchemaBuilder.JsonType;
 import static no.ssb.lds.graphql.schemas.OldGraphqlSchemaBuilder.elementJsonType;
@@ -55,11 +53,11 @@ public class SpecificationTraverser {
         Set<GraphQLType> domains = new LinkedHashSet<>();
 
         Map<String, SpecificationElement> rootElements = specification.getRootElement().getProperties();
-        Set<String> managedDomains = specification.getManagedDomains();
         for (String elementName : rootElements.keySet()) {
             SpecificationElement domainSpecification = rootElements.get(elementName);
             GraphQLObjectType.Builder domainObject = createGraphQLObject(domainSpecification);
-            if (managedDomains.contains(elementName)) {
+            // getManagedDomains() in tests contains embedded objects..
+            if (domainSpecification.getSpecificationElementType().equals(MANAGED)) {
                 domainObject.withDirective(newDomainDirective(true));
             }
             domains.add(domainObject.build());
