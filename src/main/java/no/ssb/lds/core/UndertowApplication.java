@@ -28,7 +28,6 @@ import no.ssb.lds.core.search.SearchIndexConfigurator;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import no.ssb.lds.graphql.GraphqlHttpHandler;
 import no.ssb.lds.graphql.schemas.GraphQLSchemaBuilder;
-import no.ssb.lds.graphql.schemas.OldGraphqlSchemaBuilder;
 import no.ssb.saga.execution.sagalog.SagaLog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,23 +46,16 @@ import java.util.stream.Stream;
 public class UndertowApplication {
 
     private static final Logger LOG = LoggerFactory.getLogger(UndertowApplication.class);
-
-    public static String getDefaultConfigurationResourcePath() {
-        return "application-defaults.properties";
-    }
-
-    public static UndertowApplication initializeUndertowApplication(DynamicConfiguration configuration) {
-        int port = configuration.evaluateToInt("http.port");
-        return initializeUndertowApplication(configuration, port);
-    }
-
     private final RxJsonPersistence persistence;
-
     private final Specification specification;
     private final Undertow server;
     private final String host;
     private final int port;
-
+    private final SagaExecutionCoordinator sec;
+    private final SagaRepository sagaRepository;
+    private final SagasObserver sagasObserver;
+    private final SagaLog sagaLog;
+    private final SelectableThreadPoolExectutor sagaThreadPool;
     UndertowApplication(Specification specification, RxJsonPersistence persistence, SagaExecutionCoordinator sec,
                         SagaRepository sagaRepository, SagasObserver sagasObserver, String host, int port,
                         SagaLog sagaLog, SelectableThreadPoolExectutor sagaThreadPool,
@@ -138,11 +130,14 @@ public class UndertowApplication {
                 .build();
     }
 
-    private final SagaExecutionCoordinator sec;
-    private final SagaRepository sagaRepository;
-    private final SagasObserver sagasObserver;
-    private final SagaLog sagaLog;
-    private final SelectableThreadPoolExectutor sagaThreadPool;
+    public static String getDefaultConfigurationResourcePath() {
+        return "application-defaults.properties";
+    }
+
+    public static UndertowApplication initializeUndertowApplication(DynamicConfiguration configuration) {
+        int port = configuration.evaluateToInt("http.port");
+        return initializeUndertowApplication(configuration, port);
+    }
 
     public static UndertowApplication initializeUndertowApplication(DynamicConfiguration configuration, int port) {
         LOG.info("Initializing Linked Data Store (LDS) server ...");
@@ -200,6 +195,21 @@ public class UndertowApplication {
                 searchIndex, configuration);
     }
 
+    static void shutdownAndAwaitTermination(ExecutorService pool) {
+        pool.shutdown();
+        try {
+            if (!pool.awaitTermination(10, TimeUnit.SECONDS)) {
+                pool.shutdownNow();
+                if (!pool.awaitTermination(10, TimeUnit.SECONDS)) {
+                    LOG.error("Pool did not terminate");
+                }
+            }
+        } catch (InterruptedException ie) {
+            pool.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
     public void enableSagaExecutionAutomaticDeadlockDetectionAndResolution() {
         sec.startThreadpoolWatchdog();
     }
@@ -232,21 +242,6 @@ public class UndertowApplication {
             ((FileSagaLog) sagaLog).close();
         }
         LOG.info("Leaving.. Bye!");
-    }
-
-    static void shutdownAndAwaitTermination(ExecutorService pool) {
-        pool.shutdown();
-        try {
-            if (!pool.awaitTermination(10, TimeUnit.SECONDS)) {
-                pool.shutdownNow();
-                if (!pool.awaitTermination(10, TimeUnit.SECONDS)) {
-                    LOG.error("Pool did not terminate");
-                }
-            }
-        } catch (InterruptedException ie) {
-            pool.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
     }
 
     public Undertow getServer() {

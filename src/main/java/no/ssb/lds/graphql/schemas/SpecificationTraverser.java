@@ -12,8 +12,6 @@ import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.api.specification.SpecificationElement;
 import no.ssb.lds.api.specification.SpecificationElementType;
 import no.ssb.lds.graphql.directives.LinkDirective;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.HashSet;

@@ -22,6 +22,7 @@ import static graphql.schema.GraphQLDirective.newDirective;
 import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
 import static graphql.schema.GraphQLList.list;
 import static graphql.schema.GraphQLNonNull.nonNull;
+import static no.ssb.lds.graphql.directives.DomainDirective.hasDomainDirective;
 
 public class GraphQLQuerySearchVisitor extends GraphQLTypeVisitorStub {
 
@@ -48,11 +49,12 @@ public class GraphQLQuerySearchVisitor extends GraphQLTypeVisitorStub {
     public GraphQLQuerySearchVisitor(Map<String, GraphQLType> typeMap) {
         this(typeMap, GraphQLObjectType.newObject().name("Query"));
     }
+
     public GraphQLQuerySearchVisitor(Map<String, GraphQLType> typeMap, GraphQLObjectType query) {
         this(typeMap, GraphQLObjectType.newObject(query));
     }
 
-
+    @Deprecated
     private static boolean isSearchable(GraphQLObjectType node) {
         for (GraphQLDirective directive : node.getDirectives()) {
             if ("domain".equals(directive.getName())) {
@@ -65,7 +67,7 @@ public class GraphQLQuerySearchVisitor extends GraphQLTypeVisitorStub {
 
     @Override
     public TraversalControl visitGraphQLObjectType(GraphQLObjectType node, TraverserContext<GraphQLType> context) {
-        if (isSearchable(node)) {
+        if (hasDomainDirective(node)) {
             typeFilterEnum.value(node.getName());
             searchResultType.possibleType(node);
         }

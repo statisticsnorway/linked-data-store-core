@@ -5,6 +5,8 @@ import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLDirective;
 import graphql.schema.GraphQLDirectiveContainer;
 import graphql.schema.GraphQLFieldDefinition;
+import graphql.schema.GraphQLFieldsContainer;
+import graphql.schema.GraphQLInterfaceType;
 import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLOutputType;
@@ -125,7 +127,7 @@ public class GraphQLFetcherSetupVisitor extends GraphQLTypeVisitorStub {
     }
 
     private TraversalControl visitConnectionLink(GraphQLFieldDefinition field, TraverserContext<GraphQLType> context) {
-        GraphQLObjectType sourceObject = (GraphQLObjectType) context.getParentNode();
+        GraphQLFieldsContainer sourceObject = (GraphQLFieldsContainer) context.getParentNode();
         GraphQLOutputType targetType = field.getType();
 
         // Unwrap the connection.
@@ -137,7 +139,7 @@ public class GraphQLFetcherSetupVisitor extends GraphQLTypeVisitorStub {
                 edgeType.getFieldDefinition("node").getType());
 
         if (sourceObject.getName().equals("Query")) {
-            log.debug("RootConnection: {} -> {} -> {} ",
+            log.trace("RootConnection: {} -> {} -> {} ",
                     simplePrint(sourceObject),
                     field.getName(),
                     simplePrint(nodeType)
@@ -147,7 +149,7 @@ public class GraphQLFetcherSetupVisitor extends GraphQLTypeVisitorStub {
         } else {
 
             if (hasReverseLinkDirective(field)) {
-                log.debug("ReverseConnection: {} -> {} -> {} ",
+                log.trace("ReverseConnection: {} -> {} -> {} ",
                         simplePrint(sourceObject),
                         field.getName(),
                         simplePrint(nodeType)
@@ -156,7 +158,7 @@ public class GraphQLFetcherSetupVisitor extends GraphQLTypeVisitorStub {
                         new PersistenceReverseLinksConnectionFetcher(persistence, namespace, nodeType.getName(),
                                 getReverseJsonNavigationPath(field, context), sourceObject.getName()));
             } else {
-                log.debug("Connection: {} -> {} -> {} ",
+                log.trace("Connection: {} -> {} -> {} ",
                         simplePrint(sourceObject),
                         field.getName(),
                         simplePrint(nodeType)
@@ -203,10 +205,10 @@ public class GraphQLFetcherSetupVisitor extends GraphQLTypeVisitorStub {
 
 
     private TraversalControl visitOneToManyLink(GraphQLFieldDefinition field, TraverserContext<GraphQLType> context) {
-        GraphQLObjectType sourceObject = (GraphQLObjectType) context.getParentNode();
+        GraphQLFieldsContainer sourceObject = (GraphQLFieldsContainer) context.getParentNode();
         GraphQLOutputType targetType = field.getType();
         if (sourceObject.getName().equals("Query")) {
-            log.debug("RootOneToMany: {} -> {} -> {} ",
+            log.trace("RootOneToMany: {} -> {} -> {} ",
                     simplePrint(sourceObject),
                     field.getName(),
                     simplePrint(unwrapAll(targetType))
@@ -215,14 +217,14 @@ public class GraphQLFetcherSetupVisitor extends GraphQLTypeVisitorStub {
                     new PersistenceLinkFetcher(persistence, namespace, field.getName(), unwrapAll(targetType).getName()));
         } else {
             if (hasReverseLinkDirective(field)) {
-                log.debug("ManyToOne: {} -> {} -> {}",
+                log.trace("ManyToOne: {} -> {} -> {}",
                         simplePrint(sourceObject),
                         field.getName(),
                         simplePrint(unwrapAll(targetType))
                 );
                 log.warn("ManyToOne: is not supported for reverse links");
             } else {
-                log.debug("OneToMany: {} -> {} -> {} ",
+                log.trace("OneToMany: {} -> {} -> {} ",
                         simplePrint(sourceObject),
                         field.getName(),
                         simplePrint(unwrapAll(targetType))
@@ -235,10 +237,10 @@ public class GraphQLFetcherSetupVisitor extends GraphQLTypeVisitorStub {
     }
 
     private TraversalControl visitOneToOneLink(GraphQLFieldDefinition field, TraverserContext<GraphQLType> context) {
-        GraphQLObjectType sourceObject = (GraphQLObjectType) context.getParentNode();
+        GraphQLFieldsContainer sourceObject = (GraphQLFieldsContainer) context.getParentNode();
         GraphQLOutputType targetType = field.getType();
         if (sourceObject.getName().equals("Query")) {
-            log.debug("RootOneToOne: {} -> {} -> {} ",
+            log.trace("RootOneToOne: {} -> {} -> {} ",
                     simplePrint(sourceObject),
                     field.getName(),
                     simplePrint(unwrapAll(targetType))
@@ -246,7 +248,7 @@ public class GraphQLFetcherSetupVisitor extends GraphQLTypeVisitorStub {
             registry.dataFetcher(FieldCoordinates.coordinates(sourceObject, field), new PersistenceFetcher(persistence,
                     namespace, unwrapAll(targetType).getName()));
         } else {
-            log.debug("OneToOne: {} -> {} -> {} ",
+            log.trace("OneToOne: {} -> {} -> {} ",
                     simplePrint(sourceObject),
                     field.getName(),
                     simplePrint(unwrapAll(targetType))
@@ -254,6 +256,15 @@ public class GraphQLFetcherSetupVisitor extends GraphQLTypeVisitorStub {
             registry.dataFetcher(FieldCoordinates.coordinates(sourceObject, field), new PersistenceLinkFetcher(
                     persistence, namespace, field.getName(), unwrapAll(targetType).getName()));
         }
+        return TraversalControl.CONTINUE;
+    }
+
+    @Override
+    public TraversalControl visitGraphQLInterfaceType(GraphQLInterfaceType node, TraverserContext<GraphQLType> context) {
+        registry.typeResolver(node, env -> {
+            Map<String, Object> object = env.getObject();
+            return (GraphQLObjectType) env.getSchema().getType(((DocumentKey) object.get("__graphql_internal_document_key")).entity());
+        });
         return TraversalControl.CONTINUE;
     }
 

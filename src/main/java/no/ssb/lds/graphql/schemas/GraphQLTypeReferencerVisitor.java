@@ -1,6 +1,7 @@
 package no.ssb.lds.graphql.schemas;
 
 import graphql.schema.GraphQLFieldDefinition;
+import graphql.schema.GraphQLInterfaceType;
 import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLNonNull;
 import graphql.schema.GraphQLObjectType;
@@ -13,8 +14,6 @@ import graphql.schema.GraphQLTypeVisitorStub;
 import graphql.schema.GraphQLUnionType;
 import graphql.util.TraversalControl;
 import graphql.util.TraverserContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Objects;
@@ -26,11 +25,22 @@ import java.util.Stack;
  */
 public class GraphQLTypeReferencerVisitor extends GraphQLTypeVisitorStub {
 
-    private static final Logger log = LoggerFactory.getLogger(GraphQLTypeReferencerVisitor.class);
     private final Map<String, GraphQLType> typeMap;
 
     public GraphQLTypeReferencerVisitor(Map<String, GraphQLType> typeMap) {
         this.typeMap = Objects.requireNonNull(typeMap);
+    }
+
+    @Override
+    public TraversalControl visitGraphQLInterfaceType(GraphQLInterfaceType node, TraverserContext<GraphQLType> context) {
+        GraphQLInterfaceType.Builder newInterface = GraphQLInterfaceType.newInterface(node);
+        for (GraphQLFieldDefinition fieldDefinition : node.getFieldDefinitions()) {
+            convertToReference(fieldDefinition.getType()).ifPresent(reference -> {
+                newInterface.field(GraphQLFieldDefinition.newFieldDefinition(fieldDefinition).type(reference).build());
+            });
+        }
+        typeMap.put(node.getName(), newInterface.build());
+        return TraversalControl.CONTINUE;
     }
 
     @Override
@@ -51,6 +61,11 @@ public class GraphQLTypeReferencerVisitor extends GraphQLTypeVisitorStub {
         for (GraphQLFieldDefinition fieldDefinition : node.getFieldDefinitions()) {
             convertToReference(fieldDefinition.getType()).ifPresent(reference -> {
                 newObject.field(GraphQLFieldDefinition.newFieldDefinition(fieldDefinition).type(reference).build());
+            });
+        }
+        for (GraphQLOutputType anInterface : node.getInterfaces()) {
+            convertToReference(anInterface).ifPresent(reference -> {
+                newObject.withInterfaces(GraphQLTypeReference.typeRef(reference.getName()));
             });
         }
         typeMap.put(node.getName(), newObject.build());
