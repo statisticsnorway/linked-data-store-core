@@ -94,34 +94,7 @@ public class OldGraphqlSchemaBuilder {
      * Returns true if the element is nullable (has null as allowed type).
      */
     public static Boolean isNullable(SpecificationElement element) {
-        return elementJsonTypes(element).contains(JsonType.NULL);
-    }
-
-    /**
-     * Returns type safe element types.
-     */
-    private static Set<JsonType> elementJsonTypes(SpecificationElement element) {
-        LinkedHashSet<JsonType> types = new LinkedHashSet<>();
-        for (String jsonType : element.getJsonTypes()) {
-            types.add(JsonType.valueOf(jsonType.toUpperCase()));
-        }
-        return types;
-    }
-
-    /**
-     * Returns type safe element type.
-     * <p>
-     * Null type, since it is used to mark fields as nullable is ignored.
-     */
-    public static JsonType elementJsonType(SpecificationElement element) {
-        Set<JsonType> types = elementJsonTypes(element);
-        types.remove(JsonType.NULL);
-        if (types.size() != 1) {
-            throw new IllegalArgumentException(format(
-                    "more than one json type in %s: %s", element.getName(), types
-            ));
-        }
-        return types.iterator().next();
+        return SpecificationToTypeDefinitionRegistry.elementJsonTypes(element).contains(SpecificationToTypeDefinitionRegistry.JsonType.NULL);
     }
 
     public static String getOneRefType(SpecificationElement property) {
@@ -381,7 +354,7 @@ public class OldGraphqlSchemaBuilder {
     private GraphQLFieldDefinition.Builder buildReferenceField(SpecificationElement property) {
 
         String propertyName = property.getName();
-        JsonType propertyType = elementJsonType(property);
+        SpecificationToTypeDefinitionRegistry.JsonType propertyType = SpecificationToTypeDefinitionRegistry.elementJsonType(property);
         switch (propertyType) {
             case ARRAY:
                 // Create connection for relation.
@@ -466,7 +439,7 @@ public class OldGraphqlSchemaBuilder {
      * If the type is object, the method recurse.
      */
     private GraphQLOutputType buildEmbeddedTargetType(SpecificationElement property) {
-        JsonType jsonType = elementJsonType(property);
+        SpecificationToTypeDefinitionRegistry.JsonType jsonType = SpecificationToTypeDefinitionRegistry.elementJsonType(property);
         switch (jsonType) {
             case OBJECT:
                 // Recurse if embedded.
@@ -474,8 +447,8 @@ public class OldGraphqlSchemaBuilder {
             case ARRAY:
                 // TODO: Ideally we should recurse.
                 SpecificationElement arrayElement = property.getItems();
-                JsonType arrayType = elementJsonType(arrayElement);
-                if (arrayType == JsonType.OBJECT && !"".equals(arrayElement.getName())) {
+                SpecificationToTypeDefinitionRegistry.JsonType arrayType = SpecificationToTypeDefinitionRegistry.elementJsonType(arrayElement);
+                if (arrayType == SpecificationToTypeDefinitionRegistry.JsonType.OBJECT && !"".equals(arrayElement.getName())) {
                     String refType = arrayElement.getName();
                     return GraphQLList.list(GraphQLNonNull.nonNull(GraphQLTypeReference.typeRef(refType)));
                 } else {
@@ -492,16 +465,6 @@ public class OldGraphqlSchemaBuilder {
                 return GraphQLLong;
         }
         throw new AssertionError();
-    }
-
-    public enum JsonType {
-        OBJECT,
-        ARRAY,
-        BOOLEAN,
-        STRING,
-        NUMBER,
-        INTEGER,
-        NULL
     }
 
 }

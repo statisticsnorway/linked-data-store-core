@@ -25,6 +25,7 @@ module no.ssb.lds.core {
     requires io.reactivex.rxjava2;
     requires org.reactivestreams;
     requires com.github.akarnokd.rxjava2jdk9interop;
+    requires graphql.java.extended.scalars;
 
     opens no.ssb.lds.graphql.graphiql;
 

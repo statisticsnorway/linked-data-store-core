@@ -82,7 +82,9 @@ public class GraphQLSchemaBuilder {
         } else if (jsonSchema && !graphQl) {
             log.info("Parsing json-schemas in {}", current);
             JsonSchemaBasedSpecification specification = JsonSchemaBasedSpecification.create(current);
-            schema = schemaBuilder.parseSpecification(specification);
+            SpecificationToTypeDefinitionRegistry test = new SpecificationToTypeDefinitionRegistry();
+            //schema = schemaBuilder.parseSpecification(specification);
+            schema = schemaBuilder.parseSchema(test.convert(specification));
         } else {
             log.error("Usage: --graphql file | --json-schema folder");
             return;
@@ -102,6 +104,7 @@ public class GraphQLSchemaBuilder {
         return builder.toString();
     }
 
+    @Deprecated
     public GraphQLSchema parseSpecification(Specification specification) {
         // Convert the specifications to GraphQL types:
         log.info("Converting specification to graphql");

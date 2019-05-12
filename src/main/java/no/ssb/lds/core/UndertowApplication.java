@@ -3,6 +3,8 @@ package no.ssb.lds.core;
 import com.netflix.hystrix.HystrixThreadPoolProperties;
 import graphql.GraphQL;
 import graphql.schema.GraphQLSchema;
+import graphql.schema.idl.SchemaParser;
+import graphql.schema.idl.TypeDefinitionRegistry;
 import io.undertow.Handlers;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
@@ -28,11 +30,14 @@ import no.ssb.lds.core.search.SearchIndexConfigurator;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import no.ssb.lds.graphql.GraphqlHttpHandler;
 import no.ssb.lds.graphql.schemas.GraphQLSchemaBuilder;
+import no.ssb.lds.graphql.schemas.SpecificationToTypeDefinitionRegistry;
 import no.ssb.saga.execution.sagalog.SagaLog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -76,10 +81,24 @@ public class UndertowApplication {
         boolean graphqlEnabled = configuration.evaluateToBoolean("graphql.enabled");
         String pathPrefix = configuration.evaluateToString("http.prefix");
 
+        Optional<String> graphQLSchemaPath = Optional.ofNullable(configuration.evaluateToString("graphql.schema"))
+                .map(path -> path.isEmpty() ? null : path);
+
+
         PathHandler pathHandler = Handlers.path();
         if (graphqlEnabled) {
-            GraphQLSchemaBuilder schemaBuilder = new GraphQLSchemaBuilder(namespace, specification, persistence, searchIndex);
-            GraphQLSchema schema = schemaBuilder.getGraphQL();
+
+            GraphQLSchemaBuilder schemaBuilder = new GraphQLSchemaBuilder(namespace, persistence, searchIndex);
+            TypeDefinitionRegistry definitionRegistry;
+            if (graphQLSchemaPath.isPresent()) {
+                File graphQLFile = new File(graphQLSchemaPath.get());
+                definitionRegistry = new SchemaParser().parse(graphQLFile);
+            } else {
+                SpecificationToTypeDefinitionRegistry specificationConverter = new SpecificationToTypeDefinitionRegistry();
+                definitionRegistry = specificationConverter.convert(specification);
+            }
+            GraphQLSchema schema = schemaBuilder.getGraphQL(schemaBuilder.parseSchema(definitionRegistry));
+
             GraphQL graphQL = GraphQL.newGraphQL(schema).build();
 
             pathHandler.addExactPath("/graphiql", Handlers.resource(new ClassPathResourceManager(

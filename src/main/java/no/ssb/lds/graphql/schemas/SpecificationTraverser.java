@@ -27,17 +27,16 @@ import static graphql.Scalars.GraphQLString;
 import static java.lang.String.format;
 import static no.ssb.lds.api.specification.SpecificationElementType.MANAGED;
 import static no.ssb.lds.graphql.directives.DomainDirective.newDomainDirective;
-import static no.ssb.lds.graphql.schemas.OldGraphqlSchemaBuilder.JsonType;
-import static no.ssb.lds.graphql.schemas.OldGraphqlSchemaBuilder.elementJsonType;
 import static no.ssb.lds.graphql.schemas.OldGraphqlSchemaBuilder.getOneRefType;
 import static no.ssb.lds.graphql.schemas.OldGraphqlSchemaBuilder.isNullable;
+import static no.ssb.lds.graphql.schemas.SpecificationToTypeDefinitionRegistry.JsonType;
+import static no.ssb.lds.graphql.schemas.SpecificationToTypeDefinitionRegistry.elementJsonType;
 
 /**
  * Traverse a specification and return converted GraphQL types.
  */
+@Deprecated
 public class SpecificationTraverser {
-
-    private static final Logger log = LoggerFactory.getLogger(SpecificationTraverser.class);
 
     private final Specification specification;
     private Set<String> unionTypes = new HashSet<>();
