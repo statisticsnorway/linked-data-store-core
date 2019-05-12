@@ -1,4 +1,4 @@
-package no.ssb.lds.graphql.schemas;
+package no.ssb.lds.graphql.schemas.visitors;
 
 import graphql.schema.GraphQLDirective;
 import graphql.schema.GraphQLFieldDefinition;
@@ -34,12 +34,12 @@ import static no.ssb.lds.graphql.directives.DomainDirective.hasDomainDirective;
  *
  * The reverseLink contains a mappedBy attribute that is the path to the field of the link annotation.
  */
-public class GraphQLReverseLinkVisitor extends GraphQLTypeVisitorStub {
+public class ReverseLinkBuildingVisitor extends GraphQLTypeVisitorStub {
 
-    private static final Logger log = LoggerFactory.getLogger(GraphQLReverseLinkVisitor.class);
+    private static final Logger log = LoggerFactory.getLogger(ReverseLinkBuildingVisitor.class);
     private final Map<String, GraphQLType> typeMap;
 
-    public GraphQLReverseLinkVisitor(Map<String, GraphQLType> typeMap) {
+    public ReverseLinkBuildingVisitor(Map<String, GraphQLType> typeMap) {
         this.typeMap = Objects.requireNonNull(typeMap);
     }
 

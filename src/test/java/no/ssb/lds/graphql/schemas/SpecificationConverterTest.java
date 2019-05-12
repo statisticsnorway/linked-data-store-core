@@ -7,13 +7,21 @@ import org.testng.annotations.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class SpecificationToTypeDefinitionRegistryTest {
+public class SpecificationConverterTest {
 
-    private SpecificationToTypeDefinitionRegistry converter;
+    private SpecificationConverter converter;
 
     @BeforeMethod
     public void setUp() {
-        converter = new SpecificationToTypeDefinitionRegistry();
+        converter = new SpecificationConverter();
+    }
+
+    @Test
+    public void testLinks() {
+    }
+
+    @Test
+    public void testLink() {
     }
 
     @Test

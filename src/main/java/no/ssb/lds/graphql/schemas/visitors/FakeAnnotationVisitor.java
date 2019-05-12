@@ -1,4 +1,4 @@
-package no.ssb.lds.graphql.schemas;
+package no.ssb.lds.graphql.schemas.visitors;
 
 import graphql.schema.GraphQLDirective;
 import graphql.schema.GraphQLFieldDefinition;

@@ -1,7 +1,6 @@
 package no.ssb.lds.graphql.schemas;
 
 import graphql.scalars.ExtendedScalars;
-import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLDirective;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLSchema;
@@ -17,11 +16,16 @@ import graphql.schema.idl.SchemaPrinter;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.search.SearchIndex;
-import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import no.ssb.lds.graphql.directives.DomainDirective;
 import no.ssb.lds.graphql.directives.LinkDirective;
 import no.ssb.lds.graphql.directives.ReverseLinkDirective;
+import no.ssb.lds.graphql.schemas.visitors.AddConnectionVisitor;
+import no.ssb.lds.graphql.schemas.visitors.AddSearchTypesVisitor;
+import no.ssb.lds.graphql.schemas.visitors.FakeAnnotationVisitor;
+import no.ssb.lds.graphql.schemas.visitors.QueryBuildingVisitor;
+import no.ssb.lds.graphql.schemas.visitors.RegistrySetupVisitor;
+import no.ssb.lds.graphql.schemas.visitors.ReverseLinkBuildingVisitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,7 +86,7 @@ public class GraphQLSchemaBuilder {
         } else if (jsonSchema && !graphQl) {
             log.info("Parsing json-schemas in {}", current);
             JsonSchemaBasedSpecification specification = JsonSchemaBasedSpecification.create(current);
-            SpecificationToTypeDefinitionRegistry test = new SpecificationToTypeDefinitionRegistry();
+            SpecificationConverter test = new SpecificationConverter();
             //schema = schemaBuilder.parseSpecification(specification);
             schema = schemaBuilder.parseSchema(test.convert(specification));
         } else {
@@ -102,39 +106,6 @@ public class GraphQLSchemaBuilder {
             builder.append(printSchema(type));
         }
         return builder.toString();
-    }
-
-    @Deprecated
-    public GraphQLSchema parseSpecification(Specification specification) {
-        // Convert the specifications to GraphQL types:
-        log.info("Converting specification to graphql");
-        SpecificationTraverser specificationTraverser = new SpecificationTraverser(specification);
-        Collection<GraphQLType> graphQLTypes = specificationTraverser.getGraphQLTypes();
-
-        if (log.isTraceEnabled()) {
-            log.debug("Converted specification to {} GraphQL types:\n{}", graphQLTypes.size(),
-                    printSchema(graphQLTypes));
-        } else {
-            log.info("Converted specification to {} GraphQL types", graphQLTypes.size());
-        }
-
-        // Collect and resolve.
-        GraphQLTypeCollectingVisitor graphQLTypeCollectingVisitor = new GraphQLTypeCollectingVisitor();
-        TRAVERSER.depthFirst(graphQLTypeCollectingVisitor, graphQLTypes);
-        Map<String, GraphQLType> typeMap = graphQLTypeCollectingVisitor.getResult();
-        TRAVERSER.depthFirst(new GraphQLTypeResolvingVisitor(typeMap), typeMap.values());
-        graphQLTypes = typeMap.values();
-
-        // Fake resolver
-        GraphQLCodeRegistry.Builder registry = GraphQLCodeRegistry.newCodeRegistry();
-        for (GraphQLType graphQLType : graphQLTypes) {
-            registry.typeResolver(graphQLType.getName(), env -> null);
-        }
-
-        return GraphQLSchema.newSchema()
-                .query(GraphQLObjectType.newObject().name("Query").build())
-                .codeRegistry(registry.build())
-                .additionalTypes(new HashSet<>(graphQLTypes)).build();
     }
 
     public GraphQLSchema parseSchema(TypeDefinitionRegistry registry) {
@@ -173,7 +144,7 @@ public class GraphQLSchemaBuilder {
         TRAVERSER.depthFirst(new FakeAnnotationVisitor(typeMap), typeMap.values());
 
         // Add the reverse links.
-        TRAVERSER.depthFirst(new GraphQLReverseLinkVisitor(typeMap), typeMap.values());
+        TRAVERSER.depthFirst(new ReverseLinkBuildingVisitor(typeMap), typeMap.values());
         if (log.isTraceEnabled()) {
             log.trace("Computing reverse links:\n{}", printSchema(typeMap.values()));
         } else {
@@ -182,7 +153,7 @@ public class GraphQLSchemaBuilder {
 
         // Create the query fields.
         log.info("Creating root \"Query\" fields");
-        GraphQLQueryBuildingVisitor graphQLQueryVisitor = new GraphQLQueryBuildingVisitor(query);
+        QueryBuildingVisitor graphQLQueryVisitor = new QueryBuildingVisitor(query);
         TRAVERSER.depthFirst(graphQLQueryVisitor, typeMap.values());
         if (log.isTraceEnabled()) {
             log.trace("Query:\n{}", printSchema(graphQLQueryVisitor.getQuery()));
@@ -190,9 +161,9 @@ public class GraphQLSchemaBuilder {
 
         // Add the search fields.
         log.info("Creating root \"Query\" search field and search types");
-        GraphQLQuerySearchVisitor graphQLQuerySearchVisitor = new GraphQLQuerySearchVisitor(typeMap, query);
-        TRAVERSER.depthFirst(graphQLQuerySearchVisitor, typeMap.values());
-        GraphQLType queryWithSearch = graphQLQuerySearchVisitor.getQuery();
+        AddSearchTypesVisitor addSearchTypesVisitor = new AddSearchTypesVisitor(typeMap, query);
+        TRAVERSER.depthFirst(addSearchTypesVisitor, typeMap.values());
+        GraphQLType queryWithSearch = addSearchTypesVisitor.getQuery();
         if (log.isTraceEnabled()) {
             log.trace("Query:\n{}", printSchema(queryWithSearch));
         }
@@ -205,8 +176,8 @@ public class GraphQLSchemaBuilder {
 
         // Transform with pagination
         log.info("Transforming paginated links to relay connections");
-        GraphQLPaginationVisitor graphQLPaginationVisitor = new GraphQLPaginationVisitor(typeMap);
-        TRAVERSER.depthFirst(graphQLPaginationVisitor, typeMap.values());
+        AddConnectionVisitor addConnectionVisitor = new AddConnectionVisitor(typeMap);
+        TRAVERSER.depthFirst(addConnectionVisitor, typeMap.values());
 
         log.info("Resolving type references");
         GraphQLTypeResolvingVisitor typeResolvingVisitor = new GraphQLTypeResolvingVisitor(typeMap);
@@ -222,7 +193,7 @@ public class GraphQLSchemaBuilder {
                 ReverseLinkDirective.INSTANCE
         );
 
-        GraphQLFetcherSetupVisitor fetcherSetupVisitor = new GraphQLFetcherSetupVisitor(persistence, namespace);
+        RegistrySetupVisitor fetcherSetupVisitor = new RegistrySetupVisitor(persistence, namespace);
         TRAVERSER.depthFirst(fetcherSetupVisitor, typeMap.values());
 
         GraphQLType queryType = typeMap.remove("Query");

@@ -1,4 +1,4 @@
-package no.ssb.lds.graphql.schemas;
+package no.ssb.lds.graphql.schemas.visitors;
 
 import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLDirective;
@@ -29,12 +29,12 @@ import static graphql.Scalars.GraphQLString;
 /**
  * Add a @pagination annotation to all fields marked with @link or @reverseLink.
  */
-public class GraphQLPaginationVisitor extends GraphQLTypeVisitorStub {
+public class AddConnectionVisitor extends GraphQLTypeVisitorStub {
 
-    private static final Logger log = LoggerFactory.getLogger(GraphQLPaginationVisitor.class);
+    private static final Logger log = LoggerFactory.getLogger(AddConnectionVisitor.class);
     private final Map<String, GraphQLType> typeMap;
 
-    public GraphQLPaginationVisitor(Map<String, GraphQLType> typeMap) {
+    public AddConnectionVisitor(Map<String, GraphQLType> typeMap) {
         this.typeMap = Objects.requireNonNull(typeMap);
     }
 

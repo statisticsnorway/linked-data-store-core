@@ -1,4 +1,4 @@
-package no.ssb.lds.graphql.schemas;
+package no.ssb.lds.graphql.schemas.visitors;
 
 import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
@@ -8,14 +8,13 @@ import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.SchemaPrinter;
 import graphql.schema.idl.TypeDefinitionRegistry;
+import org.assertj.core.api.Assertions;
 import org.testng.annotations.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-public class GraphQLReverseLinkVisitorTest {
+public class ReverseLinkBuildingVisitorTest {
 
     @Test
     public void testReverseLink() {
@@ -39,13 +38,13 @@ public class GraphQLReverseLinkVisitorTest {
 
         Map<String, GraphQLType> typeMap = new HashMap<>(schema.getTypeMap());
         new TypeTraverser().depthFirst(
-                new GraphQLReverseLinkVisitor(typeMap),
+                new ReverseLinkBuildingVisitor(typeMap),
                 typeMap.values()
         );
 
         String target = new SchemaPrinter().print(typeMap.get("Target"));
 
-        assertThat(target).isEqualToIgnoringWhitespace("" +
+        Assertions.assertThat(target).isEqualToIgnoringWhitespace("" +
                 "type Target {" +
                 "   bar: String" +
                 "   sources: [Source!]! @reverseLink(mappedBy : \"link\") @pagination" +

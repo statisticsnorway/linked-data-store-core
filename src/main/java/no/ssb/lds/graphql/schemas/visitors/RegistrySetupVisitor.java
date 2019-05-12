@@ -1,4 +1,4 @@
-package no.ssb.lds.graphql.schemas;
+package no.ssb.lds.graphql.schemas.visitors;
 
 import graphql.schema.FieldCoordinates;
 import graphql.schema.GraphQLCodeRegistry;
@@ -42,22 +42,22 @@ import static graphql.schema.GraphQLTypeUtil.unwrapAll;
 import static graphql.schema.GraphQLTypeUtil.unwrapType;
 import static no.ssb.lds.graphql.directives.DomainDirective.hasDomainDirective;
 
-public class GraphQLFetcherSetupVisitor extends GraphQLTypeVisitorStub {
+public class RegistrySetupVisitor extends GraphQLTypeVisitorStub {
 
-    private static final Logger log = LoggerFactory.getLogger(GraphQLFetcherSetupVisitor.class);
+    private static final Logger log = LoggerFactory.getLogger(RegistrySetupVisitor.class);
     private final GraphQLCodeRegistry.Builder registry;
     private final RxJsonPersistence persistence;
     private final String namespace;
 
-    public GraphQLFetcherSetupVisitor(RxJsonPersistence persistence, String namespace) {
+    public RegistrySetupVisitor(RxJsonPersistence persistence, String namespace) {
         this(GraphQLCodeRegistry.newCodeRegistry(), persistence, namespace);
     }
 
-    public GraphQLFetcherSetupVisitor(GraphQLCodeRegistry registry, RxJsonPersistence persistence, String namespace) {
+    public RegistrySetupVisitor(GraphQLCodeRegistry registry, RxJsonPersistence persistence, String namespace) {
         this(GraphQLCodeRegistry.newCodeRegistry(registry), persistence, namespace);
     }
 
-    public GraphQLFetcherSetupVisitor(GraphQLCodeRegistry.Builder registry, RxJsonPersistence persistence, String namespace) {
+    public RegistrySetupVisitor(GraphQLCodeRegistry.Builder registry, RxJsonPersistence persistence, String namespace) {
         this.registry = registry;
         this.persistence = persistence;
         this.namespace = namespace;

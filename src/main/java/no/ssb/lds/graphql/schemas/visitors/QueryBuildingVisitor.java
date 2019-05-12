@@ -1,4 +1,4 @@
-package no.ssb.lds.graphql.schemas;
+package no.ssb.lds.graphql.schemas.visitors;
 
 import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLFieldDefinition;
@@ -19,15 +19,15 @@ import static no.ssb.lds.graphql.directives.DomainDirective.hasDomainDirective;
  * <p>
  * The visitor uses the object types marked with the @domain annotations.
  */
-public class GraphQLQueryBuildingVisitor extends GraphQLTypeVisitorStub {
+public class QueryBuildingVisitor extends GraphQLTypeVisitorStub {
 
     private final GraphQLObjectType.Builder query;
 
-    public GraphQLQueryBuildingVisitor(GraphQLObjectType.Builder originalQuery) {
+    public QueryBuildingVisitor(GraphQLObjectType.Builder originalQuery) {
         query = originalQuery;
     }
 
-    public GraphQLQueryBuildingVisitor(GraphQLObjectType originalQuery) {
+    public QueryBuildingVisitor(GraphQLObjectType originalQuery) {
         this(GraphQLObjectType.newObject(originalQuery));
     }
 

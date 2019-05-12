@@ -1,4 +1,4 @@
-package no.ssb.lds.graphql.schemas;
+package no.ssb.lds.graphql.schemas.visitors;
 
 import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
@@ -8,14 +8,13 @@ import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.SchemaPrinter;
 import graphql.schema.idl.TypeDefinitionRegistry;
+import org.assertj.core.api.Assertions;
 import org.testng.annotations.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-public class GraphQLPaginationVisitorTest {
+public class AddConnectionVisitorTest {
 
     @Test
     public void testPagination() {
@@ -39,7 +38,7 @@ public class GraphQLPaginationVisitorTest {
 
         Map<String, GraphQLType> typeMap = new HashMap<>(schema.getTypeMap());
         new TypeTraverser().depthFirst(
-                new GraphQLPaginationVisitor(typeMap),
+                new AddConnectionVisitor(typeMap),
                 typeMap.values()
         );
 
@@ -80,7 +79,7 @@ public class GraphQLPaginationVisitorTest {
 
         Map<String, GraphQLType> typeMap = new HashMap<>(schema.getTypeMap());
         new TypeTraverser().depthFirst(
-                new GraphQLPaginationVisitor(typeMap),
+                new AddConnectionVisitor(typeMap),
                 typeMap.values()
         );
 
@@ -138,7 +137,7 @@ public class GraphQLPaginationVisitorTest {
 
         Map<String, GraphQLType> typeMap = new HashMap<>(schema.getTypeMap());
         new TypeTraverser().depthFirst(
-                new GraphQLPaginationVisitor(typeMap),
+                new AddConnectionVisitor(typeMap),
                 typeMap.values()
         );
 
@@ -179,6 +178,6 @@ public class GraphQLPaginationVisitorTest {
 
     void assertTypeDefinition(Map<String, GraphQLType> typeMap, String typeName, String expectedDefinition) {
         String target = new SchemaPrinter().print(typeMap.get(typeName));
-        assertThat(target).isEqualToIgnoringWhitespace(expectedDefinition);
+        Assertions.assertThat(target).isEqualToIgnoringWhitespace(expectedDefinition);
     }
 }

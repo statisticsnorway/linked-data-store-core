@@ -1,4 +1,4 @@
-package no.ssb.lds.graphql.schemas;
+package no.ssb.lds.graphql.schemas.visitors;
 
 import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLDirective;
@@ -24,16 +24,16 @@ import static graphql.schema.GraphQLList.list;
 import static graphql.schema.GraphQLNonNull.nonNull;
 import static no.ssb.lds.graphql.directives.DomainDirective.hasDomainDirective;
 
-public class GraphQLQuerySearchVisitor extends GraphQLTypeVisitorStub {
+public class AddSearchTypesVisitor extends GraphQLTypeVisitorStub {
 
-    private static final Logger log = LoggerFactory.getLogger(GraphQLPaginationVisitor.class);
+    private static final Logger log = LoggerFactory.getLogger(AddConnectionVisitor.class);
 
     private final GraphQLObjectType.Builder query;
     private final Map<String, GraphQLType> typeMap;
     private final GraphQLEnumType.Builder typeFilterEnum;
     private final GraphQLUnionType.Builder searchResultType;
 
-    public GraphQLQuerySearchVisitor(Map<String, GraphQLType> typeMap, GraphQLObjectType.Builder query) {
+    public AddSearchTypesVisitor(Map<String, GraphQLType> typeMap, GraphQLObjectType.Builder query) {
         this.typeMap = typeMap;
         this.query = query;
         // Create a union type for the search results and a Type filter for the query.
@@ -46,11 +46,11 @@ public class GraphQLQuerySearchVisitor extends GraphQLTypeVisitorStub {
                 .description("Union type for possible search results");
     }
 
-    public GraphQLQuerySearchVisitor(Map<String, GraphQLType> typeMap) {
+    public AddSearchTypesVisitor(Map<String, GraphQLType> typeMap) {
         this(typeMap, GraphQLObjectType.newObject().name("Query"));
     }
 
-    public GraphQLQuerySearchVisitor(Map<String, GraphQLType> typeMap, GraphQLObjectType query) {
+    public AddSearchTypesVisitor(Map<String, GraphQLType> typeMap, GraphQLObjectType query) {
         this(typeMap, GraphQLObjectType.newObject(query));
     }
 

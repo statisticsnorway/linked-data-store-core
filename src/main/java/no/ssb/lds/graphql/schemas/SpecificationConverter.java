@@ -30,9 +30,9 @@ import static no.ssb.lds.api.specification.SpecificationElementType.MANAGED;
  * <p>
  * This is a temporary step that we do in order to stop relying on the specification.
  */
-public class SpecificationToTypeDefinitionRegistry {
+public class SpecificationConverter {
 
-    private static final Logger log = LoggerFactory.getLogger(SpecificationToTypeDefinitionRegistry.class);
+    private static final Logger log = LoggerFactory.getLogger(SpecificationConverter.class);
 
     private TypeDefinitionRegistry registry;
 

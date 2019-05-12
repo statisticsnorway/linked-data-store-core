@@ -30,7 +30,7 @@ import no.ssb.lds.core.search.SearchIndexConfigurator;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import no.ssb.lds.graphql.GraphqlHttpHandler;
 import no.ssb.lds.graphql.schemas.GraphQLSchemaBuilder;
-import no.ssb.lds.graphql.schemas.SpecificationToTypeDefinitionRegistry;
+import no.ssb.lds.graphql.schemas.SpecificationConverter;
 import no.ssb.saga.execution.sagalog.SagaLog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,7 +94,7 @@ public class UndertowApplication {
                 File graphQLFile = new File(graphQLSchemaPath.get());
                 definitionRegistry = new SchemaParser().parse(graphQLFile);
             } else {
-                SpecificationToTypeDefinitionRegistry specificationConverter = new SpecificationToTypeDefinitionRegistry();
+                SpecificationConverter specificationConverter = new SpecificationConverter();
                 definitionRegistry = specificationConverter.convert(specification);
             }
             GraphQLSchema schema = schemaBuilder.getGraphQL(schemaBuilder.parseSchema(definitionRegistry));
