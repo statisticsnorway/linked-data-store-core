@@ -108,7 +108,7 @@ public class GraphQLSchemaBuilder {
         return builder.toString();
     }
 
-    public GraphQLSchema parseSchema(TypeDefinitionRegistry registry) {
+    public static GraphQLSchema parseSchema(TypeDefinitionRegistry registry) {
 
         RuntimeWiring.Builder runtime = RuntimeWiring.newRuntimeWiring()
                 .scalar(ExtendedScalars.DateTime)
