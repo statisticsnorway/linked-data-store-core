@@ -49,6 +49,13 @@
             <organization>Capra Consulting AS</organization>
             <organizationUrl>https://www.capraconsulting.no/</organizationUrl>
         </developer>
+        <developer>
+            <name>Hadrien Kohl</name>
+            <email>hadrien.kohl@gmail.com</email>
+            <url>https://www.linkedin.com/in/hadrienkohl/</url>
+            <organization>Sonat Consulting AS</organization>
+            <organizationUrl>https://www.sonat.no/</organizationUrl>
+        </developer>
     </developers>
 
     <scm>
@@ -88,7 +95,7 @@
         <dependency>
             <groupId>no.ssb.lds</groupId>
             <artifactId>linked-data-store-persistence-provider-api</artifactId>
-            <version>0.11</version>
+            <version>0.12-SNAPSHOT</version>
         </dependency>
 
         <dependency>
