@@ -2,12 +2,10 @@ pipeline {
     agent { docker 'maven:3.6.0-jdk-11-slim' }
     environment {
         NEXUS_REPO = 'https://nexus.infra.ssbmod.net'
-        GITHUB_REPO = "https://github.com/statisticsnorway/${env.JOB_BASE_NAME}"
     }
     stages {
         stage("Build") {
             steps {
-                git url: "${env.GITHUB_REPO}"
                 sh 'mvn clean install -B -V -DskipTests'
             }
         }
