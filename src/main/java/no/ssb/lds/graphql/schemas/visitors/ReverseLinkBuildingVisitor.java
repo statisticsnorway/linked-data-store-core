@@ -28,10 +28,12 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static no.ssb.lds.graphql.directives.DomainDirective.hasDomainDirective;
+import static no.ssb.lds.graphql.directives.LinkDirective.NAME;
+import static no.ssb.lds.graphql.directives.LinkDirective.newLinkDirective;
 
 /**
  * Update the target of a link annotation with a corresponding reverseLink annotation.
- *
+ * <p>
  * The reverseLink contains a mappedBy attribute that is the path to the field of the link annotation.
  */
 public class ReverseLinkBuildingVisitor extends GraphQLTypeVisitorStub {
@@ -135,6 +137,8 @@ public class ReverseLinkBuildingVisitor extends GraphQLTypeVisitorStub {
         for (GraphQLDirective directive : node.getDirectives()) {
             if (directive instanceof LinkDirective) {
                 return Optional.of((LinkDirective) directive);
+            } else if (directive.getName().equals(NAME)) {
+                return Optional.of(newLinkDirective(directive));
             }
         }
         return Optional.empty();

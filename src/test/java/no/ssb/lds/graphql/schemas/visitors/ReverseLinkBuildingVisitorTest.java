@@ -46,8 +46,8 @@ public class ReverseLinkBuildingVisitorTest {
 
         Assertions.assertThat(target).isEqualToIgnoringWhitespace("" +
                 "type Target {" +
-                "   bar: String" +
-                "   sources: [Source!]! @reverseLink(mappedBy : \"link\") @pagination" +
+                "  bar: String" +
+                "  sources: [Source!]! @reverseLink(mappedBy : \"$.Source.link[]\", pagination : true)" +
                 "}"
         );
 

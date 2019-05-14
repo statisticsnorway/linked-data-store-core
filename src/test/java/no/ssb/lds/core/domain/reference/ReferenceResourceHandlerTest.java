@@ -152,8 +152,8 @@ public class ReferenceResourceHandlerTest {
 
     @Test
     public void thatGETLongResourcePathWorks() {
-        client.delete("/data/provisionagreement/r15?sync=true").expectAnyOf(200, 204);
-        client.get("/data/provisionagreement/r15/support/technicalSupport/contact/s2").expect404NotFound();
+        client.delete("/data/provisionagreement/r14?sync=true").expectAnyOf(200, 204);
+        client.get("/data/provisionagreement/r14/support/technicalSupport/contact/s2").expect404NotFound();
         createTestResource("provisionagreement", "r15", "{\"id\":\"r15\",\"name\":\"pa-test-name\",\"support\":{\"technicalSupport\":[\"/contact/s1\",\"/contact/s2\"],\"businessSupport\":[\"/contact/b1\"]}}");
         client.get("/data/provisionagreement/r15/support/technicalSupport/contact/s2").expect200Ok();
         client.get("/data/provisionagreement/r15/support/technicalSupport/contact/s3").expect404NotFound();

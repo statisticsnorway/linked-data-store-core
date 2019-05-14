@@ -193,7 +193,7 @@ public class GraphQLSchemaBuilder {
                 ReverseLinkDirective.INSTANCE
         );
 
-        RegistrySetupVisitor fetcherSetupVisitor = new RegistrySetupVisitor(persistence, namespace);
+        RegistrySetupVisitor fetcherSetupVisitor = new RegistrySetupVisitor(persistence, namespace, searchIndex);
         TRAVERSER.depthFirst(fetcherSetupVisitor, typeMap.values());
 
         GraphQLType queryType = typeMap.remove("Query");

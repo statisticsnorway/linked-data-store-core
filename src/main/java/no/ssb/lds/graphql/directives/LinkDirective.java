@@ -54,6 +54,18 @@ public class LinkDirective extends GraphQLDirective {
         );
     }
 
+    public static LinkDirective newLinkDirective(GraphQLDirective directive) {
+        Optional<Boolean> pagination = Optional.ofNullable(directive.getArgument(PAGINATION_NAME))
+                .map(arg -> (Boolean) arg.getValue());
+        Optional<String> reverseName = Optional.ofNullable(directive.getArgument(REVERSE_NAME_NAME))
+                .map(arg -> (String) arg.getValue());
+        if (reverseName.isPresent()) {
+            return newLinkDirective(pagination.orElse(true), reverseName.get());
+        } else {
+            return newLinkDirective(pagination.orElse(true));
+        }
+    }
+
     public static LinkDirective newLinkDirective(Boolean pagination, String reverseName) {
         return new LinkDirective(
                 NAME,

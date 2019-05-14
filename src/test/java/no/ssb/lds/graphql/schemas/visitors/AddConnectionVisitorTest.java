@@ -48,9 +48,9 @@ public class AddConnectionVisitorTest {
     }
 
     void assertSourceConnection(Map<String, GraphQLType> typeMap) {
-        assertTypeDefinition(typeMap, "SourceTargetConnection", "" +
-                "type SourceTargetConnection {" +
-                "   edges: [SourceTargetEdge!]!" +
+        assertTypeDefinition(typeMap, "TargetConnection", "" +
+                "type TargetConnection {" +
+                "   edges: [TargetEdge!]!" +
                 "   pageInfo: PageInfo!" +
                 "}");
     }
@@ -93,19 +93,19 @@ public class AddConnectionVisitorTest {
                 "  sources(after: String, " +
                 "          before: String, " +
                 "          first: Int, " +
-                "          last: Int): TargetSourceConnection @reverseLink(mappedBy : \"link\", pagination : true)" +
+                "          last: Int): SourceConnection @reverseLink(mappedBy : \"link\", pagination : true)" +
                 "}"
         );
 
-        assertTypeDefinition(typeMap, "TargetSourceConnection", "" +
-                "type TargetSourceConnection {" +
-                "  edges: [TargetSourceEdge!]!" +
+        assertTypeDefinition(typeMap, "SourceConnection", "" +
+                "type SourceConnection {" +
+                "  edges: [SourceEdge!]!" +
                 "  pageInfo: PageInfo!" +
                 "}"
         );
 
-        assertTypeDefinition(typeMap, "TargetSourceEdge", "" +
-                "type TargetSourceEdge {" +
+        assertTypeDefinition(typeMap, "SourceEdge", "" +
+                "type SourceEdge {" +
                 "  cursor: String!" +
                 "  node: Source!" +
                 "}"
@@ -158,8 +158,8 @@ public class AddConnectionVisitorTest {
     }
 
     void assertSourceEdge(Map<String, GraphQLType> typeMap) {
-        assertTypeDefinition(typeMap, "SourceTargetEdge", "" +
-                "type SourceTargetEdge {" +
+        assertTypeDefinition(typeMap, "TargetEdge", "" +
+                "type TargetEdge {" +
                 "  cursor: String!" +
                 "  node: Target!" +
                 "}");
@@ -169,10 +169,10 @@ public class AddConnectionVisitorTest {
         assertTypeDefinition(typeMap, "Source", "" +
                 "type Source {" +
                 "  foo: String" +
-                "  link(after: String, " +
-                "       before: String, " +
-                "       first: Int, " +
-                "       last: Int): SourceTargetConnection @link(pagination : true, reverseName: \"sources\")" +
+                "  link(after: String," +
+                "      before: String," +
+                "       first: Int," +
+                "  last: Int): TargetConnection @link(pagination : true, reverseName : \"sources\")" +
                 "}");
     }
 

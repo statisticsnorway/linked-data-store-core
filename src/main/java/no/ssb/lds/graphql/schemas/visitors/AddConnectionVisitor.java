@@ -151,7 +151,10 @@ public class AddConnectionVisitor extends GraphQLTypeVisitorStub {
     }
 
     private GraphQLType createEdgeType(GraphQLType from, GraphQLType to) {
-        String edgeTypeName = from.getName() + to.getName() + "Edge";
+        // We do not use Relay Connection name conversion to reduce the amount of
+        // types.
+        // String edgeTypeName = from.getName() + to.getName() + "Connection";
+        String edgeTypeName = to.getName() + "Edge";
         if (!typeMap.containsKey(edgeTypeName)) {
 
             GraphQLFieldDefinition.Builder nodeField = GraphQLFieldDefinition.newFieldDefinition()

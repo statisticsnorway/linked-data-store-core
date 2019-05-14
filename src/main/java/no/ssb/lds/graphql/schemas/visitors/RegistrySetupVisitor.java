@@ -19,6 +19,7 @@ import graphql.util.TraverserContext;
 import no.ssb.lds.api.json.JsonNavigationPath;
 import no.ssb.lds.api.persistence.DocumentKey;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
+import no.ssb.lds.api.search.SearchIndex;
 import no.ssb.lds.graphql.directives.LinkDirective;
 import no.ssb.lds.graphql.directives.ReverseLinkDirective;
 import no.ssb.lds.graphql.fetcher.PersistenceFetcher;
@@ -27,6 +28,7 @@ import no.ssb.lds.graphql.fetcher.PersistenceLinksConnectionFetcher;
 import no.ssb.lds.graphql.fetcher.PersistenceLinksFetcher;
 import no.ssb.lds.graphql.fetcher.PersistenceReverseLinksConnectionFetcher;
 import no.ssb.lds.graphql.fetcher.PersistenceRootConnectionFetcher;
+import no.ssb.lds.graphql.fetcher.QueryConnectionFetcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,20 +49,22 @@ public class RegistrySetupVisitor extends GraphQLTypeVisitorStub {
     private static final Logger log = LoggerFactory.getLogger(RegistrySetupVisitor.class);
     private final GraphQLCodeRegistry.Builder registry;
     private final RxJsonPersistence persistence;
+    private final SearchIndex searchIndex;
     private final String namespace;
 
-    public RegistrySetupVisitor(RxJsonPersistence persistence, String namespace) {
-        this(GraphQLCodeRegistry.newCodeRegistry(), persistence, namespace);
+    public RegistrySetupVisitor(RxJsonPersistence persistence, String namespace, SearchIndex searchIndex) {
+        this(GraphQLCodeRegistry.newCodeRegistry(), persistence, namespace, searchIndex);
     }
 
-    public RegistrySetupVisitor(GraphQLCodeRegistry registry, RxJsonPersistence persistence, String namespace) {
-        this(GraphQLCodeRegistry.newCodeRegistry(registry), persistence, namespace);
+    public RegistrySetupVisitor(GraphQLCodeRegistry registry, RxJsonPersistence persistence, String namespace, SearchIndex searchIndex) {
+        this(GraphQLCodeRegistry.newCodeRegistry(registry), persistence, namespace, searchIndex);
     }
 
-    public RegistrySetupVisitor(GraphQLCodeRegistry.Builder registry, RxJsonPersistence persistence, String namespace) {
+    public RegistrySetupVisitor(GraphQLCodeRegistry.Builder registry, RxJsonPersistence persistence, String namespace, SearchIndex searchIndex) {
         this.registry = registry;
         this.persistence = persistence;
         this.namespace = namespace;
+        this.searchIndex = searchIndex;
     }
 
     private static Boolean isMany(GraphQLOutputType type) {
@@ -101,6 +105,15 @@ public class RegistrySetupVisitor extends GraphQLTypeVisitorStub {
         return false;
     }
 
+    private static Boolean hasSearchDirective(GraphQLDirectiveContainer container) {
+        for (GraphQLDirective directive : container.getDirectives()) {
+            if (directive.getName().equals("search")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static boolean isOneToMany(GraphQLFieldDefinition field, TraverserContext<GraphQLType> context) {
         GraphQLOutputType targetType = field.getType();
         return isMany(targetType);
@@ -115,7 +128,9 @@ public class RegistrySetupVisitor extends GraphQLTypeVisitorStub {
     }
 
     private TraversalControl visitLinkField(GraphQLFieldDefinition field, TraverserContext<GraphQLType> context) {
-        if (isOneToMany(field, context) && !isConnection(field, context)) {
+        if (hasSearchDirective(field)) {
+            return visitSearchLink(field, context);
+        } else if (isOneToMany(field, context) && !isConnection(field, context)) {
             return visitOneToManyLink(field, context);
         } else if (!isOneToMany(field, context) && isConnection(field, context)) {
             return visitConnectionLink(field, context);
@@ -124,6 +139,13 @@ public class RegistrySetupVisitor extends GraphQLTypeVisitorStub {
         } else {
             return TraversalControl.CONTINUE;
         }
+    }
+
+    private TraversalControl visitSearchLink(GraphQLFieldDefinition field, TraverserContext<GraphQLType> context) {
+        registry.dataFetcher(FieldCoordinates.coordinates((GraphQLFieldsContainer) context.getParentNode(), field),
+                new QueryConnectionFetcher(searchIndex, persistence, namespace, field.getType().getName())
+        );
+        return TraversalControl.CONTINUE;
     }
 
     private TraversalControl visitConnectionLink(GraphQLFieldDefinition field, TraverserContext<GraphQLType> context) {
@@ -279,7 +301,7 @@ public class RegistrySetupVisitor extends GraphQLTypeVisitorStub {
 
     @Override
     public TraversalControl visitGraphQLFieldDefinition(GraphQLFieldDefinition field, TraverserContext<GraphQLType> context) {
-        if (hasReverseLinkDirective(field) || hasLinkDirective(field)) {
+        if (hasReverseLinkDirective(field) || hasLinkDirective(field) | hasSearchDirective(field)) {
             return visitLinkField(field, context);
         } else {
             return TraversalControl.CONTINUE;
