@@ -6,10 +6,12 @@ import no.ssb.lds.api.specification.SpecificationValidator;
 import no.ssb.lds.core.schema.JsonSchema;
 import no.ssb.lds.core.schema.JsonSchemaDefinitionElement;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 class SpecificationElementBuilder {
@@ -24,6 +26,7 @@ class SpecificationElementBuilder {
     private SpecificationElementType specificationElementType;
     private Set<String> refTypes;
     private Set<String> jsonTypes;
+    private Set<String> required = Collections.emptySet();
 
     SpecificationElementBuilder(JsonSchemaDefinitionElement schemaElement) {
         this.schemaElement = schemaElement;
@@ -66,6 +69,11 @@ class SpecificationElementBuilder {
 
     SpecificationElementBuilder parent(SpecificationElement parent) {
         this.parent = parent;
+        return this;
+    }
+
+    SpecificationElementBuilder required(Set<String> required) {
+        this.required = Objects.requireNonNull(required);
         return this;
     }
 
@@ -154,6 +162,7 @@ class SpecificationElementBuilder {
                         .name(entry.getKey())
                         .parent(specificationElement)
                         .specificationElementType(specificationElementType)
+                        .required(entry.getValue().required)
                         .build();
                 map.put(entry.getKey(), managed);
             }
@@ -180,5 +189,9 @@ class SpecificationElementBuilder {
             map.put(e.getKey(), child);
         }
         return map;
+    }
+
+    public Set<String> required() {
+        return required != null ? required : Collections.emptySet();
     }
 }

@@ -25,6 +25,7 @@ class ImmutableSpecificationElement implements SpecificationElement {
     private final Set<String> refTypes;
     private final Map<String, SpecificationElement> properties;
     private final SpecificationElement items;
+    private final Set<String> required;
 
     ImmutableSpecificationElement(SpecificationElementBuilder elementBuilder) {
         elementBuilder.specificationElement(this);
@@ -37,6 +38,7 @@ class ImmutableSpecificationElement implements SpecificationElement {
         this.refTypes = ofNullable(elementBuilder.refTypes()).map(Collections::unmodifiableSet).orElse(Collections.emptySet());
         this.properties = ofNullable(elementBuilder.properties()).map(Collections::unmodifiableMap).orElse(Collections.emptyMap());
         this.items = elementBuilder.items();
+        this.required = elementBuilder.required();
     }
 
     @Override
@@ -82,5 +84,10 @@ class ImmutableSpecificationElement implements SpecificationElement {
     @Override
     public SpecificationElement getItems() {
         return items;
+    }
+
+    @Override
+    public Set<String> getRequired() {
+        return this.required;
     }
 }

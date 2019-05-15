@@ -6,6 +6,7 @@ import graphql.language.DirectiveDefinition;
 import graphql.language.DirectiveLocation;
 import graphql.language.FieldDefinition;
 import graphql.language.ListType;
+import graphql.language.NonNullType;
 import graphql.language.ObjectTypeDefinition;
 import graphql.language.Type;
 import graphql.language.TypeName;
@@ -187,10 +188,9 @@ public class SpecificationConverter {
                 ));
         }
 
-        // TODO: Expose the required set of the json schema.
-        //if (property.getParent().getRequired().contains(property.getName())) {
-        //    fieldType = new NonNullType(fieldType);
-        //}
+        if (property.isRequired()) {
+            fieldType = new NonNullType(fieldType);
+        }
 
         return field.type(fieldType).build();
     }
