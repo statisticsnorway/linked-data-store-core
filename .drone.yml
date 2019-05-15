@@ -1,0 +1,27 @@
+kind: pipeline
+name: default
+
+steps:
+- name: build
+  image: maven:3.6.1-jdk-11-slim
+  commands:
+  - echo "$SERVICE_ACCOUNT" | /usr/bin/base64 -d > "$GOOGLE_APPLICATION_CREDENTIALS"
+  - mvn clean test -Pdrone -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+  environment:
+    GOOGLE_APPLICATION_CREDENTIALS: /sa.json
+    SERVICE_ACCOUNT:
+      from_secret: service_account
+  
+- name: deploy
+  image: maven:3.6.0-jdk-11-slim
+  commands:
+  - echo "$SERVICE_ACCOUNT" | /usr/bin/base64 -d > "$GOOGLE_APPLICATION_CREDENTIALS"
+  - mvn deploy:deploy -P drone -B -DskipTests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+  environment:
+    GOOGLE_APPLICATION_CREDENTIALS: /sa
+    SERVICE_ACCOUNT:
+      from_secret: service_account
+  when:
+    branch:
+    - master
+    - develop
