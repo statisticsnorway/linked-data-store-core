@@ -5,6 +5,7 @@ import no.ssb.lds.api.specification.SpecificationElement;
 import no.ssb.lds.api.specification.SpecificationElementType;
 import no.ssb.lds.api.specification.SpecificationValidator;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -19,6 +20,7 @@ public class TestSpecificationElement implements SpecificationElement {
     private final Set<String> refTypes;
     private final Map<String, SpecificationElement> properties;
     private final SpecificationElement items;
+    private Set<String> required = new HashSet<>();
 
     public TestSpecificationElement(String name, SpecificationElementType specificationElementType, Set<String> jsonTypes, List<SpecificationValidator> validators, Set<String> refTypes, Map<String, SpecificationElement> properties, SpecificationElement items) {
         this.name = name;
@@ -78,6 +80,12 @@ public class TestSpecificationElement implements SpecificationElement {
     @Override
     public SpecificationElement getItems() {
         return items;
+    }
+
+
+    @Override
+    public Set<String> getRequired() {
+        return required;
     }
 
     @Override

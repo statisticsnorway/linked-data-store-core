@@ -3,7 +3,7 @@ package no.ssb.lds.core.validation;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.api.specification.SpecificationElement;
 import no.ssb.lds.api.specification.SpecificationElementType;
-import no.ssb.lds.api.specification.SpecificationTraverals;
+import no.ssb.lds.api.specification.SpecificationTraversal;
 import no.ssb.lds.core.schema.SchemaRepository;
 import org.everit.json.schema.Schema;
 import org.everit.json.schema.ValidationException;
@@ -44,7 +44,7 @@ public class LinkedDocumentValidator {
             throw new LinkedDocumentValidationException(e.getAllMessages().toString(), e);
         }
         SpecificationElement managedDomainElement = specification.getRootElement().getProperties().get(managedDomain);
-        SpecificationTraverals.depthFirstPreOrderFullTraversal(managedDomainElement, (ancestors, te) -> {
+        SpecificationTraversal.depthFirstPreOrderFullTraversal(managedDomainElement, (ancestors, te) -> {
             if (SpecificationElementType.REF != te.getSpecificationElementType()) {
                 return;
             }

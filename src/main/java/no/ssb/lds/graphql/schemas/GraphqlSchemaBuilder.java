@@ -100,7 +100,7 @@ public class GraphqlSchemaBuilder {
      * Returns true if the element is nullable (has null as allowed type).
      */
     private static Boolean isNullable(SpecificationElement element) {
-        return elementJsonTypes(element).contains(JsonType.NULL);
+        return !element.isRequired();
     }
 
     /**
