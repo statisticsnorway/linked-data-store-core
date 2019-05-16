@@ -101,12 +101,22 @@ public class AddConnectionVisitor extends GraphQLTypeVisitorStub {
 
         log.debug("Transforming {} fields to pagination fields in {}", fieldsWithPagination.size(), node.getName());
 
-        GraphQLObjectType.Builder newObject = GraphQLObjectType.newObject(node);
+        GraphQLObjectType.Builder newObject = GraphQLObjectType.newObject(
+                (GraphQLObjectType) typeMap.get(node.getName()));
         for (GraphQLFieldDefinition fieldDefinition : fieldsWithPagination) {
             newObject.field(createConnectionField(node, fieldDefinition));
         }
 
-        typeMap.put(node.getName(), newObject.build());
+        // TODO: Figure out why this fails. We should have tree with same instance of all types
+        //if (!typeMap.replace(existing.getName(), existing, newObject)) {
+        //    throw new IllegalArgumentException(String.format(
+        //            "Could not replace %s, the schema probably contains references", existing.getName()
+        //    ));
+        //}
+        GraphQLType oldObject = typeMap.put(node.getName(), newObject.build());
+        if (oldObject != null && Objects.equals(oldObject, node)) {
+            log.warn("Existing object {} is not equal to visited object {}", node, oldObject);
+        }
 
         return TraversalControl.CONTINUE;
     }

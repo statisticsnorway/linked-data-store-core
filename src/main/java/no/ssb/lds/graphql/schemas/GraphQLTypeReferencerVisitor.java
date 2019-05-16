@@ -14,6 +14,8 @@ import graphql.schema.GraphQLTypeVisitorStub;
 import graphql.schema.GraphQLUnionType;
 import graphql.util.TraversalControl;
 import graphql.util.TraverserContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Objects;
@@ -25,6 +27,7 @@ import java.util.Stack;
  */
 public class GraphQLTypeReferencerVisitor extends GraphQLTypeVisitorStub {
 
+    private static final Logger log = LoggerFactory.getLogger(GraphQLTypeReferencerVisitor.class);
     private final Map<String, GraphQLType> typeMap;
 
     public GraphQLTypeReferencerVisitor(Map<String, GraphQLType> typeMap) {
@@ -33,31 +36,53 @@ public class GraphQLTypeReferencerVisitor extends GraphQLTypeVisitorStub {
 
     @Override
     public TraversalControl visitGraphQLInterfaceType(GraphQLInterfaceType node, TraverserContext<GraphQLType> context) {
-        GraphQLInterfaceType.Builder newInterface = GraphQLInterfaceType.newInterface(node);
+        GraphQLInterfaceType.Builder newInterface = GraphQLInterfaceType.newInterface(
+                (GraphQLInterfaceType) typeMap.get(node.getName()));
         for (GraphQLFieldDefinition fieldDefinition : node.getFieldDefinitions()) {
             convertToReference(fieldDefinition.getType()).ifPresent(reference -> {
                 newInterface.field(GraphQLFieldDefinition.newFieldDefinition(fieldDefinition).type(reference).build());
             });
         }
-        typeMap.put(node.getName(), newInterface.build());
+
+        // TODO: Figure out why this fails. We should have tree with same instance of all types
+        //if (!typeMap.replace(existing.getName(), existing, newObject)) {
+        //    throw new IllegalArgumentException(String.format(
+        //            "Could not replace %s, the schema probably contains references", existing.getName()
+        //    ));
+        //}
+        GraphQLType oldObject = typeMap.put(node.getName(), newInterface.build());
+        if (oldObject != null && Objects.equals(oldObject, node)) {
+            log.warn("Existing object {} is not equal to visited object {}", node, oldObject);
+        }
         return TraversalControl.CONTINUE;
     }
 
     @Override
     public TraversalControl visitGraphQLUnionType(GraphQLUnionType node, TraverserContext<GraphQLType> context) {
-        GraphQLUnionType.Builder newUnionType = GraphQLUnionType.newUnionType(node);
+        GraphQLUnionType.Builder newUnionType = GraphQLUnionType.newUnionType(
+                (GraphQLUnionType) typeMap.get(node.getName()));
         for (GraphQLOutputType type : node.getTypes()) {
             if (!(type instanceof GraphQLTypeReference)) {
                 newUnionType.possibleType(GraphQLTypeReference.typeRef(type.getName()));
             }
         }
-        typeMap.put(node.getName(), newUnionType.build());
+        // TODO: Figure out why this fails. We should have tree with same instance of all types
+        //if (!typeMap.replace(existing.getName(), existing, newObject)) {
+        //    throw new IllegalArgumentException(String.format(
+        //            "Could not replace %s, the schema probably contains references", existing.getName()
+        //    ));
+        //}
+        GraphQLType oldObject = typeMap.put(node.getName(), newUnionType.build());
+        if (oldObject != null && Objects.equals(oldObject, node)) {
+            log.warn("Existing object {} is not equal to visited object {}", node, oldObject);
+        }
         return TraversalControl.CONTINUE;
     }
 
     @Override
     public TraversalControl visitGraphQLObjectType(GraphQLObjectType node, TraverserContext<GraphQLType> context) {
-        GraphQLObjectType.Builder newObject = GraphQLObjectType.newObject(node);
+        GraphQLObjectType.Builder newObject = GraphQLObjectType.newObject(
+                (GraphQLObjectType) typeMap.get(node.getName()));
         for (GraphQLFieldDefinition fieldDefinition : node.getFieldDefinitions()) {
             convertToReference(fieldDefinition.getType()).ifPresent(reference -> {
                 newObject.field(GraphQLFieldDefinition.newFieldDefinition(fieldDefinition).type(reference).build());
@@ -67,6 +92,16 @@ public class GraphQLTypeReferencerVisitor extends GraphQLTypeVisitorStub {
             convertToReference(anInterface).ifPresent(reference -> {
                 newObject.withInterfaces(GraphQLTypeReference.typeRef(reference.getName()));
             });
+        }
+        // TODO: Figure out why this fails. We should have tree with same instance of all types
+        //if (!typeMap.replace(existing.getName(), existing, newObject)) {
+        //    throw new IllegalArgumentException(String.format(
+        //            "Could not replace %s, the schema probably contains references", existing.getName()
+        //    ));
+        //}
+        GraphQLType oldObject = typeMap.put(node.getName(), newObject.build());
+        if (oldObject != null && Objects.equals(oldObject, node)) {
+            log.warn("Existing object {} is not equal to visited object {}", node, oldObject);
         }
         typeMap.put(node.getName(), newObject.build());
         return TraversalControl.CONTINUE;
