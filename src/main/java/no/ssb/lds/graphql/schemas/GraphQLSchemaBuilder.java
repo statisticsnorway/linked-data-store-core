@@ -23,6 +23,7 @@ import no.ssb.lds.graphql.directives.ReverseLinkDirective;
 import no.ssb.lds.graphql.schemas.visitors.AddConnectionVisitor;
 import no.ssb.lds.graphql.schemas.visitors.AddSearchTypesVisitor;
 import no.ssb.lds.graphql.schemas.visitors.AutomaticReverseLink;
+import no.ssb.lds.graphql.schemas.visitors.GraphQLTypeReferencerVisitor;
 import no.ssb.lds.graphql.schemas.visitors.QueryBuildingVisitor;
 import no.ssb.lds.graphql.schemas.visitors.RegistrySetupVisitor;
 import no.ssb.lds.graphql.schemas.visitors.ReverseLinkBuildingVisitor;
