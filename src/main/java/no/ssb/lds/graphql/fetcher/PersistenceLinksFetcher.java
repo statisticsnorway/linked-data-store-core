@@ -12,6 +12,7 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,15 +25,15 @@ public class PersistenceLinksFetcher implements DataFetcher<List<Map<String, Obj
     private final String namespace;
 
     public PersistenceLinksFetcher(RxJsonPersistence persistence, String namespace, String field, String target) {
-        this.field = field;
-        this.target = target;
-        this.persistence = persistence;
-        this.pattern = Pattern.compile("/" + target + "/(?<id>.*)");
-        this.namespace = namespace;
+        this.field = Objects.requireNonNull(field);
+        this.target = Objects.requireNonNull(target);
+        this.persistence = Objects.requireNonNull(persistence);
+        this.pattern = Pattern.compile("/" + Objects.requireNonNull(target) + "/(?<id>.*)");
+        this.namespace = Objects.requireNonNull(namespace);
     }
 
     @Override
-    public List<Map<String, Object>> get(DataFetchingEnvironment environment) throws Exception {
+    public List<Map<String, Object>> get(DataFetchingEnvironment environment) {
         Map<String, Object> source = environment.getSource();
         List<String> links = (List<String>) source.get(field);
         List<Map<String, Object>> results = new ArrayList<>();

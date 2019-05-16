@@ -2,11 +2,14 @@ package no.ssb.lds.graphql.fetcher;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import graphql.execution.ExecutionContext;
+import graphql.cachecontrol.CacheControl;
 import graphql.execution.ExecutionId;
 import graphql.execution.ExecutionStepInfo;
+import graphql.execution.MergedField;
+import graphql.language.Document;
 import graphql.language.Field;
 import graphql.language.FragmentDefinition;
+import graphql.language.OperationDefinition;
 import graphql.relay.Connection;
 import graphql.relay.Edge;
 import graphql.schema.DataFetchingEnvironment;
@@ -203,6 +206,11 @@ public class PersistenceLinksConnectionFetcherTest {
         }
 
         @Override
+        public <T> T getLocalContext() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public <T> T getRoot() {
             throw new UnsupportedOperationException();
         }
@@ -214,6 +222,11 @@ public class PersistenceLinksConnectionFetcherTest {
 
         @Override
         public List<Field> getFields() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public MergedField getMergedField() {
             throw new UnsupportedOperationException();
         }
 
@@ -258,13 +271,28 @@ public class PersistenceLinksConnectionFetcherTest {
         }
 
         @Override
-        public ExecutionContext getExecutionContext() {
+        public <K, V> DataLoader<K, V> getDataLoader(String dataLoaderName) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public <K, V> DataLoader<K, V> getDataLoader(String dataLoaderName) {
-            throw new UnsupportedOperationException();
+        public CacheControl getCacheControl() {
+            return null;
+        }
+
+        @Override
+        public OperationDefinition getOperationDefinition() {
+            return null;
+        }
+
+        @Override
+        public Document getDocument() {
+            return null;
+        }
+
+        @Override
+        public Map<String, Object> getVariables() {
+            return null;
         }
     }
 }

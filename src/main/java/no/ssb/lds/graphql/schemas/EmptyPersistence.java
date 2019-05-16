@@ -34,7 +34,12 @@ class EmptyPersistence implements RxJsonPersistence {
     }
 
     @Override
-    public Flowable<JsonDocument> readLinkedDocuments(Transaction tx, ZonedDateTime snapshot, String ns, String entityName, String id, JsonNavigationPath jsonNavigationPath, String targetEntityName, Range<String> range) {
+    public Flowable<JsonDocument> readTargetDocuments(Transaction tx, ZonedDateTime snapshot, String ns, String sourceEntityName, String sourceId, JsonNavigationPath relationPath, String targetEntityName, Range<String> range) {
+        return Flowable.empty();
+    }
+
+    @Override
+    public Flowable<JsonDocument> readSourceDocuments(Transaction tx, ZonedDateTime snapshot, String ns, String targetEntityName, String targetId, JsonNavigationPath relationPath, String sourceEntityName, Range<String> range) {
         return Flowable.empty();
     }
 

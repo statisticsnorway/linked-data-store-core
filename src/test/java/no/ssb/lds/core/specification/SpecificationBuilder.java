@@ -43,6 +43,14 @@ public class SpecificationBuilder {
         return objectNode(SpecificationElementType.EMBEDDED, name, properties);
     }
 
+    public static TestSpecificationElement required(TestSpecificationElement element) {
+        if (element.getSpecificationElementType() == SpecificationElementType.ROOT) {
+            throw new IllegalArgumentException("cannot set required on root object");
+        }
+        element.setRequired(true);
+        return element;
+    }
+
     public static TestSpecificationElement objectNode(SpecificationElementType elementType, String name, Set<TestSpecificationElement> properties) {
         TestSpecificationElement mapElement = new TestSpecificationElement(name, elementType, Set.of("object"), List.of(), Set.of(),
                 new TreeMap<>(properties.stream().collect(Collectors.toMap(e -> e.getName(), e -> e))), null);

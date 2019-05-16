@@ -19,9 +19,9 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * A fetcher that support relay style connection parameters and type.
+ * Reverse link fetcher.
  */
-public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<String, Object>> {
+public class PersistenceReverseLinksConnectionFetcher extends ConnectionFetcher<Map<String, Object>> {
 
     // Field name containing the ids of the target.
     private final JsonNavigationPath relationPath;
@@ -36,12 +36,12 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
 
     private final RxJsonPersistence persistence;
 
-    public PersistenceLinksConnectionFetcher(RxJsonPersistence persistence, String nameSpace, String sourceEntityName, JsonNavigationPath path, String targetEntityName) {
-        this.persistence = Objects.requireNonNull(persistence);
-        this.nameSpace = Objects.requireNonNull(nameSpace);
+    public PersistenceReverseLinksConnectionFetcher(RxJsonPersistence persistence, String nameSpace, String sourceEntityName, JsonNavigationPath relationPath, String targetEntityName) {
+        this.relationPath = Objects.requireNonNull(relationPath);
         this.sourceEntityName = Objects.requireNonNull(sourceEntityName);
-        this.relationPath = Objects.requireNonNull(path);
         this.targetEntityName = Objects.requireNonNull(targetEntityName);
+        this.nameSpace = Objects.requireNonNull(nameSpace);
+        this.persistence = Objects.requireNonNull(persistence);
     }
 
     /**
@@ -57,10 +57,10 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
     Connection<Map<String, Object>> getConnection(DataFetchingEnvironment environment, ConnectionParameters parameters) {
         try (Transaction tx = persistence.createTransaction(true)) {
 
-            String sourceId = getIdFromSource(environment);
+            String targetId = getIdFromSource(environment);
 
-            Flowable<JsonDocument> documents = persistence.readTargetDocuments(tx, parameters.getSnapshot(), nameSpace,
-                    sourceEntityName, sourceId, relationPath, targetEntityName, parameters.getRange());
+            Flowable<JsonDocument> documents = persistence.readSourceDocuments(tx, parameters.getSnapshot(), nameSpace,
+                    targetEntityName, targetId, relationPath, sourceEntityName, parameters.getRange());
 
             List<Edge<Map<String, Object>>> edges = documents.map(document -> toEdge(document)).toList()
                     .blockingGet();
@@ -92,7 +92,6 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
                     edges,
                     pageInfo
             );
-
         }
     }
 }

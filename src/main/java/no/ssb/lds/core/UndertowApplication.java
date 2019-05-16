@@ -2,6 +2,9 @@ package no.ssb.lds.core;
 
 import com.netflix.hystrix.HystrixThreadPoolProperties;
 import graphql.GraphQL;
+import graphql.schema.GraphQLSchema;
+import graphql.schema.idl.SchemaParser;
+import graphql.schema.idl.TypeDefinitionRegistry;
 import io.undertow.Handlers;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
@@ -26,12 +29,15 @@ import no.ssb.lds.core.saga.SagasObserver;
 import no.ssb.lds.core.search.SearchIndexConfigurator;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import no.ssb.lds.graphql.GraphqlHttpHandler;
-import no.ssb.lds.graphql.schemas.GraphqlSchemaBuilder;
+import no.ssb.lds.graphql.schemas.GraphQLSchemaBuilder;
+import no.ssb.lds.graphql.schemas.SpecificationConverter;
 import no.ssb.saga.execution.sagalog.SagaLog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -45,23 +51,16 @@ import java.util.stream.Stream;
 public class UndertowApplication {
 
     private static final Logger LOG = LoggerFactory.getLogger(UndertowApplication.class);
-
-    public static String getDefaultConfigurationResourcePath() {
-        return "application-defaults.properties";
-    }
-
-    public static UndertowApplication initializeUndertowApplication(DynamicConfiguration configuration) {
-        int port = configuration.evaluateToInt("http.port");
-        return initializeUndertowApplication(configuration, port);
-    }
-
     private final RxJsonPersistence persistence;
-
     private final Specification specification;
     private final Undertow server;
     private final String host;
     private final int port;
-
+    private final SagaExecutionCoordinator sec;
+    private final SagaRepository sagaRepository;
+    private final SagasObserver sagasObserver;
+    private final SagaLog sagaLog;
+    private final SelectableThreadPoolExectutor sagaThreadPool;
     UndertowApplication(Specification specification, RxJsonPersistence persistence, SagaExecutionCoordinator sec,
                         SagaRepository sagaRepository, SagasObserver sagasObserver, String host, int port,
                         SagaLog sagaLog, SelectableThreadPoolExectutor sagaThreadPool,
@@ -82,10 +81,25 @@ public class UndertowApplication {
         boolean graphqlEnabled = configuration.evaluateToBoolean("graphql.enabled");
         String pathPrefix = configuration.evaluateToString("http.prefix");
 
+        Optional<String> graphQLSchemaPath = Optional.ofNullable(configuration.evaluateToString("graphql.schema"))
+                .map(path -> path.isEmpty() ? null : path);
+
+
         PathHandler pathHandler = Handlers.path();
         if (graphqlEnabled) {
-            GraphQL graphQL = GraphQL.newGraphQL(new GraphqlSchemaBuilder(specification, persistence, searchIndex, namespace)
-                    .getSchema()).build();
+
+            GraphQLSchemaBuilder schemaBuilder = new GraphQLSchemaBuilder(namespace, persistence, searchIndex);
+            TypeDefinitionRegistry definitionRegistry;
+            if (graphQLSchemaPath.isPresent()) {
+                File graphQLFile = new File(graphQLSchemaPath.get());
+                definitionRegistry = new SchemaParser().parse(graphQLFile);
+            } else {
+                SpecificationConverter specificationConverter = new SpecificationConverter();
+                definitionRegistry = specificationConverter.convert(specification);
+            }
+            GraphQLSchema schema = schemaBuilder.getGraphQL(schemaBuilder.parseSchema(definitionRegistry));
+
+            GraphQL graphQL = GraphQL.newGraphQL(schema).build();
 
             pathHandler.addExactPath("/graphiql", Handlers.resource(new ClassPathResourceManager(
                     Thread.currentThread().getContextClassLoader(), "no/ssb/lds/graphql/graphiql"
@@ -135,11 +149,14 @@ public class UndertowApplication {
                 .build();
     }
 
-    private final SagaExecutionCoordinator sec;
-    private final SagaRepository sagaRepository;
-    private final SagasObserver sagasObserver;
-    private final SagaLog sagaLog;
-    private final SelectableThreadPoolExectutor sagaThreadPool;
+    public static String getDefaultConfigurationResourcePath() {
+        return "application-defaults.properties";
+    }
+
+    public static UndertowApplication initializeUndertowApplication(DynamicConfiguration configuration) {
+        int port = configuration.evaluateToInt("http.port");
+        return initializeUndertowApplication(configuration, port);
+    }
 
     public static UndertowApplication initializeUndertowApplication(DynamicConfiguration configuration, int port) {
         LOG.info("Initializing Linked Data Store (LDS) server ...");
@@ -197,6 +214,21 @@ public class UndertowApplication {
                 searchIndex, configuration);
     }
 
+    static void shutdownAndAwaitTermination(ExecutorService pool) {
+        pool.shutdown();
+        try {
+            if (!pool.awaitTermination(10, TimeUnit.SECONDS)) {
+                pool.shutdownNow();
+                if (!pool.awaitTermination(10, TimeUnit.SECONDS)) {
+                    LOG.error("Pool did not terminate");
+                }
+            }
+        } catch (InterruptedException ie) {
+            pool.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
     public void enableSagaExecutionAutomaticDeadlockDetectionAndResolution() {
         sec.startThreadpoolWatchdog();
     }
@@ -229,21 +261,6 @@ public class UndertowApplication {
             ((FileSagaLog) sagaLog).close();
         }
         LOG.info("Leaving.. Bye!");
-    }
-
-    static void shutdownAndAwaitTermination(ExecutorService pool) {
-        pool.shutdown();
-        try {
-            if (!pool.awaitTermination(10, TimeUnit.SECONDS)) {
-                pool.shutdownNow();
-                if (!pool.awaitTermination(10, TimeUnit.SECONDS)) {
-                    LOG.error("Pool did not terminate");
-                }
-            }
-        } catch (InterruptedException ie) {
-            pool.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
     }
 
     public Undertow getServer() {
