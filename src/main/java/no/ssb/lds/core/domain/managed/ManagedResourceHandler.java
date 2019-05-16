@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 import no.ssb.concurrent.futureselector.SelectableFuture;
@@ -179,8 +180,19 @@ public class ManagedResourceHandler implements HttpHandler {
         SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, resourceContext.getNamespace(), managedDomain, topLevelElement.id(), resourceContext.getTimestamp(), null);
         SagaHandoffResult handoffResult = handoff.join();
 
-        exchange.setStatusCode(StatusCodes.NO_CONTENT);
-        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-        exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.executionId + "\"}");
+        HeaderMap responseHeaders = exchange.getResponseHeaders();
+        if (sync) {
+            // Workaround https://bugs.openjdk.java.net/browse/JDK-8211437
+            // 204 MUST come with a content-size of 0.
+            responseHeaders.add(Headers.CONTENT_LENGTH, 0);
+            exchange.setStatusCode(StatusCodes.NO_CONTENT);
+            exchange.endExchange();
+        } else {
+            exchange.setStatusCode(StatusCodes.ACCEPTED);
+            responseHeaders.put(Headers.CONTENT_TYPE, "application/json");
+            exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.executionId + "\"}");
+        }
+
+
     }
 }
