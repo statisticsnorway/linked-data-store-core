@@ -25,12 +25,12 @@ import java.util.Stack;
 /**
  * Given a typeMap this visitor will replace all types with type references.
  */
-public class GraphQLTypeReferencerVisitor extends GraphQLTypeVisitorStub {
+public class TypeReferencerVisitor extends GraphQLTypeVisitorStub {
 
-    private static final Logger log = LoggerFactory.getLogger(GraphQLTypeReferencerVisitor.class);
+    private static final Logger log = LoggerFactory.getLogger(TypeReferencerVisitor.class);
     private final Map<String, GraphQLType> typeMap;
 
-    public GraphQLTypeReferencerVisitor(Map<String, GraphQLType> typeMap) {
+    public TypeReferencerVisitor(Map<String, GraphQLType> typeMap) {
         this.typeMap = Objects.requireNonNull(typeMap);
     }
 

@@ -23,10 +23,10 @@ import no.ssb.lds.graphql.directives.ReverseLinkDirective;
 import no.ssb.lds.graphql.schemas.visitors.AddConnectionVisitor;
 import no.ssb.lds.graphql.schemas.visitors.AddSearchTypesVisitor;
 import no.ssb.lds.graphql.schemas.visitors.AutomaticReverseLink;
-import no.ssb.lds.graphql.schemas.visitors.GraphQLTypeReferencerVisitor;
 import no.ssb.lds.graphql.schemas.visitors.QueryBuildingVisitor;
 import no.ssb.lds.graphql.schemas.visitors.RegistrySetupVisitor;
 import no.ssb.lds.graphql.schemas.visitors.ReverseLinkBuildingVisitor;
+import no.ssb.lds.graphql.schemas.visitors.TypeReferencerVisitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -138,7 +138,7 @@ public class GraphQLSchemaBuilder {
         Map<String, GraphQLType> typeMap = graphQLTypeCollectingVisitor.getResult();
 
         // Reference and Resolve
-        TRAVERSER.depthFirst(new GraphQLTypeReferencerVisitor(typeMap), typeMap.values());
+        TRAVERSER.depthFirst(new TypeReferencerVisitor(typeMap), typeMap.values());
         TRAVERSER.depthFirst(new GraphQLTypeResolvingVisitor(typeMap), typeMap.values());
 
         // Compute reverse links
@@ -175,7 +175,7 @@ public class GraphQLSchemaBuilder {
         typeMap.put("Query", query.build());
 
         log.info("Replacing all type with references");
-        TRAVERSER.depthFirst(new GraphQLTypeReferencerVisitor(typeMap), typeMap.values());
+        TRAVERSER.depthFirst(new TypeReferencerVisitor(typeMap), typeMap.values());
 
         // Transform with pagination
         log.info("Transforming paginated links to relay connections");
