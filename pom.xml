@@ -252,14 +252,14 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-core</artifactId>
             <version>${logback.version}</version>
-            <!--<scope>test</scope>-->
+            <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>${logback.version}</version>
-            <!--<scope>test</scope>-->
+            <scope>test</scope>
             <exclusions>
                 <exclusion>
                     <groupId>com.sun.mail</groupId>
