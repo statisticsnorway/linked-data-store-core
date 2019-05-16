@@ -77,7 +77,6 @@ public class ReverseLinkBuildingVisitor extends GraphQLTypeVisitorStub {
 
     public static Collection<String> computePath(GraphQLFieldDefinition node, TraverserContext<GraphQLType> context) {
         List<GraphQLType> types = new ArrayList<>();
-        //types.add(node.getType());
         types.add(node);
         types.addAll(context.getParentNodes());
         Deque<String> parts = new ArrayDeque<>();
