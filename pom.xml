@@ -476,6 +476,10 @@
                 <version>3.0.0-M3</version>
                 <!--<version>2.19.1</version> &lt;!&ndash; Newer version do not yet work with Java 11 &ndash;&gt;-->
                 <configuration>
+                    <!--Required to make service loader work in tests.-->
+                    <!--Without this ServiceLoader.load(SearchIndexProvider.class) won't work.-->
+                    <!--See https://stackoverflow.com/questions/54087050-->
+                    <useModulePath>false</useModulePath>
                     <suiteXmlFiles>
                         <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
                     </suiteXmlFiles>
