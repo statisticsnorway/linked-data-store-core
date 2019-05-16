@@ -33,13 +33,13 @@ import static no.ssb.lds.graphql.schemas.visitors.ReverseLinkBuildingVisitor.get
  * Reverse names are based on the source domain type name and the property
  * that is used as a link.
  */
-public class AutomaticReverseLink extends GraphQLTypeVisitorStub {
+public class ReverseLinkNameVisitor extends GraphQLTypeVisitorStub {
 
-    private static final Logger log = LoggerFactory.getLogger(AutomaticReverseLink.class);
+    private static final Logger log = LoggerFactory.getLogger(ReverseLinkNameVisitor.class);
     private static final String REVERSE_PREFIX = "reverse";
     private final Map<String, GraphQLType> typeMap;
 
-    public AutomaticReverseLink(Map<String, GraphQLType> typeMap) {
+    public ReverseLinkNameVisitor(Map<String, GraphQLType> typeMap) {
         this.typeMap = Objects.requireNonNull(typeMap);
     }
 

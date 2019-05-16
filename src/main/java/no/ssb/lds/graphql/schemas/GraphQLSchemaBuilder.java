@@ -22,10 +22,10 @@ import no.ssb.lds.graphql.directives.LinkDirective;
 import no.ssb.lds.graphql.directives.ReverseLinkDirective;
 import no.ssb.lds.graphql.schemas.visitors.AddConnectionVisitor;
 import no.ssb.lds.graphql.schemas.visitors.AddSearchTypesVisitor;
-import no.ssb.lds.graphql.schemas.visitors.AutomaticReverseLink;
 import no.ssb.lds.graphql.schemas.visitors.QueryBuildingVisitor;
 import no.ssb.lds.graphql.schemas.visitors.RegistrySetupVisitor;
 import no.ssb.lds.graphql.schemas.visitors.ReverseLinkBuildingVisitor;
+import no.ssb.lds.graphql.schemas.visitors.ReverseLinkNameVisitor;
 import no.ssb.lds.graphql.schemas.visitors.TypeReferencerVisitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -142,7 +142,7 @@ public class GraphQLSchemaBuilder {
         TRAVERSER.depthFirst(new GraphQLTypeResolvingVisitor(typeMap), typeMap.values());
 
         // Compute reverse links
-        TRAVERSER.depthFirst(new AutomaticReverseLink(typeMap), typeMap.values());
+        TRAVERSER.depthFirst(new ReverseLinkNameVisitor(typeMap), typeMap.values());
 
         // Add the reverse links.
         TRAVERSER.depthFirst(new ReverseLinkBuildingVisitor(typeMap), typeMap.values());
