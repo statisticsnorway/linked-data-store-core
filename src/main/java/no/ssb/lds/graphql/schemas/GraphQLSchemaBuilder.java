@@ -22,7 +22,7 @@ import no.ssb.lds.graphql.directives.LinkDirective;
 import no.ssb.lds.graphql.directives.ReverseLinkDirective;
 import no.ssb.lds.graphql.schemas.visitors.AddConnectionVisitor;
 import no.ssb.lds.graphql.schemas.visitors.AddSearchTypesVisitor;
-import no.ssb.lds.graphql.schemas.visitors.FakeAnnotationVisitor;
+import no.ssb.lds.graphql.schemas.visitors.AutomaticReverseLink;
 import no.ssb.lds.graphql.schemas.visitors.QueryBuildingVisitor;
 import no.ssb.lds.graphql.schemas.visitors.RegistrySetupVisitor;
 import no.ssb.lds.graphql.schemas.visitors.ReverseLinkBuildingVisitor;
@@ -137,11 +137,11 @@ public class GraphQLSchemaBuilder {
         Map<String, GraphQLType> typeMap = graphQLTypeCollectingVisitor.getResult();
 
         // Reference and Resolve
-        //TRAVERSER.depthFirst(new GraphQLTypeReferencerVisitor(typeMap), typeMap.values());
-        //TRAVERSER.depthFirst(new GraphQLTypeResolvingVisitor(typeMap), typeMap.values());
+        TRAVERSER.depthFirst(new GraphQLTypeReferencerVisitor(typeMap), typeMap.values());
+        TRAVERSER.depthFirst(new GraphQLTypeResolvingVisitor(typeMap), typeMap.values());
 
-        // Fake reverseName until the annotation is finalized.
-        TRAVERSER.depthFirst(new FakeAnnotationVisitor(typeMap), typeMap.values());
+        // Compute reverse links
+        TRAVERSER.depthFirst(new AutomaticReverseLink(typeMap), typeMap.values());
 
         // Add the reverse links.
         TRAVERSER.depthFirst(new ReverseLinkBuildingVisitor(typeMap), typeMap.values());
@@ -160,12 +160,14 @@ public class GraphQLSchemaBuilder {
         }
 
         // Add the search fields.
-        log.info("Creating root \"Query\" search field and search types");
-        AddSearchTypesVisitor addSearchTypesVisitor = new AddSearchTypesVisitor(typeMap, query);
-        TRAVERSER.depthFirst(addSearchTypesVisitor, typeMap.values());
-        GraphQLType queryWithSearch = addSearchTypesVisitor.getQuery();
-        if (log.isTraceEnabled()) {
-            log.trace("Query:\n{}", printSchema(queryWithSearch));
+        if (searchIndex != null) {
+            log.info("Creating root \"Query\" search field and search types");
+            AddSearchTypesVisitor addSearchTypesVisitor = new AddSearchTypesVisitor(typeMap, query);
+            TRAVERSER.depthFirst(addSearchTypesVisitor, typeMap.values());
+            GraphQLType queryWithSearch = addSearchTypesVisitor.getQuery();
+            if (log.isTraceEnabled()) {
+                log.trace("Query:\n{}", printSchema(queryWithSearch));
+            }
         }
 
         // Done with the query at this point so add it to the type map for the next passes.
@@ -179,10 +181,6 @@ public class GraphQLSchemaBuilder {
         AddConnectionVisitor addConnectionVisitor = new AddConnectionVisitor(typeMap);
         TRAVERSER.depthFirst(addConnectionVisitor, typeMap.values());
 
-        log.info("Resolving type references");
-        GraphQLTypeResolvingVisitor typeResolvingVisitor = new GraphQLTypeResolvingVisitor(typeMap);
-        TRAVERSER.depthFirst(typeResolvingVisitor, typeMap.values());
-
         if (log.isDebugEnabled()) {
             log.debug("Final schema:\n{}", printSchema(typeMap.values()));
         }
@@ -192,6 +190,11 @@ public class GraphQLSchemaBuilder {
                 LinkDirective.INSTANCE,
                 ReverseLinkDirective.INSTANCE
         );
+
+        // Resolve references before using RegistrySetupVisitor
+        log.info("Resolving type references");
+        GraphQLTypeResolvingVisitor typeResolvingVisitor = new GraphQLTypeResolvingVisitor(typeMap);
+        TRAVERSER.depthFirst(typeResolvingVisitor, typeMap.values());
 
         RegistrySetupVisitor fetcherSetupVisitor = new RegistrySetupVisitor(persistence, namespace, searchIndex);
         TRAVERSER.depthFirst(fetcherSetupVisitor, typeMap.values());
