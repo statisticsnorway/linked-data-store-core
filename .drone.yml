@@ -25,3 +25,5 @@ steps:
     branch:
     - master
     - develop
+    event:
+    - push
