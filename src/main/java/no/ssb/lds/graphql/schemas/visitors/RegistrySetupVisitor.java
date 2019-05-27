@@ -7,7 +7,6 @@ import graphql.schema.GraphQLDirectiveContainer;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLFieldsContainer;
 import graphql.schema.GraphQLInterfaceType;
-import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLOutputType;
 import graphql.schema.GraphQLType;
@@ -32,8 +31,7 @@ import no.ssb.lds.graphql.fetcher.QueryConnectionFetcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Stack;
 
@@ -42,7 +40,7 @@ import static graphql.schema.GraphQLTypeUtil.isNotWrapped;
 import static graphql.schema.GraphQLTypeUtil.simplePrint;
 import static graphql.schema.GraphQLTypeUtil.unwrapAll;
 import static graphql.schema.GraphQLTypeUtil.unwrapType;
-import static no.ssb.lds.graphql.directives.DomainDirective.hasDomainDirective;
+import static no.ssb.lds.graphql.schemas.visitors.ReverseLinkBuildingVisitor.computePath;
 
 public class RegistrySetupVisitor extends GraphQLTypeVisitorStub {
 
@@ -205,23 +203,7 @@ public class RegistrySetupVisitor extends GraphQLTypeVisitorStub {
     }
 
     private JsonNavigationPath getJsonNavigationPath(GraphQLFieldDefinition field, TraverserContext<GraphQLType> context) {
-        Deque<String> parts = new ArrayDeque<>();
-        parts.addFirst(field.getName());
-        // Iterate through parents until we find a domain object.
-        for (GraphQLType currentNode : context.getParentNodes()) {
-            if (currentNode instanceof GraphQLList) {
-                parts.addFirst("[]");
-            }
-            if (currentNode instanceof GraphQLFieldDefinition) {
-                parts.addFirst(currentNode.getName());
-            }
-            if (currentNode instanceof GraphQLObjectType) {
-                if (hasDomainDirective((GraphQLObjectType) currentNode)) {
-                    break;
-                }
-            }
-        }
-        parts.addFirst("$");
+        Collection<String> parts = computePath(field, context);
         return JsonNavigationPath.from(parts);
     }
 

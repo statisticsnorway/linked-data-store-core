@@ -77,6 +77,7 @@ public class ReverseLinkBuildingVisitor extends GraphQLTypeVisitorStub {
 
     public static Collection<String> computePath(GraphQLFieldDefinition node, TraverserContext<GraphQLType> context) {
         List<GraphQLType> types = new ArrayList<>();
+        types.add(node.getType());
         types.add(node);
         types.addAll(context.getParentNodes());
         Deque<String> parts = new ArrayDeque<>();
@@ -84,14 +85,17 @@ public class ReverseLinkBuildingVisitor extends GraphQLTypeVisitorStub {
             if (type instanceof GraphQLNonNull) {
                 type = ((GraphQLNonNull) type).getWrappedType();
             }
-            if (type instanceof GraphQLList) {
+            // TODO: We need to use annotations to mark relation types.
+            if (type instanceof GraphQLList
+                    || type.getName().endsWith("Connection")) {
                 parts.addFirst("[]");
+                continue;
             }
             if (type instanceof GraphQLFieldDefinition) {
                 parts.addFirst(type.getName());
             }
             if (type instanceof GraphQLObjectType) {
-                if (hasDomainDirective((GraphQLObjectType) type)) {
+                if (!parts.isEmpty() && hasDomainDirective((GraphQLObjectType) type)) {
                     break;
                 }
             }
