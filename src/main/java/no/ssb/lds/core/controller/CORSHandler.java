@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * A handler that implements https://www.w3.org/TR/cors/#resource-processing-model.
@@ -137,6 +138,13 @@ public class CORSHandler implements HttpHandler {
     private void checkHeaders(HttpServerExchange exchange) throws OutOfScopeException {
         // If there are no Access-Control-Request-Headers headers let header field-names be the empty list.
         List<String> requestHeaders = getHeaderOrEmpty(exchange, ACCESS_CONTROL_REQUEST_HEADERS);
+
+        // Request headers can be comma separated
+        requestHeaders = requestHeaders.stream()
+                .flatMap(value -> Stream.of(value.split(",")))
+                .map(value -> value.trim())
+                .collect(Collectors.toList());
+
         // If any of the header field-names is not a ASCII case-insensitive match for any of the values in
         // list of headers do not set any additional headers and terminate this set of steps.
         boolean isMatch = false;
