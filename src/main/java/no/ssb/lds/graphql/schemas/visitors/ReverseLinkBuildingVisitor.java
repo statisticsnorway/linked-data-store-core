@@ -10,6 +10,7 @@ import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeReference;
 import graphql.schema.GraphQLTypeUtil;
 import graphql.schema.GraphQLTypeVisitorStub;
+import graphql.schema.GraphQLUnionType;
 import graphql.util.TraversalControl;
 import graphql.util.TraverserContext;
 import no.ssb.lds.api.json.JsonNavigationPath;
@@ -74,9 +75,8 @@ public class ReverseLinkBuildingVisitor extends GraphQLTypeVisitorStub {
         }
     }
 
-    private Collection<String> computePath(GraphQLFieldDefinition node, TraverserContext<GraphQLType> context) {
+    public static Collection<String> computePath(GraphQLFieldDefinition node, TraverserContext<GraphQLType> context) {
         List<GraphQLType> types = new ArrayList<>();
-        types.add(node.getType());
         types.add(node);
         types.addAll(context.getParentNodes());
         Deque<String> parts = new ArrayDeque<>();
@@ -100,13 +100,40 @@ public class ReverseLinkBuildingVisitor extends GraphQLTypeVisitorStub {
         return parts;
     }
 
+    /**
+     * Checks that the node has a link directive.
+     */
+    public static Optional<LinkDirective> getLinkDirective(GraphQLFieldDefinition node) {
+        for (GraphQLDirective directive : node.getDirectives()) {
+            if (directive instanceof LinkDirective) {
+                return Optional.of((LinkDirective) directive);
+            } else if (directive.getName().equals(NAME)) {
+                return Optional.of(newLinkDirective(directive));
+            }
+        }
+        return Optional.empty();
+    }
+
     private boolean addReverseField(GraphQLFieldDefinition node, TraverserContext<GraphQLType> context, String reverseName) {
+
         String sourceName = GraphQLTypeUtil.unwrapAll(context.getParentNode()).getName();
         String targetName = GraphQLTypeUtil.unwrapType(node.getType()).peek().getName();
 
         GraphQLOutputType source = getObjectType(sourceName);
         GraphQLOutputType target = getObjectType(targetName);
 
+        if (target instanceof GraphQLUnionType) {
+            boolean replaced = false;
+            for (GraphQLOutputType concreteType : ((GraphQLUnionType) target).getTypes()) {
+                replaced = addReverseField(node, context, reverseName, source, getObjectType(concreteType.getName()));
+            }
+            return replaced;
+        } else {
+            return addReverseField(node, context, reverseName, source, target);
+        }
+    }
+
+    private boolean addReverseField(GraphQLFieldDefinition node, TraverserContext<GraphQLType> context, String reverseName, GraphQLOutputType source, GraphQLOutputType target) {
         // Copy the definition
         GraphQLObjectType.Builder nodeCopy = GraphQLObjectType.newObject((GraphQLObjectType) target);
 
@@ -124,23 +151,19 @@ public class ReverseLinkBuildingVisitor extends GraphQLTypeVisitorStub {
                 .withDirective(ReverseLinkDirective.newReverseLinkDirective(true, mappedBy.serialize()))
                 .build();
 
-        log.debug("Adding reverseLink {} from target {} to source {}", fieldDefinition, targetName, sourceName);
+        log.debug("Adding reverseLink {} from target {} to source {}", fieldDefinition, target.getName(), source.getName());
         nodeCopy.field(fieldDefinition);
 
-        return typeMap.replace(target.getName(), target, nodeCopy.build());
-    }
-
-    /**
-     * Checks that the node has a link directive.
-     */
-    private Optional<LinkDirective> getLinkDirective(GraphQLFieldDefinition node) {
-        for (GraphQLDirective directive : node.getDirectives()) {
-            if (directive instanceof LinkDirective) {
-                return Optional.of((LinkDirective) directive);
-            } else if (directive.getName().equals(NAME)) {
-                return Optional.of(newLinkDirective(directive));
-            }
+        // TODO: Figure out why this fails. We should have tree with same instance of all types
+        //if (!typeMap.replace(existing.getName(), existing, newObject)) {
+        //    throw new IllegalArgumentException(String.format(
+        //            "Could not replace %s, the schema probably contains references", existing.getName()
+        //    ));
+        //}
+        GraphQLType oldObject = typeMap.put(target.getName(), nodeCopy.build());
+        if (oldObject != null && Objects.equals(oldObject, target)) {
+            log.warn("Existing object {} is not equal to visited object {}", target, oldObject);
         }
-        return Optional.empty();
+        return true;
     }
 }
