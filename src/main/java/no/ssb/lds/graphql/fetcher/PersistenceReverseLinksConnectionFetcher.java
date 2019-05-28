@@ -11,6 +11,7 @@ import no.ssb.lds.api.json.JsonNavigationPath;
 import no.ssb.lds.api.persistence.DocumentKey;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
+import no.ssb.lds.api.persistence.reactivex.Range;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 
 import java.util.Collections;
@@ -71,15 +72,26 @@ public class PersistenceReverseLinksConnectionFetcher extends ConnectionFetcher<
                 return new DefaultConnection<>(Collections.emptyList(), pageInfo);
             }
 
-            if (parameters.getFirst() != null) {
+            if (parameters.getFirst() != null && edges.size() > parameters.getFirst()) {
                 edges = edges.subList(0, parameters.getFirst());
             }
 
             Edge<Map<String, Object>> firstEdge = edges.get(0);
             Edge<Map<String, Object>> lastEdge = edges.get(edges.size() - 1);
 
-            boolean hasPrevious = true; // !firstEdge.getCursor().getValue().equals(first.get());
-            boolean hasNext = true; // !lastEdge.getCursor().getValue().equals(last.get());
+            boolean hasPrevious = true;
+            if (environment.getSelectionSet().contains("pageInfo/hasPreviousPage")) {
+                hasPrevious = persistence.readSourceDocuments(tx, parameters.getSnapshot(), nameSpace, targetEntityName,
+                        targetId, relationPath, sourceEntityName, Range.lastBefore(1, firstEdge.getCursor().getValue())
+                ).isEmpty().map(wasEmpty -> !wasEmpty).blockingGet();
+            }
+
+            boolean hasNext = true;
+            if (environment.getSelectionSet().contains("pageInfo/hasNextPage")) {
+                hasNext = persistence.readSourceDocuments(tx, parameters.getSnapshot(), nameSpace, targetEntityName,
+                        targetId, relationPath, sourceEntityName, Range.firstAfter(1, lastEdge.getCursor().getValue())
+                ).isEmpty().map(wasEmpty -> !wasEmpty).blockingGet();
+            }
 
             PageInfo pageInfo = new DefaultPageInfo(
                     firstEdge.getCursor(),
