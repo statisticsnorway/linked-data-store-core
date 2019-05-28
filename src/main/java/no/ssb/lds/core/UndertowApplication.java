@@ -97,7 +97,7 @@ public class UndertowApplication {
                 SpecificationConverter specificationConverter = new SpecificationConverter();
                 definitionRegistry = specificationConverter.convert(specification);
             }
-            GraphQLSchema schema = schemaBuilder.getGraphQL(schemaBuilder.parseSchema(definitionRegistry));
+            GraphQLSchema schema = schemaBuilder.getGraphQL(GraphQLSchemaBuilder.parseSchema(definitionRegistry));
 
             GraphQL graphQL = GraphQL.newGraphQL(schema).build();
 

@@ -10,7 +10,6 @@ import graphql.schema.GraphQLNonNull;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLOutputType;
 import graphql.schema.GraphQLType;
-import graphql.schema.GraphQLTypeUtil;
 import graphql.schema.GraphQLTypeVisitorStub;
 import graphql.util.TraversalControl;
 import graphql.util.TraverserContext;
@@ -25,6 +24,10 @@ import java.util.Objects;
 import static graphql.Scalars.GraphQLBoolean;
 import static graphql.Scalars.GraphQLInt;
 import static graphql.Scalars.GraphQLString;
+import static graphql.schema.GraphQLTypeUtil.isList;
+import static graphql.schema.GraphQLTypeUtil.simplePrint;
+import static graphql.schema.GraphQLTypeUtil.unwrapNonNull;
+import static graphql.schema.GraphQLTypeUtil.unwrapType;
 
 /**
  * Add a @pagination annotation to all fields marked with @link or @reverseLink.
@@ -82,8 +85,8 @@ public class AddConnectionVisitor extends GraphQLTypeVisitorStub {
     private List<GraphQLFieldDefinition> findFieldsWithPagination(GraphQLFieldsContainer node) {
         List<GraphQLFieldDefinition> fieldsWithPagination = new ArrayList<>();
         for (GraphQLFieldDefinition fieldDefinition : node.getFieldDefinitions()) {
-            if (hasLinkWithPagination(fieldDefinition)) {
-                log.trace("Found link from {} to {} on field {}", node.getName(), GraphQLTypeUtil.simplePrint(fieldDefinition.getType()),
+            if (hasLinkWithPagination(fieldDefinition) && isList(unwrapNonNull(fieldDefinition.getType()))) {
+                log.trace("Found link from {} to {} on field {}", node.getName(), simplePrint(fieldDefinition.getType()),
                         fieldDefinition.getName());
                 fieldsWithPagination.add(fieldDefinition);
             }
@@ -101,18 +104,28 @@ public class AddConnectionVisitor extends GraphQLTypeVisitorStub {
 
         log.debug("Transforming {} fields to pagination fields in {}", fieldsWithPagination.size(), node.getName());
 
-        GraphQLObjectType.Builder newObject = GraphQLObjectType.newObject(node);
+        GraphQLObjectType.Builder newObject = GraphQLObjectType.newObject(
+                (GraphQLObjectType) typeMap.get(node.getName()));
         for (GraphQLFieldDefinition fieldDefinition : fieldsWithPagination) {
             newObject.field(createConnectionField(node, fieldDefinition));
         }
 
-        typeMap.put(node.getName(), newObject.build());
+        // TODO: Figure out why this fails. We should have tree with same instance of all types
+        //if (!typeMap.replace(existing.getName(), existing, newObject)) {
+        //    throw new IllegalArgumentException(String.format(
+        //            "Could not replace %s, the schema probably contains references", existing.getName()
+        //    ));
+        //}
+        GraphQLType oldObject = typeMap.put(node.getName(), newObject.build());
+        if (oldObject != null && Objects.equals(oldObject, node)) {
+            log.warn("Existing object {} is not equal to visited object {}", node, oldObject);
+        }
 
         return TraversalControl.CONTINUE;
     }
 
     private GraphQLFieldDefinition createConnectionField(GraphQLType from, GraphQLFieldDefinition field) {
-        GraphQLType to = GraphQLTypeUtil.unwrapType(field.getType()).pop();
+        GraphQLType to = unwrapType(field.getType()).pop();
         GraphQLFieldDefinition.Builder newFieldDefinition = GraphQLFieldDefinition.newFieldDefinition(field);
         return newFieldDefinition
                 .argument(GraphQLArgument.newArgument().name("first").type(GraphQLInt).build())

@@ -11,6 +11,7 @@ import no.ssb.lds.api.json.JsonNavigationPath;
 import no.ssb.lds.api.persistence.DocumentKey;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.json.JsonDocument;
+import no.ssb.lds.api.persistence.reactivex.Range;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 
 import java.util.Collections;
@@ -78,8 +79,19 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
             Edge<Map<String, Object>> firstEdge = edges.get(0);
             Edge<Map<String, Object>> lastEdge = edges.get(edges.size() - 1);
 
-            boolean hasPrevious = true; // !firstEdge.getCursor().getValue().equals(first.get());
-            boolean hasNext = true; // !lastEdge.getCursor().getValue().equals(last.get());
+            boolean hasPrevious = true;
+            if (environment.getSelectionSet().contains("pageInfo/hasPreviousPage")) {
+                hasPrevious = persistence.readTargetDocuments(tx, parameters.getSnapshot(), nameSpace, sourceEntityName,
+                        sourceId, relationPath, targetEntityName, Range.lastBefore(1, firstEdge.getCursor().getValue())
+                ).isEmpty().map(wasEmpty -> !wasEmpty).blockingGet();
+            }
+
+            boolean hasNext = true;
+            if (environment.getSelectionSet().contains("pageInfo/hasNextPage")) {
+                hasNext = persistence.readTargetDocuments(tx, parameters.getSnapshot(), nameSpace, sourceEntityName,
+                        sourceId, relationPath, targetEntityName, Range.firstAfter(1, lastEdge.getCursor().getValue())
+                ).isEmpty().map(wasEmpty -> !wasEmpty).blockingGet();
+            }
 
             PageInfo pageInfo = new DefaultPageInfo(
                     firstEdge.getCursor(),
