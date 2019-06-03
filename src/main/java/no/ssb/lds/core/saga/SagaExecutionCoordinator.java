@@ -104,7 +104,7 @@ public class SagaExecutionCoordinator {
         });
         SagaExecution sagaExecution = new SagaExecution(sagaLog, threadPool, saga, adapterLoader);
 
-        SagaHandoffControl handoffControl = startSagaExecutionWithThrottling(sagaExecution, input, executionId, logId);
+        SagaHandoffControl handoffControl = startSagaExecutionWithThrottling(sagaExecution, input, executionId, logId, sagaLog);
 
         sagasObserver.registerSaga(handoffControl);
         SelectableFuture<SagaHandoffResult> future = sync ?
@@ -122,7 +122,7 @@ public class SagaExecutionCoordinator {
         }
     }
 
-    private SagaHandoffControl startSagaExecutionWithThrottling(SagaExecution sagaExecution, JsonNode input, String executionId, String logId) {
+    private SagaHandoffControl startSagaExecutionWithThrottling(SagaExecution sagaExecution, JsonNode input, String executionId, String logId, SagaLog sagaLog) {
         SagaHandoffControl handoffControl;
         try {
             semaphore.acquire();
@@ -133,6 +133,7 @@ public class SagaExecutionCoordinator {
         AtomicBoolean permitReleased = new AtomicBoolean(false);
         try {
             handoffControl = sagaExecution.executeSaga(executionId, input, false, r -> {
+                sagaLog.truncate();
                 if (permitReleased.compareAndSet(false, true)) {
                     semaphore.release();
                 }
