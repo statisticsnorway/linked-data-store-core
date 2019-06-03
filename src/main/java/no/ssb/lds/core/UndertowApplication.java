@@ -21,9 +21,7 @@ import no.ssb.lds.core.controller.CORSHandler;
 import no.ssb.lds.core.controller.HealthCheckHandler;
 import no.ssb.lds.core.controller.NamespaceController;
 import no.ssb.lds.core.persistence.PersistenceConfigurator;
-import no.ssb.lds.core.saga.FileSagaLog;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
-import no.ssb.lds.core.saga.SagaLogInitializer;
 import no.ssb.lds.core.saga.SagaRepository;
 import no.ssb.lds.core.saga.SagasObserver;
 import no.ssb.lds.core.search.SearchIndexConfigurator;
@@ -31,15 +29,18 @@ import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import no.ssb.lds.graphql.GraphqlHttpHandler;
 import no.ssb.lds.graphql.schemas.GraphQLSchemaBuilder;
 import no.ssb.lds.graphql.schemas.SpecificationConverter;
-import no.ssb.saga.execution.sagalog.SagaLog;
+import no.ssb.sagalog.SagaLogInitializer;
+import no.ssb.sagalog.SagaLogPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.List;
 import java.util.Optional;
+import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -59,11 +60,12 @@ public class UndertowApplication {
     private final SagaExecutionCoordinator sec;
     private final SagaRepository sagaRepository;
     private final SagasObserver sagasObserver;
-    private final SagaLog sagaLog;
+    private final SagaLogPool sagaLogPool;
     private final SelectableThreadPoolExectutor sagaThreadPool;
+
     UndertowApplication(Specification specification, RxJsonPersistence persistence, SagaExecutionCoordinator sec,
                         SagaRepository sagaRepository, SagasObserver sagasObserver, String host, int port,
-                        SagaLog sagaLog, SelectableThreadPoolExectutor sagaThreadPool,
+                        SagaLogPool sagaLogPool, SelectableThreadPoolExectutor sagaThreadPool,
                         NamespaceController namespaceController, SearchIndex searchIndex,
                         DynamicConfiguration configuration) {
         this.specification = specification;
@@ -73,7 +75,7 @@ public class UndertowApplication {
         this.sec = sec;
         this.sagaRepository = sagaRepository;
         this.sagasObserver = sagasObserver;
-        this.sagaLog = sagaLog;
+        this.sagaLogPool = sagaLogPool;
         this.sagaThreadPool = sagaThreadPool;
 
         String namespace = configuration.evaluateToString("namespace.default");
@@ -164,7 +166,11 @@ public class UndertowApplication {
         String[] specificationSchema = ("".equals(schemaConfigStr) ? new String[0] : schemaConfigStr.split(","));
         JsonSchemaBasedSpecification specification = JsonSchemaBasedSpecification.create(specificationSchema);
         RxJsonPersistence persistence = PersistenceConfigurator.configurePersistence(configuration, specification);
-        SagaLog sagaLog = SagaLogInitializer.initializeSagaLog(configuration.evaluateToString("saga.log.type"), configuration.evaluateToString("saga.log.type.file.path"));
+
+        ServiceLoader<SagaLogInitializer> loader = ServiceLoader.load(SagaLogInitializer.class);
+        String sagalogProviderClass = configuration.evaluateToString("sagalog.provider");
+        SagaLogPool sagaLogPool = loader.stream().filter(c -> sagalogProviderClass.equals(c.type().getName())).findFirst().orElseThrow().get().initialize(configuration.asMap());
+
         String host = configuration.evaluateToString("http.host");
         SearchIndex searchIndex = SearchIndexConfigurator.configureSearchIndex(configuration);
         SagaRepository sagaRepository;
@@ -196,7 +202,9 @@ public class UndertowApplication {
                 },
                 new ThreadPoolExecutor.AbortPolicy()
         );
-        SagaExecutionCoordinator sec = new SagaExecutionCoordinator(sagaLog, sagaRepository, sagasObserver, sagaThreadPool);
+        int numberOfSagaLogs = configuration.evaluateToInt("saga.number-of-logs");
+
+        SagaExecutionCoordinator sec = new SagaExecutionCoordinator(sagaLogPool, numberOfSagaLogs, sagaRepository, sagasObserver, sagaThreadPool);
 
         HystrixThreadPoolProperties.Setter().withMaximumSize(50); // TODO Configure Hystrix properly
 
@@ -210,7 +218,7 @@ public class UndertowApplication {
         );
 
         return new UndertowApplication(specification, persistence, sec, sagaRepository, sagasObserver, host, port,
-                sagaLog, sagaThreadPool, namespaceController,
+                sagaLogPool, sagaThreadPool, namespaceController,
                 searchIndex, configuration);
     }
 
@@ -233,8 +241,8 @@ public class UndertowApplication {
         sec.startThreadpoolWatchdog();
     }
 
-    public void triggerRecoveryOfIncompleteSagas() {
-        sec.recoverIncompleteSagas();
+    public CompletableFuture triggerForwardRecoveryOfIncompleteSagas() {
+        return sec.completeIncompleteSagas();
     }
 
     public String getHost() {
@@ -257,9 +265,7 @@ public class UndertowApplication {
         sagasObserver.shutdown();
         sec.shutdown();
         shutdownAndAwaitTermination(sagaThreadPool);
-        if (sagaLog instanceof FileSagaLog) {
-            ((FileSagaLog) sagaLog).close();
-        }
+        sagaLogPool.shutdown();
         LOG.info("Leaving.. Bye!");
     }
 
@@ -283,8 +289,8 @@ public class UndertowApplication {
         return sagasObserver;
     }
 
-    public SagaLog getSagaLog() {
-        return sagaLog;
+    public SagaLogPool getSagaLogPool() {
+        return sagaLogPool;
     }
 
     public SelectableThreadPoolExectutor getSagaThreadPool() {

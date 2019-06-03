@@ -1,5 +1,6 @@
 import no.ssb.lds.api.persistence.PersistenceInitializer;
 import no.ssb.lds.api.search.SearchIndexProvider;
+import no.ssb.sagalog.SagaLogInitializer;
 
 module no.ssb.lds.core {
     requires no.ssb.lds.persistence.api;
@@ -8,6 +9,7 @@ module no.ssb.lds.core {
     requires no.ssb.concurrent.futureselector;
     requires no.ssb.saga.api;
     requires no.ssb.saga.execution;
+    requires no.ssb.sagalog;
     requires jdk.unsupported;
     requires java.base;
     requires java.net.http;
@@ -31,6 +33,7 @@ module no.ssb.lds.core {
 
     uses PersistenceInitializer;
     uses SearchIndexProvider;
+    uses SagaLogInitializer;
 
     exports no.ssb.lds.core;
 }

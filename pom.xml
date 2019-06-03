@@ -105,6 +105,19 @@
         </dependency>
 
         <dependency>
+            <groupId>no.ssb.saga</groupId>
+            <artifactId>sagalog-api</artifactId>
+            <version>0.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>no.ssb.saga</groupId>
+            <artifactId>sagalog-file</artifactId>
+            <version>0.1</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>no.ssb.lds</groupId>
             <artifactId>linked-data-store-persistence-provider-memory</artifactId>
             <version>0.8-SNAPSHOT</version>
@@ -230,7 +243,7 @@
         <dependency>
             <groupId>no.ssb.saga</groupId>
             <artifactId>distributed-saga-execution</artifactId>
-            <version>0.2</version>
+            <version>0.3-SNAPSHOT</version>
         </dependency>
 
         <dependency>
