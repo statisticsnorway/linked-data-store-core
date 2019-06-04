@@ -22,6 +22,7 @@ import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -43,6 +44,7 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
     private final String nameSpace;
 
     private final RxJsonPersistence persistence;
+    public static final Comparator<JsonDocument> BY_ID = Comparator.comparing(a -> a.key().id());
 
     public PersistenceLinksConnectionFetcher(RxJsonPersistence persistence, String nameSpace, String sourceEntityName, JsonNavigationPath path, String targetEntityName) {
         this.persistence = Objects.requireNonNull(persistence);
@@ -98,10 +100,13 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
                 documents = Flowable.merge(documents, concreteDocuments);
             }
             // Limit the flow.
-            if (!concreteTypes.isEmpty() && parameters.getRange().isLimited()) {
+            if (concreteTypes.size() > 1 && parameters.getRange().isLimited()) {
                 documents = parameters.getRange().isBackward()
                         ? documents.takeLast(parameters.getRange().getLimit())
                         : documents.limit(parameters.getRange().getLimit());
+                documents = parameters.getRange().isBackward()
+                        ? documents.sorted(BY_ID)
+                        : documents.sorted(BY_ID.reversed());
             }
             List<Edge<Map<String, Object>>> edges = documents.map(document -> toEdge(document)).toList()
                     .blockingGet();
