@@ -61,7 +61,7 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
         return key.id();
     }
 
-    List<GraphQLOutputType> getConcreteTypes(GraphQLSchema graphQLSchema, String typeName) {
+    private List<GraphQLOutputType> getConcreteTypes(GraphQLSchema graphQLSchema, String typeName) {
         GraphQLType actualType = graphQLSchema.getType(typeName);
         if (actualType instanceof GraphQLUnionType) {
             return ((GraphQLUnionType) actualType).getTypes();
@@ -99,8 +99,9 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
             }
             // Limit the flow.
             if (!concreteTypes.isEmpty() && parameters.getRange().isLimited()) {
-
-                documents = documents.limit(parameters.getRange().getLimit());
+                documents = parameters.getRange().isBackward()
+                        ? documents.takeLast(parameters.getRange().getLimit())
+                        : documents.limit(parameters.getRange().getLimit());
             }
             List<Edge<Map<String, Object>>> edges = documents.map(document -> toEdge(document)).toList()
                     .blockingGet();
@@ -109,10 +110,6 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
                 PageInfo pageInfo = new DefaultPageInfo(null, null, false,
                         false);
                 return new DefaultConnection<>(Collections.emptyList(), pageInfo);
-            }
-
-            if (parameters.getFirst() != null) {
-                edges = edges.subList(0, parameters.getFirst());
             }
 
             Edge<Map<String, Object>> firstEdge = edges.get(0);
