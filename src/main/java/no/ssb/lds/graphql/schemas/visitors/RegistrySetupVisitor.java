@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Stack;
+import java.util.stream.Collectors;
 
 import static graphql.schema.GraphQLTypeUtil.isList;
 import static graphql.schema.GraphQLTypeUtil.isNotWrapped;
@@ -242,7 +243,17 @@ public class RegistrySetupVisitor extends GraphQLTypeVisitorStub {
 
     private TraversalControl visitOneToOneLink(GraphQLFieldDefinition field, TraverserContext<GraphQLType> context) {
         GraphQLFieldsContainer sourceObject = (GraphQLFieldsContainer) context.getParentNode();
-        GraphQLOutputType targetType = field.getType();
+        GraphQLUnmodifiedType targetType = unwrapAll(field.getType());
+
+        // TODO: Factorize the logic in PersistenceLinksConnectionFetcher.
+        String targetTypeName;
+        if (targetType instanceof GraphQLUnionType) {
+            targetTypeName = ((GraphQLUnionType) targetType).getTypes().stream()
+                    .map(GraphQLType::getName)
+                    .collect(Collectors.joining("|", "(", ")"));
+        } else {
+            targetTypeName = targetType.getName();
+        }
         if (sourceObject.getName().equals("Query")) {
             log.trace("RootOneToOne: {} -> {} -> {} ",
                     simplePrint(sourceObject),
@@ -250,7 +261,7 @@ public class RegistrySetupVisitor extends GraphQLTypeVisitorStub {
                     simplePrint(unwrapAll(targetType))
             );
             registry.dataFetcher(FieldCoordinates.coordinates(sourceObject, field), new PersistenceFetcher(persistence,
-                    namespace, unwrapAll(targetType).getName()));
+                    namespace, targetTypeName));
         } else {
             log.trace("OneToOne: {} -> {} -> {} ",
                     simplePrint(sourceObject),
@@ -258,7 +269,7 @@ public class RegistrySetupVisitor extends GraphQLTypeVisitorStub {
                     simplePrint(unwrapAll(targetType))
             );
             registry.dataFetcher(FieldCoordinates.coordinates(sourceObject, field), new PersistenceLinkFetcher(
-                    persistence, namespace, field.getName(), unwrapAll(targetType).getName()));
+                    persistence, namespace, field.getName(), targetTypeName));
         }
         return TraversalControl.CONTINUE;
     }
