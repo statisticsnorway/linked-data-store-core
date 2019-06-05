@@ -100,13 +100,15 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
                 documents = Flowable.merge(documents, concreteDocuments);
             }
             // Limit the flow.
-            if (concreteTypes.size() > 1 && parameters.getRange().isLimited()) {
+            if (concreteTypes.size() > 1) {
+                if (parameters.getRange().isLimited()) {
+                    documents = parameters.getRange().isBackward()
+                            ? documents.takeLast(parameters.getRange().getLimit())
+                            : documents.limit(parameters.getRange().getLimit());
+                }
                 documents = parameters.getRange().isBackward()
-                        ? documents.takeLast(parameters.getRange().getLimit())
-                        : documents.limit(parameters.getRange().getLimit());
-                documents = parameters.getRange().isBackward()
-                        ? documents.sorted(BY_ID)
-                        : documents.sorted(BY_ID.reversed());
+                        ? documents.sorted(BY_ID.reversed())
+                        : documents.sorted(BY_ID);
             }
             List<Edge<Map<String, Object>>> edges = documents.map(document -> toEdge(document)).toList()
                     .blockingGet();
