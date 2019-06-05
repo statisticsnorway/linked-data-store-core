@@ -1,0 +1,4 @@
+{
+  "query": "{\n  Owner {\n    edges {\n      node {\n        animals {\n          edges {\n            node {\n              __typename\n              ... on Cat {\n                name\n              }\n              ... on Dog {\n                name\n              }\n            }\n          }\n        }\n        favorite {\n          __typename\n          ... on Cat {\n            name\n          }\n          ... on Dog {\n            name\n          }\n        }\n      }\n    }\n  }\n  Cat {\n    edges {\n      cursor\n      node {\n        name\n      }\n    }\n  }\n  Dog {\n    edges {\n      cursor\n      node {\n        name\n      }\n    }\n  }\n}\n",
+  "variables": null
+}

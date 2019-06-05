@@ -1,8 +1,8 @@
 package no.ssb.lds.graphql;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import no.ssb.lds.api.persistence.json.JsonTools;
-import no.ssb.lds.core.utils.FileAndClasspathReaderUtils;
 import no.ssb.lds.test.ConfigurationOverride;
 import no.ssb.lds.test.client.TestClient;
 import no.ssb.lds.test.server.TestServerListener;
@@ -11,14 +11,45 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
+import java.io.IOException;
+import java.util.Comparator;
 
+import static no.ssb.lds.core.utils.FileAndClasspathReaderUtils.readFileOrClasspathResource;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.testng.Assert.assertEquals;
 
 @Listeners(TestServerListener.class)
 public class GraphQLIntegrationTest {
 
+    static final ObjectMapper MAPPER = new ObjectMapper();
+
     @Inject
     TestClient client;
+    private Comparator<JsonNode> jsonNodeComparator;
+
+
+    @Test
+    @ConfigurationOverride({
+            "graphql.enabled", "true",
+            "graphql.search.enabled", "false",
+            "specification.schema", "spec/abstract/Dog.json,spec/abstract/Cat.json,spec/abstract/Owner.json"
+    })
+    public void testAbstractRelations() throws IOException {
+        putResource("/data/Cat/cat1", "spec/abstract/cat1.json");
+        putResource("/data/Cat/cat2", "spec/abstract/cat2.json");
+        putResource("/data/Dog/dog1", "spec/abstract/dog1.json");
+        putResource("/data/Dog/dog2", "spec/abstract/dog2.json");
+        putResource("/data/Owner/owner1", "spec/abstract/owner1.json");
+        putResource("/data/Owner/owner2", "spec/abstract/owner2.json");
+
+        JsonNode result = executeGraphQLQuery("spec/abstract/query.json");
+
+        JsonNode expectedResult = MAPPER.readTree(readFileOrClasspathResource("spec/abstract/query-response.json"));
+
+        assertThat(result)
+                .isEqualTo(expectedResult);
+
+    }
 
     @Test
     @ConfigurationOverride({
@@ -29,7 +60,7 @@ public class GraphQLIntegrationTest {
 
         client.options("/graphql",
                 "Access-Controll-Request-Method", "POST"
-                ).response().headers();
+        ).response().headers();
     }
 
     @Test
@@ -79,7 +110,7 @@ public class GraphQLIntegrationTest {
         Assert.assertEquals(result.get("data").get("Search").get("edges").size(), 1);
         Assert.assertEquals(result.get("data").get("Search").get("edges").get(0).get("node").get("name").textValue(), "Sirius");
         // Check that the entity index is updated
-        client.put("/data/provisionagreement/2a41c", FileAndClasspathReaderUtils.readFileOrClasspathResource(
+        client.put("/data/provisionagreement/2a41c", readFileOrClasspathResource(
                 "demo/1-sirius.json").replace("Sirius", "Jupiter"));
         result = executeGraphQLQuery("spec/demo/graphql/search_address.json", "Jupiter");
         assertNoErrors(result);
@@ -104,7 +135,7 @@ public class GraphQLIntegrationTest {
     }
 
     private void putResource(String path, String resourceFilePath) {
-        client.put(path + "?sync=true", FileAndClasspathReaderUtils.readFileOrClasspathResource(resourceFilePath));
+        client.put(path + "?sync=true", readFileOrClasspathResource(resourceFilePath));
     }
 
     private void assertNoErrors(JsonNode responseRootNode) {
@@ -118,7 +149,7 @@ public class GraphQLIntegrationTest {
     }
 
     private JsonNode executeGraphQLQuery(String path, Object... params) {
-        String query = String.format(FileAndClasspathReaderUtils.readFileOrClasspathResource(path), params);
+        String query = String.format(readFileOrClasspathResource(path), params);
         return JsonTools.toJsonNode(client.postJson("/graphql", query)
                 .expect200Ok()
                 .body());

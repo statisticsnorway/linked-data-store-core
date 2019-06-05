@@ -1,0 +1,112 @@
+{
+  "data": {
+    "Owner": {
+      "edges": [
+        {
+          "node": {
+            "animals": {
+              "edges": [
+                {
+                  "node": {
+                    "__typename": "Cat",
+                    "name": "cat1"
+                  }
+                },
+                {
+                  "node": {
+                    "__typename": "Cat",
+                    "name": "cat2"
+                  }
+                },
+                {
+                  "node": {
+                    "__typename": "Dog",
+                    "name": "dog1"
+                  }
+                },
+                {
+                  "node": {
+                    "__typename": "Dog",
+                    "name": "dog2"
+                  }
+                }
+              ]
+            },
+            "favorite": {
+              "__typename": "Dog",
+              "name": "dog1"
+            }
+          }
+        },
+        {
+          "node": {
+            "animals": {
+              "edges": [
+                {
+                  "node": {
+                    "__typename": "Cat",
+                    "name": "cat1"
+                  }
+                },
+                {
+                  "node": {
+                    "__typename": "Cat",
+                    "name": "cat2"
+                  }
+                },
+                {
+                  "node": {
+                    "__typename": "Dog",
+                    "name": "dog1"
+                  }
+                },
+                {
+                  "node": {
+                    "__typename": "Dog",
+                    "name": "dog2"
+                  }
+                }
+              ]
+            },
+            "favorite": {
+              "__typename": "Cat",
+              "name": "cat1"
+            }
+          }
+        }
+      ]
+    },
+    "Cat": {
+      "edges": [
+        {
+          "cursor": "cat1",
+          "node": {
+            "name": "cat1"
+          }
+        },
+        {
+          "cursor": "cat2",
+          "node": {
+            "name": "cat2"
+          }
+        }
+      ]
+    },
+    "Dog": {
+      "edges": [
+        {
+          "cursor": "dog1",
+          "node": {
+            "name": "dog1"
+          }
+        },
+        {
+          "cursor": "dog2",
+          "node": {
+            "name": "dog2"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "$ref" : "#/definitions/Owner",
+  "definitions" : {
+    "Owner" : {
+      "type" : "object",
+      "properties" : {
+        "name" : {
+          "type" : "string"
+        },
+        "age" : {
+          "type" : "number"
+        },
+        "email" : {
+          "type" : "string"
+        },
+        "favorite" : {
+          "type" : "string"
+        },
+        "animals" : {
+          "type" : "array"
+        },
+        "_link_property_favorite" : {
+          "type" : "object",
+          "properties" : {
+            "Cat" : {
+              "type" : "null"
+            },
+            "Dog" : {
+              "type" : "null"
+            }
+          }
+        },
+        "_link_property_animals" : {
+          "type" : "object",
+          "properties" : {
+            "Cat" : {
+              "type" : "null"
+            },
+            "Dog" : {
+              "type" : "null"
+            }
+          }
+        }
+      },
+      "required" : [ "name", "email" ]
+    }
+  },
+  "$schema" : "http://json-schema.org/draft-04/schema#"
+}
