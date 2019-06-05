@@ -12,7 +12,6 @@ import org.testng.annotations.Test;
 
 import javax.inject.Inject;
 import java.io.IOException;
-import java.util.Comparator;
 
 import static no.ssb.lds.core.utils.FileAndClasspathReaderUtils.readFileOrClasspathResource;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,8 +24,6 @@ public class GraphQLIntegrationTest {
 
     @Inject
     TestClient client;
-    private Comparator<JsonNode> jsonNodeComparator;
-
 
     @Test
     @ConfigurationOverride({
