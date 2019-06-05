@@ -1,0 +1,7 @@
+{
+  "name": "dog2",
+  "age": 10,
+  "email" : "foo@bar.com",
+  "favorite" : "/Cat/cat1",
+  "animals" : ["/Dog/dog1", "/Dog/dog2", "/Cat/cat1", "/Cat/cat2"]
+}

@@ -72,10 +72,6 @@ public class PersistenceReverseLinksConnectionFetcher extends ConnectionFetcher<
                 return new DefaultConnection<>(Collections.emptyList(), pageInfo);
             }
 
-            if (parameters.getFirst() != null && edges.size() > parameters.getFirst()) {
-                edges = edges.subList(0, parameters.getFirst());
-            }
-
             Edge<Map<String, Object>> firstEdge = edges.get(0);
             Edge<Map<String, Object>> lastEdge = edges.get(edges.size() - 1);
 
