@@ -70,7 +70,7 @@ public class SpecificationConverter {
 
     public TypeDefinitionRegistry convert(Specification specification) {
 
-        log.debug("Converting specification {} to GraphQL IDL");
+        log.debug("Converting specification {} to GraphQL IDL", specification);
 
         registry = new TypeDefinitionRegistry();
 
