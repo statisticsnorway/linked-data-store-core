@@ -124,6 +124,14 @@ public class ManagedResourceHandler implements HttpHandler {
                         return;
                     }
 
+                    // check that we have a document id.
+                    if (managedDocumentId == null || "".equals(managedDocumentId)) {
+                        exchange.setStatusCode(400);
+                        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
+                        exchange.getResponseSender().send("Id was empty!");
+                        return;
+                    }
+
                     // deserialize request data
                     JsonNode requestData = JsonTools.toJsonNode(requestBody);
 
@@ -170,9 +178,10 @@ public class ManagedResourceHandler implements HttpHandler {
         ResourceElement topLevelElement = resourceContext.getFirstElement();
         String managedDomain = topLevelElement.name();
 
-        boolean sync = exchange.getQueryParameters()
-                .getOrDefault("sync", new LinkedList<>())
-                .stream().anyMatch(s -> "true".equalsIgnoreCase(s));
+        // True if defined and no false values.
+        Map<String, Deque<String>> parameters = exchange.getQueryParameters();
+        boolean sync = parameters.getOrDefault("sync", new LinkedList<>())
+                .stream().noneMatch("false"::equalsIgnoreCase);
 
         Saga saga = sagaRepository.get(SagaRepository.SAGA_DELETE_MANAGED_RESOURCE);
 
