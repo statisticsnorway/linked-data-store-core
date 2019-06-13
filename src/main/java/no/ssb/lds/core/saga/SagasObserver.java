@@ -69,6 +69,14 @@ public class SagasObserver implements Runnable {
                 // wait for next task to complete or fail
                 Selection<SagaHandoffResult, SagaHandoffControl> selected = selector.select();
 
+                if (selected.future == shutdownFuture) {
+                    // shutdown wanted, quit thread even if not all sagas are completed.
+                    if (selector.pending()) {
+                        LOG.warn("Shutting down SagaObserver even though there are pending sagas!");
+                    }
+                    return;
+                }
+
                 /*
                  * Deal with successful completion and failure of a the selected saga
                  */
