@@ -22,6 +22,7 @@ import no.ssb.lds.core.controller.HealthCheckHandler;
 import no.ssb.lds.core.controller.NamespaceController;
 import no.ssb.lds.core.persistence.PersistenceConfigurator;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
+import no.ssb.lds.core.saga.SagaRecoveryTrigger;
 import no.ssb.lds.core.saga.SagaRepository;
 import no.ssb.lds.core.saga.SagasObserver;
 import no.ssb.lds.core.search.SearchIndexConfigurator;
@@ -40,7 +41,6 @@ import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -62,13 +62,15 @@ public class UndertowApplication {
     private final SagasObserver sagasObserver;
     private final SagaLogPool sagaLogPool;
     private final SelectableThreadPoolExectutor sagaThreadPool;
+    private final SagaRecoveryTrigger sagaRecoveryTrigger;
 
     UndertowApplication(Specification specification, RxJsonPersistence persistence, SagaExecutionCoordinator sec,
-                        SagaRepository sagaRepository, SagasObserver sagasObserver, String host, int port,
+                        SagaRepository sagaRepository, SagasObserver sagasObserver, SagaRecoveryTrigger sagaRecoveryTrigger, String host, int port,
                         SagaLogPool sagaLogPool, SelectableThreadPoolExectutor sagaThreadPool,
                         NamespaceController namespaceController, SearchIndex searchIndex,
                         DynamicConfiguration configuration) {
         this.specification = specification;
+        this.sagaRecoveryTrigger = sagaRecoveryTrigger;
         this.host = host;
         this.port = port;
         this.persistence = persistence;
@@ -208,6 +210,14 @@ public class UndertowApplication {
 
         HystrixThreadPoolProperties.Setter().withMaximumSize(50); // TODO Configure Hystrix properly
 
+        int intervalMinSec = configuration.evaluateToInt("saga.recovery.interval.seconds.min");
+        int intervalMaxSec = configuration.evaluateToInt("saga.recovery.interval.seconds.max");
+        boolean sagaRecoveryEnabled = configuration.evaluateToBoolean("saga.recovery.enabled");
+        SagaRecoveryTrigger sagaRecoveryTrigger = new SagaRecoveryTrigger(sec, intervalMinSec, intervalMaxSec);
+        if (sagaRecoveryEnabled) {
+            sagaRecoveryTrigger.start();
+        }
+
         NamespaceController namespaceController = new NamespaceController(
                 configuration.evaluateToString("namespace.default"),
                 specification,
@@ -217,7 +227,7 @@ public class UndertowApplication {
                 sagaRepository
         );
 
-        return new UndertowApplication(specification, persistence, sec, sagaRepository, sagasObserver, host, port,
+        return new UndertowApplication(specification, persistence, sec, sagaRepository, sagasObserver, sagaRecoveryTrigger, host, port,
                 sagaLogPool, sagaThreadPool, namespaceController,
                 searchIndex, configuration);
     }
@@ -241,10 +251,6 @@ public class UndertowApplication {
         sec.startThreadpoolWatchdog();
     }
 
-    public CompletableFuture triggerForwardRecoveryOfIncompleteSagas() {
-        return sec.completeIncompleteSagas();
-    }
-
     public String getHost() {
         return host;
     }
@@ -263,6 +269,7 @@ public class UndertowApplication {
         server.stop();
         persistence.close();
         sagasObserver.shutdown();
+        sagaRecoveryTrigger.stop();
         sec.shutdown();
         shutdownAndAwaitTermination(sagaThreadPool);
         sagaLogPool.shutdown();
@@ -295,6 +302,10 @@ public class UndertowApplication {
 
     public SelectableThreadPoolExectutor getSagaThreadPool() {
         return sagaThreadPool;
+    }
+
+    public SagaRecoveryTrigger getSagaRecoveryTrigger() {
+        return sagaRecoveryTrigger;
     }
 
     public Undertow getUndertowServer() {
