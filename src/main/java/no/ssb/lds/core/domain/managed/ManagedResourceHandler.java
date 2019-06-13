@@ -163,7 +163,7 @@ public class ManagedResourceHandler implements HttpHandler {
 
                     exchange.setStatusCode(StatusCodes.CREATED);
                     exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-                    exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.executionId + "\"}");
+                    exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.getExecutionId() + "\"}");
                 },
                 (exchange1, e) -> {
                     exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
@@ -199,7 +199,7 @@ public class ManagedResourceHandler implements HttpHandler {
         } else {
             exchange.setStatusCode(StatusCodes.ACCEPTED);
             responseHeaders.put(Headers.CONTENT_TYPE, "application/json");
-            exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.executionId + "\"}");
+            exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.getExecutionId() + "\"}");
         }
 
 

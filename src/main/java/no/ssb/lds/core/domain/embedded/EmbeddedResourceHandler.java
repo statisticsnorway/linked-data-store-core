@@ -145,7 +145,7 @@ public class EmbeddedResourceHandler implements HttpHandler {
 
                     exchange.setStatusCode(200);
                     exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-                    exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.executionId + "\"}");
+                    exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.getExecutionId() + "\"}");
                 },
                 (exchange1, e) -> {
                     exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
@@ -186,7 +186,7 @@ public class EmbeddedResourceHandler implements HttpHandler {
 
                     exchange.setStatusCode(200);
                     exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-                    exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.executionId + "\"}");
+                    exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.getExecutionId() + "\"}");
                 },
                 (exchange1, e) -> {
                     exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");

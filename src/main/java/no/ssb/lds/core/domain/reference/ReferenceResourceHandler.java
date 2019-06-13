@@ -113,7 +113,7 @@ public class ReferenceResourceHandler implements HttpHandler {
 
                         exchange.setStatusCode(200);
                         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-                        exchange.getResponseSender().send("{\"saga-execution-id\":\"" + sagaHandoffResult.executionId + "\"}");
+                        exchange.getResponseSender().send("{\"saga-execution-id\":\"" + sagaHandoffResult.getExecutionId() + "\"}");
                     }
                 },
                 (exchange1, e) -> {
@@ -171,7 +171,7 @@ public class ReferenceResourceHandler implements HttpHandler {
         } else {
             exchange.setStatusCode(200);
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-            exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.executionId + "\"}");
+            exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.getExecutionId() + "\"}");
             exchange.endExchange();
         }
     }
