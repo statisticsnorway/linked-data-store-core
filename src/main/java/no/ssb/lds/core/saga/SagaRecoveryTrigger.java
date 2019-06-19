@@ -1,6 +1,10 @@
 package no.ssb.lds.core.saga;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -8,6 +12,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SagaRecoveryTrigger {
+
+    private static final Logger LOG = LoggerFactory.getLogger(SagaRecoveryTrigger.class);
 
     private final SagaExecutionCoordinator sec;
     private final int intervalMinSec;
@@ -17,8 +23,10 @@ public class SagaRecoveryTrigger {
     private final int MAX_LEGAL_INTERVAL = 60 * 60 * 24;
     private final Random random = new Random();
 
+    private final static AtomicInteger triggerThreadId = new AtomicInteger();
     private final static AtomicInteger executorThreadId = new AtomicInteger();
-    private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1, runnable -> new Thread(runnable, "saga-recovery-" + executorThreadId.incrementAndGet()));
+    private final ScheduledExecutorService recoveryTriggerSingleThreadedPool = Executors.newScheduledThreadPool(1, runnable -> new Thread(runnable, "saga-recovery-trigger-" + triggerThreadId.incrementAndGet()));
+    private final ExecutorService recoveryThreadPool = Executors.newScheduledThreadPool(10, runnable -> new Thread(runnable, "saga-recovery-" + executorThreadId.incrementAndGet()));
 
     public SagaRecoveryTrigger(SagaExecutionCoordinator sec, int intervalMinSec, int intervalMaxSec) {
         if (intervalMinSec < 1) {
@@ -42,16 +50,23 @@ public class SagaRecoveryTrigger {
     }
 
     public void start() {
-        scheduledExecutorService.schedule(triggerRecoveryTask(), randomizedWaitSec(), TimeUnit.SECONDS);
+        recoveryTriggerSingleThreadedPool.schedule(triggerRecoveryTask(), randomizedWaitSec(), TimeUnit.SECONDS);
     }
 
     private Runnable triggerRecoveryTask() {
         return () -> {
-            sec.completeClusterWideIncompleteSagas();
-            if (stopped.get()) {
-                return;
+            try {
+                if (stopped.get()) {
+                    LOG.info("Saga recovery trigger stopped");
+                    return;
+                }
+                LOG.debug("Saga recovery task triggered, attempting to recover all incomplete sagas cluster-wide");
+                sec.completeClusterWideIncompleteSagas(recoveryThreadPool).join();
+                LOG.debug("Saga recovery task complete.");
+            } catch (Throwable t) {
+                LOG.error("Error while attempting to run cluster-wide saga recovery", t);
             }
-            scheduledExecutorService.schedule(triggerRecoveryTask(), randomizedWaitSec(), TimeUnit.SECONDS);
+            recoveryTriggerSingleThreadedPool.schedule(triggerRecoveryTask(), randomizedWaitSec(), TimeUnit.SECONDS);
         };
     }
 
