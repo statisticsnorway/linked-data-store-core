@@ -105,11 +105,25 @@
         </dependency>
 
         <dependency>
+            <groupId>no.ssb.concurrent.futureselector</groupId>
+            <artifactId>future-selector</artifactId>
+            <version>0.2</version>
+        </dependency>
+        <dependency>
+            <groupId>no.ssb.saga</groupId>
+            <artifactId>distributed-saga-api</artifactId>
+            <version>0.1</version>
+        </dependency>
+        <dependency>
+            <groupId>no.ssb.saga</groupId>
+            <artifactId>distributed-saga-execution</artifactId>
+            <version>0.6-SNAPSHOT</version>
+        </dependency>
+        <dependency>
             <groupId>no.ssb.saga</groupId>
             <artifactId>sagalog-api</artifactId>
             <version>0.3</version>
         </dependency>
-
         <dependency>
             <groupId>no.ssb.saga</groupId>
             <artifactId>sagalog-file</artifactId>
@@ -228,22 +242,6 @@
                     <artifactId>commons-logging</artifactId>
                 </exclusion>
             </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>no.ssb.concurrent.futureselector</groupId>
-            <artifactId>future-selector</artifactId>
-            <version>0.2</version>
-        </dependency>
-        <dependency>
-            <groupId>no.ssb.saga</groupId>
-            <artifactId>distributed-saga-api</artifactId>
-            <version>0.1</version>
-        </dependency>
-        <dependency>
-            <groupId>no.ssb.saga</groupId>
-            <artifactId>distributed-saga-execution</artifactId>
-            <version>0.6-SNAPSHOT</version>
         </dependency>
 
         <dependency>
