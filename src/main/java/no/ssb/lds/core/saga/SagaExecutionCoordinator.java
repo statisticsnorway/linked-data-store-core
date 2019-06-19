@@ -189,7 +189,7 @@ public class SagaExecutionCoordinator {
                         for (SagaCommand command : commands) {
                             String cmd = command.getCommand();
                             if ("failBefore".equalsIgnoreCase(cmd)) {
-                                throw new RuntimeException("failBefore saga command");
+                                throw new RuntimeException(String.format("failBefore saga command. nodeId: %s, sagalog-id: %s, executionId: %s", sagaExecutionTraversalContext.getNode().id, sagaLog.id(), executionId));
                             }
                         }
                     },
@@ -201,7 +201,7 @@ public class SagaExecutionCoordinator {
                         for (SagaCommand command : commands) {
                             String cmd = command.getCommand();
                             if ("failAfter".equalsIgnoreCase(cmd)) {
-                                throw new RuntimeException("failAfter saga command");
+                                throw new RuntimeException(String.format("failAfter saga command. nodeId: %s, sagalog-id: %s, executionId: %s", sagaExecutionTraversalContext.getNode().id, sagaLog.id(), executionId));
                             }
                         }
                     }
