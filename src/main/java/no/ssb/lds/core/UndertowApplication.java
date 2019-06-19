@@ -206,7 +206,9 @@ public class UndertowApplication {
         );
         int numberOfSagaLogs = configuration.evaluateToInt("saga.number-of-logs");
 
-        SagaExecutionCoordinator sec = new SagaExecutionCoordinator(sagaLogPool, numberOfSagaLogs, sagaRepository, sagasObserver, sagaThreadPool);
+        boolean sagaCommandsEnabled = configuration.evaluateToBoolean("saga.commands.enabled");
+
+        SagaExecutionCoordinator sec = new SagaExecutionCoordinator(sagaLogPool, numberOfSagaLogs, sagaRepository, sagasObserver, sagaThreadPool, sagaCommandsEnabled);
 
         HystrixThreadPoolProperties.Setter().withMaximumSize(50); // TODO Configure Hystrix properly
 

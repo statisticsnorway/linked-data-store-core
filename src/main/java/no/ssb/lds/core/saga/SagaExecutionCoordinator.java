@@ -51,6 +51,7 @@ public class SagaExecutionCoordinator {
     final BlockingQueue<SagaLogId> availableLogIds = new LinkedBlockingQueue<>();
     final Map<SagaLogId, SagaLog> sagaLogBySagaLogId = new ConcurrentHashMap<>();
     final Map<SagaLogId, String> executionIdBySagaLogId = new ConcurrentHashMap<>();
+    final boolean sagaCommandsEnabled;
 
     final SagaRepository sagaRepository;
     final SagasObserver sagasObserver;
@@ -58,9 +59,10 @@ public class SagaExecutionCoordinator {
     final Semaphore semaphore;
     final ThreadPoolWatchDog threadPoolWatchDog;
 
-    public SagaExecutionCoordinator(SagaLogPool sagaLogPool, int numberOfSagaLogs, SagaRepository sagaRepository, SagasObserver sagasObserver, SelectableThreadPoolExectutor threadPool) {
+    public SagaExecutionCoordinator(SagaLogPool sagaLogPool, int numberOfSagaLogs, SagaRepository sagaRepository, SagasObserver sagasObserver, SelectableThreadPoolExectutor threadPool, boolean sagaCommandsEnabled) {
         this.sagaLogPool = sagaLogPool;
         this.numberOfSagaLogs = numberOfSagaLogs;
+        this.sagaCommandsEnabled = sagaCommandsEnabled;
         Set<SagaLogId> allLogIds = new LinkedHashSet<>();
         for (int i = 0; i < numberOfSagaLogs; i++) {
             allLogIds.add(sagaLogPool.idFor(String.format("%02d", i)));
@@ -87,7 +89,7 @@ public class SagaExecutionCoordinator {
         return threadPool;
     }
 
-    public SelectableFuture<SagaHandoffResult> handoff(boolean sync, AdapterLoader adapterLoader, Saga saga, String namespace, String entity, String id, ZonedDateTime version, JsonNode data) {
+    public SelectableFuture<SagaHandoffResult> handoff(boolean sync, AdapterLoader adapterLoader, Saga saga, String namespace, String entity, String id, ZonedDateTime version, JsonNode data, Map<String, List<SagaCommand>> commandsByNodeId) {
         String versionStr = version.format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
         ObjectNode input = mapper.createObjectNode();
         input.put("namespace", namespace);
@@ -113,7 +115,7 @@ public class SagaExecutionCoordinator {
         });
         SagaExecution sagaExecution = new SagaExecution(sagaLog, threadPool, saga, adapterLoader);
 
-        SagaHandoffControl handoffControl = startSagaExecutionWithThrottling(sagaExecution, input, executionId, sagaLog);
+        SagaHandoffControl handoffControl = startSagaExecutionWithThrottling(sagaExecution, input, executionId, sagaLog, sagaCommandsEnabled ? commandsByNodeId : Collections.emptyMap());
 
         sagasObserver.registerSaga(handoffControl);
         SelectableFuture<SagaHandoffResult> future = sync ?
@@ -135,7 +137,7 @@ public class SagaExecutionCoordinator {
         return allLogIds;
     }
 
-    private SagaHandoffControl startSagaExecutionWithThrottling(SagaExecution sagaExecution, JsonNode input, String executionId, SagaLog sagaLog) {
+    private SagaHandoffControl startSagaExecutionWithThrottling(SagaExecution sagaExecution, JsonNode input, String executionId, SagaLog sagaLog, Map<String, List<SagaCommand>> commandsByNodeId) {
         SagaHandoffControl handoffControl;
         try {
             semaphore.acquire();
@@ -145,18 +147,44 @@ public class SagaExecutionCoordinator {
         }
         AtomicBoolean permitReleased = new AtomicBoolean(false);
         try {
-            handoffControl = sagaExecution.executeSaga(executionId, input, false, r -> {
-                if (r.isSuccess()) {
-                    sagaLog.truncate();
-                }
-                if (permitReleased.compareAndSet(false, true)) {
-                    semaphore.release();
-                }
-                sagaLogBySagaLogId.remove(sagaLog.id());
-                executionIdBySagaLogId.remove(sagaLog.id());
-                sagaLogPool.release(sagaLog.id());
-                availableLogIds.add(sagaLog.id());
-            });
+            handoffControl = sagaExecution.executeSaga(executionId, input, false,
+                    r -> {
+                        if (r.isSuccess()) {
+                            sagaLog.truncate();
+                        }
+                        if (permitReleased.compareAndSet(false, true)) {
+                            semaphore.release();
+                        }
+                        sagaLogBySagaLogId.remove(sagaLog.id());
+                        executionIdBySagaLogId.remove(sagaLog.id());
+                        sagaLogPool.release(sagaLog.id());
+                        availableLogIds.add(sagaLog.id());
+                    },
+                    sagaExecutionTraversalContext -> {
+                        List<SagaCommand> commands = commandsByNodeId.get(sagaExecutionTraversalContext.getNode().id);
+                        if (commands == null) {
+                            return;
+                        }
+                        for (SagaCommand command : commands) {
+                            String cmd = command.getCommand();
+                            if ("failBefore".equalsIgnoreCase(cmd)) {
+                                throw new RuntimeException("failBefore saga command");
+                            }
+                        }
+                    },
+                    sagaExecutionTraversalContext -> {
+                        List<SagaCommand> commands = commandsByNodeId.get(sagaExecutionTraversalContext.getNode().id);
+                        if (commands == null) {
+                            return;
+                        }
+                        for (SagaCommand command : commands) {
+                            String cmd = command.getCommand();
+                            if ("failAfter".equalsIgnoreCase(cmd)) {
+                                throw new RuntimeException("failAfter saga command");
+                            }
+                        }
+                    }
+            );
             // permit will be released by sagaPermitReleaseThread
         } catch (RuntimeException e) {
             if (permitReleased.compareAndSet(false, true)) {

@@ -16,6 +16,7 @@ import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.domain.resource.ResourceContext;
 import no.ssb.lds.core.domain.resource.ResourceElement;
+import no.ssb.lds.core.saga.SagaCommands;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
 import no.ssb.lds.core.saga.SagaRepository;
 import no.ssb.lds.core.schema.SchemaRepository;
@@ -158,7 +159,7 @@ public class ManagedResourceHandler implements HttpHandler {
                     Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
                     AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-                    SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), requestData);
+                    SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), requestData, SagaCommands.getSagaAdminParameterCommands(httpServerExchange));
                     SagaHandoffResult handoffResult = handoff.join();
 
                     exchange.setStatusCode(StatusCodes.CREATED);
@@ -186,7 +187,7 @@ public class ManagedResourceHandler implements HttpHandler {
         Saga saga = sagaRepository.get(SagaRepository.SAGA_DELETE_MANAGED_RESOURCE);
 
         AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-        SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, resourceContext.getNamespace(), managedDomain, topLevelElement.id(), resourceContext.getTimestamp(), null);
+        SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, resourceContext.getNamespace(), managedDomain, topLevelElement.id(), resourceContext.getTimestamp(), null, SagaCommands.getSagaAdminParameterCommands(exchange));
         SagaHandoffResult handoffResult = handoff.join();
 
         HeaderMap responseHeaders = exchange.getResponseHeaders();
