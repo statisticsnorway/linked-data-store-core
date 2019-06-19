@@ -85,7 +85,7 @@ public class SagaRecoveryTriggerTest {
         }
 
         @Override
-        public String executeAction(Object sagaInput, Map<SagaNode, Object> dependeesOutput) throws AbortSagaException {
+        public String executeAction(SagaNode sagaNode, Object sagaInput, Map<SagaNode, Object> dependeesOutput) throws AbortSagaException {
             int attempt = attempts.incrementAndGet();
             if (attempt == 1) {
                 throw new RuntimeException("Failing because this is attempt # " + attempt);

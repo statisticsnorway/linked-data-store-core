@@ -28,7 +28,7 @@ public class PersistenceCreateOrOverwriteSagaAdapter extends Adapter<JsonNode> {
     }
 
     @Override
-    public JsonNode executeAction(Object sagaInput, Map<SagaNode, Object> dependeesOutput) {
+    public JsonNode executeAction(SagaNode sagaNode, Object sagaInput, Map<SagaNode, Object> dependeesOutput) {
         JsonNode input = (JsonNode) sagaInput;
         String versionStr = input.get("version").textValue();
         ZonedDateTime version = ZonedDateTime.parse(versionStr, DateTimeFormatter.ISO_ZONED_DATE_TIME);
