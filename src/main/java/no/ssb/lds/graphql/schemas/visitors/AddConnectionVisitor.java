@@ -118,7 +118,7 @@ public class AddConnectionVisitor extends GraphQLTypeVisitorStub {
         //}
         GraphQLType oldObject = typeMap.put(node.getName(), newObject.build());
         if (oldObject != null && Objects.equals(oldObject, node)) {
-            log.warn("Existing object {} is not equal to visited object {}", node, oldObject);
+            log.debug("Existing object {} is not equal to visited object {}", node, oldObject);
         }
 
         return TraversalControl.CONTINUE;

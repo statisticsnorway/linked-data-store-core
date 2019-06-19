@@ -116,7 +116,7 @@ public class ReverseLinkNameVisitor extends GraphQLTypeVisitorStub {
             //}
             GraphQLType oldObject = typeMap.put(existing.getName(), newObject);
             if (oldObject != null && Objects.equals(oldObject, existing)) {
-                log.warn("Existing object {} is not equal to visited object {}", existing, oldObject);
+                log.debug("Existing object {} is not equal to visited object {}", existing, oldObject);
             }
         }
         return TraversalControl.CONTINUE;

@@ -166,7 +166,7 @@ public class ReverseLinkBuildingVisitor extends GraphQLTypeVisitorStub {
         //}
         GraphQLType oldObject = typeMap.put(target.getName(), nodeCopy.build());
         if (oldObject != null && Objects.equals(oldObject, target)) {
-            log.warn("Existing object {} is not equal to visited object {}", target, oldObject);
+            log.debug("Existing object {} is not equal to visited object {}", target, oldObject);
         }
         return true;
     }
