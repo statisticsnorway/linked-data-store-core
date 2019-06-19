@@ -312,7 +312,7 @@ public class SagaExecutionCoordinator {
         SagaLogEntry startSagaEntry = sagaLogEntries.get(0);
         Saga saga = sagaRepository.get(startSagaEntry.getSagaName());
         if (saga == null) {
-            throw new RuntimeException(String.format("Saga with name %s is not present in sagaRepository", startSagaEntry.getSagaName()));
+            throw new RuntimeException(String.format("In saga-log %s, Saga with name %s is not present in sagaRepository", sagaLog.id(), startSagaEntry.getSagaName()));
         }
         AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
         JsonNode sagaInput = JsonTools.toJsonNode(startSagaEntry.getJsonData());
@@ -320,13 +320,13 @@ public class SagaExecutionCoordinator {
         CompletableFuture<SagaHandoffResult> future = new CompletableFuture<>();
         SagaHandoffControl handoffControl = sagaExecution.executeSaga(executionId, sagaInput, true, r -> future.complete(r));
         sagasObserver.registerSaga(handoffControl);
-        LOG.info("Started recovery of saga with executionId: {}", executionId);
+        LOG.info("Started recovery of saga with sagaLog: {} and executionId: {}", sagaLog.id(), executionId);
         return future.thenCompose(r -> {
             if (r.isFailure()) {
-                LOG.info("Recovery of saga failed, executionId: {}", executionId);
+                LOG.info("Recovery of saga failed, sagaLog: {}, executionId: {}", sagaLog.id(), executionId);
                 return CompletableFuture.failedFuture(r.getFailureCause()); // unwrap
             } else {
-                LOG.info("Recovery of saga succeeded, executionId: {}", executionId);
+                LOG.info("Recovery of saga succeeded, sagaLog: {}, executionId: {}", sagaLog.id(), executionId);
                 return CompletableFuture.completedFuture(null);
             }
         });
