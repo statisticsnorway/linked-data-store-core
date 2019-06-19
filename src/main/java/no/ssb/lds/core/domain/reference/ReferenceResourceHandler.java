@@ -12,6 +12,7 @@ import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.domain.resource.ResourceContext;
 import no.ssb.lds.core.domain.resource.ResourceElement;
+import no.ssb.lds.core.saga.SagaCommands;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
 import no.ssb.lds.core.saga.SagaRepository;
 import no.ssb.saga.api.Saga;
@@ -108,7 +109,7 @@ public class ReferenceResourceHandler implements HttpHandler {
                         Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
                         AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-                        SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), jsonDocument.jackson());
+                        SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), jsonDocument.jackson(), SagaCommands.getSagaAdminParameterCommands(httpServerExchange));
                         SagaHandoffResult sagaHandoffResult = handoff.join();
 
                         exchange.setStatusCode(200);
@@ -162,7 +163,7 @@ public class ReferenceResourceHandler implements HttpHandler {
         Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
         AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-        SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, resourceContext.getNamespace(), resourceContext.getFirstElement().name(), resourceContext.getFirstElement().id(), resourceContext.getTimestamp(), rootNode);
+        SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, resourceContext.getNamespace(), resourceContext.getFirstElement().name(), resourceContext.getFirstElement().id(), resourceContext.getTimestamp(), rootNode, SagaCommands.getSagaAdminParameterCommands(exchange));
         SagaHandoffResult handoffResult = handoff.join();
 
         if (sync) {

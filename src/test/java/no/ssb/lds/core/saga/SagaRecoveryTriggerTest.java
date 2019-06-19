@@ -19,6 +19,7 @@ import org.testng.annotations.Test;
 
 import javax.inject.Inject;
 import java.time.ZonedDateTime;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -41,7 +42,7 @@ public class SagaRecoveryTriggerTest {
         sec.sagaRepository.register(saga);
         SagaLogPool sagaLogPool = sec.getSagaLogPool();
         SelectableFuture<SagaHandoffResult> handoff = sec.handoff(true, sec.sagaRepository.getAdapterLoader(), saga,
-                "ns", "SomeEntity", "x123", ZonedDateTime.now(), JsonTools.mapper.createObjectNode());
+                "ns", "SomeEntity", "x123", ZonedDateTime.now(), JsonTools.mapper.createObjectNode(), Collections.emptyMap());
         try {
             handoff.join(); // wait for saga-execution to fail
             Assert.fail("Saga execution did no fail on first attempt");
@@ -80,7 +81,7 @@ public class SagaRecoveryTriggerTest {
     static class FailingTheFirstTimeSagaAdapter extends Adapter<String> {
         final AtomicInteger attempts = new AtomicInteger();
 
-        public FailingTheFirstTimeSagaAdapter() {
+        FailingTheFirstTimeSagaAdapter() {
             super(String.class, "zigzag");
         }
 
