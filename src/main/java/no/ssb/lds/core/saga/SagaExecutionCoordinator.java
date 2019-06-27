@@ -285,7 +285,7 @@ public class SagaExecutionCoordinator {
     public CompletableFuture<Void> completeLocalIncompleteSagas(ExecutorService executorService) {
         Set<SagaLogId> logIds = new LinkedHashSet<>(sagaLogPool.instanceLocalLogIds());
 
-        return completeClusterWideIncompleteSagas(executorService, logIds, Collections.emptySet());
+        return recoverIncompleteSagas(executorService, logIds, Collections.emptySet());
     }
 
     public CompletableFuture<Void> completeClusterWideIncompleteSagas(ExecutorService executorService) {
@@ -295,10 +295,10 @@ public class SagaExecutionCoordinator {
         LinkedHashSet<SagaLogId> nonLocalClusterSagaLogs = new LinkedHashSet<>(logIds);
         nonLocalClusterSagaLogs.removeAll(instanceLocalLogIds);
 
-        return completeClusterWideIncompleteSagas(executorService, logIds, nonLocalClusterSagaLogs);
+        return recoverIncompleteSagas(executorService, logIds, nonLocalClusterSagaLogs);
     }
 
-    private CompletableFuture<Void> completeClusterWideIncompleteSagas(ExecutorService executorService, Set<SagaLogId> logIds, Set<SagaLogId> nonLocalClusterSagaLogs) {
+    private CompletableFuture<Void> recoverIncompleteSagas(ExecutorService executorService, Set<SagaLogId> logIds, Set<SagaLogId> nonLocalClusterSagaLogs) {
         List<CompletableFuture<CompletableFuture<Void>>> tasks = new ArrayList<>();
         for (SagaLogId logId : logIds) {
             try {
@@ -323,10 +323,10 @@ public class SagaExecutionCoordinator {
                         });
                     } catch (Throwable t) {
                         LOG.warn(String.format("Error completing log %s", logId), t);
-                        sagaLogPool.release(logId);
                         if (nonClusterLocalSagaLog) {
                             sagaLogPool.remove(logId);
                         }
+                        sagaLogPool.release(logId);
                         return CompletableFuture.failedFuture(t);
                     }
                 }, executorService));
@@ -346,11 +346,11 @@ public class SagaExecutionCoordinator {
         SagaLogId logId = sagaLog.id();
         Map<String, List<SagaLogEntry>> entriesByExecutionId = sagaLog.readIncompleteSagas().collect(groupingBy(SagaLogEntry::getExecutionId));
         if (entriesByExecutionId.isEmpty()) {
-            if (releaseSagaLogWhenDone) {
-                sagaLogPool.release(logId);
-            }
             if (removeFromPoolWhenDone) {
                 sagaLogPool.remove(logId);
+            }
+            if (releaseSagaLogWhenDone) {
+                sagaLogPool.release(logId);
             }
             return CompletableFuture.completedFuture(null);
         }
@@ -362,11 +362,11 @@ public class SagaExecutionCoordinator {
             try {
                 futureList.add(startSagaForwardRecovery(executionId, entriesByNodeId, sagaLog, preAction, postAction));
             } catch (Throwable t) {
-                if (releaseSagaLogWhenDone) {
-                    sagaLogPool.release(logId);
-                }
                 if (removeFromPoolWhenDone) {
                     sagaLogPool.remove(logId);
+                }
+                if (releaseSagaLogWhenDone) {
+                    sagaLogPool.release(logId);
                 }
                 return CompletableFuture.failedFuture(t);
             }
@@ -374,21 +374,22 @@ public class SagaExecutionCoordinator {
         return CompletableFuture.allOf(futureList.toArray(new CompletableFuture[futureList.size()]))
                 .handle((v, t) -> {
                     if (t != null) {
-                        if (releaseSagaLogWhenDone) {
-                            sagaLogPool.release(logId);
-                        }
                         if (removeFromPoolWhenDone) {
                             sagaLogPool.remove(logId);
+                        }
+                        if (releaseSagaLogWhenDone) {
+                            sagaLogPool.release(logId);
                         }
 
                         throw new RuntimeException("Unable to complete saga forward recovery", t);
                     }
                     sagaLog.truncate().join();
-                    if (releaseSagaLogWhenDone) {
-                        sagaLogPool.release(logId);
-                    }
                     if (removeFromPoolWhenDone) {
                         sagaLogPool.remove(logId);
+                        sagaLogPool.delete(logId); // delete external resource associated with saga-log after truncation
+                    }
+                    if (releaseSagaLogWhenDone) {
+                        sagaLogPool.release(logId);
                     }
                     return v;
                 });
