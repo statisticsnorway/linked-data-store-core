@@ -348,6 +348,7 @@ public class SagaExecutionCoordinator {
         if (entriesByExecutionId.isEmpty()) {
             if (removeFromPoolWhenDone) {
                 sagaLogPool.remove(logId);
+                deleteExternalResourceAssociatedWithSagaLog(logId); // not in use
             }
             if (releaseSagaLogWhenDone) {
                 sagaLogPool.release(logId);
@@ -386,13 +387,22 @@ public class SagaExecutionCoordinator {
                     sagaLog.truncate().join();
                     if (removeFromPoolWhenDone) {
                         sagaLogPool.remove(logId);
-                        sagaLogPool.delete(logId); // delete external resource associated with saga-log after truncation
+                        deleteExternalResourceAssociatedWithSagaLog(logId); // not in use
                     }
                     if (releaseSagaLogWhenDone) {
                         sagaLogPool.release(logId);
                     }
                     return v;
                 });
+    }
+
+    private void deleteExternalResourceAssociatedWithSagaLog(SagaLogId logId) {
+        boolean deleted = sagaLogPool.delete(logId);
+        if (deleted) {
+            LOG.info("Deleted unused empty saga-log: {}", logId);
+        } else {
+            LOG.info("Failed to deleted saga-log: {}", logId);
+        }
     }
 
     private CompletableFuture<Void> startSagaForwardRecovery(String executionId, Map<String, List<SagaLogEntry>> entriesByNodeId, SagaLog sagaLog, Consumer<SagaExecutionTraversalContext> preAction, Consumer<SagaExecutionTraversalContext> postAction) {
