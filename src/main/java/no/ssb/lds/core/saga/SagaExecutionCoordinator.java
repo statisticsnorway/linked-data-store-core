@@ -51,8 +51,7 @@ public class SagaExecutionCoordinator {
 
     private static final Logger LOG = LoggerFactory.getLogger(SagaExecutionCoordinator.class);
 
-    public static final String DEAD_LETTER_SAGA_GROUP_KEY = "dead-letter-saga-group";
-    public static final String DEAD_SAGA_LITERAL = "dead-saga";
+    static final Pattern deadLetterSagaPattern = Pattern.compile("dead-saga");
 
     final int numberOfSagaLogs;
     final SagaLogPool sagaLogPool;
@@ -72,16 +71,15 @@ public class SagaExecutionCoordinator {
         this.numberOfSagaLogs = numberOfSagaLogs;
         this.sagaCommandsEnabled = sagaCommandsEnabled;
         this.recoveryThreadPool = recoveryThreadPool;
-        Pattern deadLetterSagaPattern = Pattern.compile(DEAD_SAGA_LITERAL);
-        sagaLogPool.registerIdPattern(DEAD_LETTER_SAGA_GROUP_KEY, deadLetterSagaPattern);
-        this.deadSagaLogId = sagaLogPool.idFor(sagaLogPool.getLocalClusterInstanceId(), DEAD_SAGA_LITERAL); // no not register
-        if (!sagaLogPool.doesSagaLogIdMatchPattern(DEAD_LETTER_SAGA_GROUP_KEY, deadSagaLogId)) {
-            throw new IllegalStateException(String.format("Unable to match dead-letter-saga log %s with registered pattern: %s", deadSagaLogId, deadLetterSagaPattern.pattern()));
+        this.deadSagaLogId = sagaLogPool.idFor(sagaLogPool.getLocalClusterInstanceId(), "dead-saga"); // do not register
+
+        if (!deadLetterSagaPattern.matcher(deadSagaLogId.getLogName()).matches()) {
+            throw new IllegalStateException(String.format("Unable to match dead-letter-saga log %s with pattern: %s", deadSagaLogId, deadLetterSagaPattern.pattern()));
         }
         Set<SagaLogId> allLogIds = new LinkedHashSet<>();
         for (int i = 0; i < numberOfSagaLogs; i++) {
             SagaLogId logId = sagaLogPool.registerInstanceLocalIdFor(String.format("%02d", i));
-            if (sagaLogPool.doesSagaLogIdMatchPattern(DEAD_LETTER_SAGA_GROUP_KEY, logId)) {
+            if (deadLetterSagaPattern.matcher(logId.getLogName()).matches()) {
                 throw new IllegalStateException(String.format("Unwanted match to of log %s with registered dead-letter-saga pattern: %s", logId, deadLetterSagaPattern.pattern()));
             }
             allLogIds.add(logId);
@@ -161,7 +159,7 @@ public class SagaExecutionCoordinator {
         if (sagaLog == null) {
             throw new RuntimeException("Timeout. No available saga-logs, please check configuration.");
         }
-        if (sagaLogPool.doesSagaLogIdMatchPattern(DEAD_LETTER_SAGA_GROUP_KEY, sagaLog.id())) {
+        if (deadLetterSagaPattern.matcher(sagaLog.id().getLogName()).matches()) {
             throw new RuntimeException("Dead-letter-saga acquired unintentionally");
         }
         if (!sagaLog.readIncompleteSagas().anyMatch(e -> true)) {
@@ -292,7 +290,7 @@ public class SagaExecutionCoordinator {
 
     public CompletableFuture<Void> completeClusterWideIncompleteSagas(ExecutorService executorService) {
         Set<SagaLogId> logIds = new LinkedHashSet<>(sagaLogPool.clusterWideLogIds());
-        logIds.removeIf(logId -> sagaLogPool.doesSagaLogIdMatchPattern(DEAD_LETTER_SAGA_GROUP_KEY, logId));
+        logIds.removeIf(logId -> deadLetterSagaPattern.matcher(logId.getLogName()).matches());
         Set<SagaLogId> instanceLocalLogIds = sagaLogPool.instanceLocalLogIds();
         LinkedHashSet<SagaLogId> nonLocalClusterSagaLogs = new LinkedHashSet<>(logIds);
         nonLocalClusterSagaLogs.removeAll(instanceLocalLogIds);
