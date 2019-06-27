@@ -42,8 +42,11 @@ import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -208,16 +211,19 @@ public class UndertowApplication {
 
         boolean sagaCommandsEnabled = configuration.evaluateToBoolean("saga.commands.enabled");
 
-        SagaExecutionCoordinator sec = new SagaExecutionCoordinator(sagaLogPool, numberOfSagaLogs, sagaRepository, sagasObserver, sagaThreadPool, sagaCommandsEnabled);
+        AtomicInteger executorThreadId = new AtomicInteger();
+        ScheduledExecutorService recoveryThreadPool = Executors.newScheduledThreadPool(10, runnable -> new Thread(runnable, "saga-recovery-" + executorThreadId.incrementAndGet()));
+
+        SagaExecutionCoordinator sec = new SagaExecutionCoordinator(sagaLogPool, numberOfSagaLogs, sagaRepository, sagasObserver, sagaThreadPool, sagaCommandsEnabled, recoveryThreadPool);
 
         HystrixThreadPoolProperties.Setter().withMaximumSize(50); // TODO Configure Hystrix properly
 
-        int intervalMinSec = configuration.evaluateToInt("saga.recovery.interval.seconds.min");
-        int intervalMaxSec = configuration.evaluateToInt("saga.recovery.interval.seconds.max");
         boolean sagaRecoveryEnabled = configuration.evaluateToBoolean("saga.recovery.enabled");
-        SagaRecoveryTrigger sagaRecoveryTrigger = new SagaRecoveryTrigger(sec, intervalMinSec, intervalMaxSec);
+        SagaRecoveryTrigger sagaRecoveryTrigger = null;
         if (sagaRecoveryEnabled) {
-            sagaRecoveryTrigger.start();
+            int intervalMinSec = configuration.evaluateToInt("saga.recovery.interval.seconds.min");
+            int intervalMaxSec = configuration.evaluateToInt("saga.recovery.interval.seconds.max");
+            sagaRecoveryTrigger = new SagaRecoveryTrigger(sec, intervalMinSec, intervalMaxSec, recoveryThreadPool);
         }
 
         NamespaceController namespaceController = new NamespaceController(
@@ -263,6 +269,16 @@ public class UndertowApplication {
 
     public void start() {
         server.start();
+        if (sagaRecoveryTrigger != null) {
+            // attempt to recover local saga-logs immediately, then attempt cluster wide recovery regularly
+            sec.completeLocalIncompleteSagas(sec.getRecoveryThreadPool()).handle((v, t) -> {
+                if (t != null) {
+                    LOG.error("Error during initial local saga-logs recovery attempt", t);
+                }
+                sagaRecoveryTrigger.start();
+                return (Void) null;
+            });
+        }
         LOG.info("Started Linked Data Store server. PID {}", ProcessHandle.current().pid());
         LOG.info("Listening on {}:{}", host, port);
     }
@@ -271,7 +287,9 @@ public class UndertowApplication {
         server.stop();
         persistence.close();
         sagasObserver.shutdown();
-        sagaRecoveryTrigger.stop();
+        if (sagaRecoveryTrigger != null) {
+            sagaRecoveryTrigger.stop();
+        }
         sec.shutdown();
         shutdownAndAwaitTermination(sagaThreadPool);
         sagaLogPool.shutdown();

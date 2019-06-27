@@ -22,6 +22,7 @@ import java.time.ZonedDateTime;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Listeners(TestServerListener.class)
@@ -35,7 +36,7 @@ public class SagaRecoveryTriggerTest {
             "saga.recovery.enabled", "false",
             "sagalog.provider", "no.ssb.sagalog.memory.MemorySagaLogInitializer"
     })
-    public void thatSomethingHappens() throws InterruptedException {
+    public void thatSagaRecoveryIsTriggeredWhenThereIsAnIncompleteSagaInLog() throws InterruptedException {
         SagaExecutionCoordinator sec = server.getSagaExecutionCoordinator();
         sec.sagaRepository.getAdapterLoader().register(new FailingTheFirstTimeSagaAdapter());
         Saga saga = Saga.start("ZigZagSaga").linkTo("zigzag").id("zigzag").adapter("zigzag").linkToEnd().end();
@@ -52,7 +53,8 @@ public class SagaRecoveryTriggerTest {
 
         // there is now a failed saga in saga-log
 
-        SagaRecoveryTrigger sagaRecoveryTrigger = new SagaRecoveryTrigger(sec, 1, 1);
+        AtomicInteger executorThreadId = new AtomicInteger();
+        SagaRecoveryTrigger sagaRecoveryTrigger = new SagaRecoveryTrigger(sec, 1, 1, Executors.newScheduledThreadPool(10, runnable -> new Thread(runnable, "saga-recovery-" + executorThreadId.incrementAndGet())));
         sagaRecoveryTrigger.start();
 
         try {
@@ -61,7 +63,7 @@ public class SagaRecoveryTriggerTest {
             for (int i = 0; ; i++) {
                 Thread.sleep(1000);
                 int incompleteEntryCount = 0;
-                for (SagaLogId logId : sec.getAllLogIds()) {
+                for (SagaLogId logId : sec.getSagaLogPool().instanceLocalLogIds()) {
                     SagaLog sagaLog = sagaLogPool.connect(logId);
                     incompleteEntryCount += sagaLog.readIncompleteSagas().count();
                 }

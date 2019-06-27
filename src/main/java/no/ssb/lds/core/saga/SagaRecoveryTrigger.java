@@ -20,26 +20,25 @@ public class SagaRecoveryTrigger {
     private final int intervalMaxSec;
     private final AtomicBoolean stopped = new AtomicBoolean(false);
 
-    private final int MAX_LEGAL_INTERVAL = 60 * 60 * 24;
+    private final int MAX_LEGAL_INTERVAL_SEC = 60 * 60 * 24;
     private final Random random = new Random();
 
     private final static AtomicInteger triggerThreadId = new AtomicInteger();
-    private final static AtomicInteger executorThreadId = new AtomicInteger();
     private final ScheduledExecutorService recoveryTriggerSingleThreadedPool = Executors.newScheduledThreadPool(1, runnable -> new Thread(runnable, "saga-recovery-trigger-" + triggerThreadId.incrementAndGet()));
-    private final ExecutorService recoveryThreadPool = Executors.newScheduledThreadPool(10, runnable -> new Thread(runnable, "saga-recovery-" + executorThreadId.incrementAndGet()));
+    private final ExecutorService recoveryThreadPool;
 
-    public SagaRecoveryTrigger(SagaExecutionCoordinator sec, int intervalMinSec, int intervalMaxSec) {
+    public SagaRecoveryTrigger(SagaExecutionCoordinator sec, int intervalMinSec, int intervalMaxSec, ScheduledExecutorService recoveryThreadPool) {
         if (intervalMinSec < 1) {
             throw new IllegalArgumentException("illegal configuration: intervalMinSec < 1");
         }
-        if (intervalMinSec > MAX_LEGAL_INTERVAL) {
-            throw new IllegalArgumentException("illegal configuration: intervalMinSec > " + MAX_LEGAL_INTERVAL);
+        if (intervalMinSec > MAX_LEGAL_INTERVAL_SEC) {
+            throw new IllegalArgumentException("illegal configuration: intervalMinSec > " + MAX_LEGAL_INTERVAL_SEC);
         }
         if (intervalMaxSec < 1) {
             throw new IllegalArgumentException("illegal configuration: intervalMaxSec < 1");
         }
-        if (intervalMaxSec > MAX_LEGAL_INTERVAL) {
-            throw new IllegalArgumentException("illegal configuration: intervalMaxSec > " + MAX_LEGAL_INTERVAL);
+        if (intervalMaxSec > MAX_LEGAL_INTERVAL_SEC) {
+            throw new IllegalArgumentException("illegal configuration: intervalMaxSec > " + MAX_LEGAL_INTERVAL_SEC);
         }
         if (intervalMaxSec < intervalMinSec) {
             throw new IllegalArgumentException("illegal configuration: intervalMaxSec < intervalMinSec");
@@ -47,6 +46,7 @@ public class SagaRecoveryTrigger {
         this.sec = sec;
         this.intervalMinSec = intervalMinSec;
         this.intervalMaxSec = intervalMaxSec;
+        this.recoveryThreadPool = recoveryThreadPool;
     }
 
     public void start() {
