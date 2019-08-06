@@ -76,13 +76,11 @@ public class SagaExecutionCoordinator {
         if (!deadLetterSagaPattern.matcher(deadSagaLogId.getLogName()).matches()) {
             throw new IllegalStateException(String.format("Unable to match dead-letter-saga log %s with pattern: %s", deadSagaLogId, deadLetterSagaPattern.pattern()));
         }
-        Set<SagaLogId> allLogIds = new LinkedHashSet<>();
         for (int i = 0; i < numberOfSagaLogs; i++) {
             SagaLogId logId = sagaLogPool.registerInstanceLocalIdFor(String.format("%02d", i));
             if (deadLetterSagaPattern.matcher(logId.getLogName()).matches()) {
                 throw new IllegalStateException(String.format("Unwanted match to of log %s with registered dead-letter-saga pattern: %s", logId, deadLetterSagaPattern.pattern()));
             }
-            allLogIds.add(logId);
         }
         this.sagaRepository = sagaRepository;
         this.sagasObserver = sagasObserver;
