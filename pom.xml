@@ -16,7 +16,7 @@
         <java.version>11</java.version>
         <module.build.sourceEncoding>UTF-8</module.build.sourceEncoding>
 
-        <undertow.io.version>2.0.13.Final</undertow.io.version>
+        <undertow.io.version>2.0.22.Final</undertow.io.version>
         <!-- trying to test newer ver of xnio: is 3.3.8 for undertow 2.0.9. latest are: 3.6.3.Final -->
         <xnio.version>3.6.5.Final</xnio.version>
         <jboss-threads.version>2.3.2.Final</jboss-threads.version>
