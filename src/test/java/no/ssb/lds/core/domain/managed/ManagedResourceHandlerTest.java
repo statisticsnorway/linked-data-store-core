@@ -47,11 +47,11 @@ public class ManagedResourceHandlerTest {
         JSONAssert.assertEquals(body, actual, false);
     }
 
-    @Test(enabled = false)
+    @Test
     public void thatDELETEDoesRemoveResource() {
         createTestResource("provisionagreement", "m2", "{\"name\":\"pa-test-name\",\"contacts\":[\"/contact/c1\",\"/contact/c2\"]}");
         client.get("/data/provisionagreement/m2").expect200Ok();
-        client.delete("/data/provisionagreement/m2?sync=true").expect200Ok();
+        client.delete("/data/provisionagreement/m2?sync=true").expect204NoContent();
         client.get("/data/provisionagreement/m2").expect404NotFound();
     }
 
