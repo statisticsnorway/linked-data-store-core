@@ -370,4 +370,8 @@ public class UndertowApplication {
     public Specification getSpecification() {
         return specification;
     }
+
+    public RawdataClient getTxLogClient() {
+        return txLogClient;
+    }
 }

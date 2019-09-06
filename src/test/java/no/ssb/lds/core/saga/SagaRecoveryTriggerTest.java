@@ -37,7 +37,7 @@ public class SagaRecoveryTriggerTest {
             "sagalog.provider", "no.ssb.sagalog.memory.MemorySagaLogInitializer"
     })
     public void thatSagaRecoveryIsTriggeredWhenThereIsAnIncompleteSagaInLog() throws InterruptedException {
-        SagaExecutionCoordinator sec = server.getSagaExecutionCoordinator();
+        SagaExecutionCoordinator sec = server.getApplication().getSec();
         sec.sagaRepository.getAdapterLoader().register(new FailingTheFirstTimeSagaAdapter());
         Saga saga = Saga.start("ZigZagSaga").linkTo("zigzag").id("zigzag").adapter("zigzag").linkToEnd().end();
         sec.sagaRepository.register(saga);

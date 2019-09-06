@@ -37,14 +37,14 @@ public class SagaExecutionCoordinatorTest {
             "saga.commands.enabled", "true"
     })
     public void thatSagaRecoveryWorksWhenAllLogsAreClean() {
-        SagaExecutionCoordinator sec = server.getSagaExecutionCoordinator();
+        SagaExecutionCoordinator sec = server.getApplication().getSec();
         {
             // force a visible non-local saga-log in cluster to trigger more code-paths
             SagaLogPool pool = sec.getSagaLogPool();
             SagaLog otherClusterIdLog = pool.connect(pool.idFor("other", "x"));
             pool.remove(otherClusterIdLog.id());
         }
-        sec.completeClusterWideIncompleteSagas(server.getSagaExecutionCoordinator().recoveryThreadPool);
+        sec.completeClusterWideIncompleteSagas(server.getApplication().getSec().recoveryThreadPool);
     }
 
     @Test
@@ -55,7 +55,7 @@ public class SagaExecutionCoordinatorTest {
             "saga.commands.enabled", "true"
     })
     public void testThatInstanceLocalSagaExecutionIsRecoveredOnAcquireClean() {
-        SagaExecutionCoordinator sec = server.getSagaExecutionCoordinator();
+        SagaExecutionCoordinator sec = server.getApplication().getSec();
         SagaLogPool pool = sec.getSagaLogPool();
         SagaLog deadSagaLog = pool.connect(sec.deadSagaLogId);
         deadSagaLog.truncate();
@@ -91,7 +91,7 @@ public class SagaExecutionCoordinatorTest {
             "saga.commands.enabled", "true"
     })
     public void testThatInstanceLocalSagaEntriesAreMovedToDeadSagaLogOnAcquireCleanWhenSagaExecutionFailureRepeats() {
-        SagaExecutionCoordinator sec = server.getSagaExecutionCoordinator();
+        SagaExecutionCoordinator sec = server.getApplication().getSec();
         SagaLogPool pool = sec.getSagaLogPool();
         SagaLog deadSagaLog = pool.connect(sec.deadSagaLogId);
         deadSagaLog.truncate();

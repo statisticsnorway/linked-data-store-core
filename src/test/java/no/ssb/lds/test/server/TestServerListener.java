@@ -117,7 +117,7 @@ public class TestServerListener implements ITestListener, IInvokedMethodListener
             Random random = new Random();
             int testServerServicePort = findFreePort(random, 9000, 9499);
             TestServer server = new TestServer(configuration, testServerServicePort);
-            server.start();
+            server.application.start();
             return server;
         });
     }
@@ -186,7 +186,7 @@ public class TestServerListener implements ITestListener, IInvokedMethodListener
             LOG.debug("Configuration has changed, stopping server with dirty configuration...");
             TestServer server = serverByConfiguration.remove(configuration);
             if (server != null) {
-                server.stop();
+                server.getApplication().stop();
             }
         }
 

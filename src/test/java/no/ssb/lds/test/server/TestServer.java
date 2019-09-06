@@ -1,10 +1,7 @@
 package no.ssb.lds.test.server;
 
 import no.ssb.config.DynamicConfiguration;
-import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
-import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.UndertowApplication;
-import no.ssb.lds.core.saga.SagaExecutionCoordinator;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -23,18 +20,6 @@ public class TestServer implements TestUriResolver {
         application = UndertowApplication.initializeUndertowApplication(configuration, testServerServicePort);
     }
 
-    public void start() {
-        application.start();
-    }
-
-    public void stop() {
-        application.stop();
-    }
-
-    public String getTestServerHost() {
-        return application.getHost();
-    }
-
     public int getTestServerServicePort() {
         return testServerServicePort;
     }
@@ -49,19 +34,11 @@ public class TestServer implements TestUriResolver {
         }
     }
 
-    public RxJsonPersistence getPersistence() {
-        return application.getPersistence();
-    }
-
     public DynamicConfiguration getConfiguration() {
         return configuration;
     }
 
-    public Specification getSpecification() {
-        return application.getSpecification();
-    }
-
-    public SagaExecutionCoordinator getSagaExecutionCoordinator() {
-        return application.getSec();
+    public UndertowApplication getApplication() {
+        return application;
     }
 }

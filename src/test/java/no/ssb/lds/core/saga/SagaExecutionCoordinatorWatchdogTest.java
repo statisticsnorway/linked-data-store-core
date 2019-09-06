@@ -55,7 +55,7 @@ public class SagaExecutionCoordinatorWatchdogTest {
             "saga.threadpool.queue.capacity", "100",
     })
     public void thatWatchdogIsTriggeredWhenSagaThreadpoolIsDeadlocked() throws InterruptedException {
-        SagaExecutionCoordinator sec = server.getSagaExecutionCoordinator();
+        SagaExecutionCoordinator sec = server.getApplication().getSec();
 
         {
             /*
