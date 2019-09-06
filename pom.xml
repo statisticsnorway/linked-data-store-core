@@ -139,6 +139,24 @@
         </dependency>
 
         <dependency>
+            <groupId>no.ssb.rawdata</groupId>
+            <artifactId>rawdata-client-api</artifactId>
+            <version>0.19-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>no.ssb.rawdata</groupId>
+            <artifactId>rawdata-client-provider-lmdb</artifactId>
+            <version>0.2-SNAPSHOT</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>no.ssb.rawdata</groupId>
+            <artifactId>rawdata-client-provider-postgres</artifactId>
+            <version>0.3-SNAPSHOT</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
             <groupId>io.reactivex.rxjava2</groupId>
             <artifactId>rxjava</artifactId>
             <version>2.2.8</version>

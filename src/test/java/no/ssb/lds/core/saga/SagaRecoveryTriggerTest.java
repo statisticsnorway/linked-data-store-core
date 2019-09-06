@@ -43,7 +43,7 @@ public class SagaRecoveryTriggerTest {
         sec.sagaRepository.register(saga);
         SagaLogPool sagaLogPool = sec.getSagaLogPool();
         SelectableFuture<SagaHandoffResult> handoff = sec.handoff(true, sec.sagaRepository.getAdapterLoader(), saga,
-                "ns", "SomeEntity", "x123", ZonedDateTime.now(), JsonTools.mapper.createObjectNode(), Collections.emptyMap());
+                "testng-schema-v1.0", "ns", "SomeEntity", "x123", ZonedDateTime.now(), JsonTools.mapper.createObjectNode(), Collections.emptyMap());
         try {
             handoff.join(); // wait for saga-execution to fail
             Assert.fail("Saga execution did no fail on first attempt");

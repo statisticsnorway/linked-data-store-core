@@ -2,6 +2,7 @@ package no.ssb.lds.core.saga;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import de.huxhorn.sulky.ulid.ULID;
 import no.ssb.concurrent.futureselector.SelectableFuture;
 import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
 import no.ssb.lds.api.persistence.json.JsonTools;
@@ -31,7 +32,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,6 +41,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
@@ -52,6 +53,9 @@ public class SagaExecutionCoordinator {
     private static final Logger LOG = LoggerFactory.getLogger(SagaExecutionCoordinator.class);
 
     static final Pattern deadLetterSagaPattern = Pattern.compile("dead-saga");
+
+    final ULID ulid = new ULID();
+    final AtomicReference<ULID.Value> prevUlid = new AtomicReference<>(ulid.nextValue());
 
     final int numberOfSagaLogs;
     final SagaLogPool sagaLogPool;
@@ -102,15 +106,19 @@ public class SagaExecutionCoordinator {
         return threadPool;
     }
 
-    public SelectableFuture<SagaHandoffResult> handoff(boolean sync, AdapterLoader adapterLoader, Saga saga, String namespace, String entity, String id, ZonedDateTime version, JsonNode data, Map<String, List<SagaCommand>> commandsByNodeId) {
+    public SelectableFuture<SagaHandoffResult> handoff(boolean sync, AdapterLoader adapterLoader, Saga saga, String schema, String namespace, String entity, String id, ZonedDateTime version, JsonNode data, Map<String, List<SagaCommand>> commandsByNodeId) {
         String versionStr = version.format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
         ObjectNode input = mapper.createObjectNode();
         input.put("namespace", namespace);
         input.put("entity", entity);
         input.put("id", id);
         input.put("version", versionStr);
-        input.set("data", data);
-        String executionId = UUID.randomUUID().toString();
+        if (data != null) {
+            input.set("data", data);
+        }
+        String executionId = ulid.nextMonotonicValue(prevUlid.get()).toString();
+        input.put("txid", executionId);
+        input.put("schema", schema);
 
         SagaLog sagaLog = acquireCleanSagaLog(c -> {
         }, c -> {

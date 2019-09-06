@@ -235,5 +235,4 @@ public class TestServerListener implements ITestListener, IInvokedMethodListener
             timeStopProfilerMap.put(test, System.currentTimeMillis() - timeStartProfilerMap.get(test));
         }
     }
-
 }

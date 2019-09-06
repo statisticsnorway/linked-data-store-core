@@ -109,7 +109,7 @@ public class ReferenceResourceHandler implements HttpHandler {
                         Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
                         AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-                        SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), jsonDocument.jackson(), SagaCommands.getSagaAdminParameterCommands(httpServerExchange));
+                        SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, "TODO", namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), jsonDocument.jackson(), SagaCommands.getSagaAdminParameterCommands(httpServerExchange));
                         SagaHandoffResult sagaHandoffResult = handoff.join();
 
                         exchange.setStatusCode(200);
@@ -163,7 +163,7 @@ public class ReferenceResourceHandler implements HttpHandler {
         Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
         AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-        SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, resourceContext.getNamespace(), resourceContext.getFirstElement().name(), resourceContext.getFirstElement().id(), resourceContext.getTimestamp(), rootNode, SagaCommands.getSagaAdminParameterCommands(exchange));
+        SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, "TODO", resourceContext.getNamespace(), resourceContext.getFirstElement().name(), resourceContext.getFirstElement().id(), resourceContext.getTimestamp(), rootNode, SagaCommands.getSagaAdminParameterCommands(exchange));
         SagaHandoffResult handoffResult = handoff.join();
 
         if (sync) {

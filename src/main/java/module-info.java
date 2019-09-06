@@ -10,6 +10,8 @@ module no.ssb.lds.core {
     requires no.ssb.saga.api;
     requires no.ssb.saga.execution;
     requires no.ssb.sagalog;
+    requires no.ssb.rawdata.api;
+    requires de.huxhorn.sulky.ulid;
     requires jdk.unsupported;
     requires java.base;
     requires java.net.http;

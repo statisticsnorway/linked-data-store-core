@@ -7,46 +7,63 @@ import no.ssb.lds.core.persistence.PersistenceCreateOrOverwriteSagaAdapter;
 import no.ssb.lds.core.persistence.PersistenceDeleteSagaAdapter;
 import no.ssb.lds.core.search.DeleteIndexSagaAdapter;
 import no.ssb.lds.core.search.UpdateIndexSagaAdapter;
+import no.ssb.lds.core.txlog.AppendTxLogAdapter;
+import no.ssb.lds.core.txlog.DeleteTxLogAdapter;
+import no.ssb.rawdata.api.RawdataClient;
 import no.ssb.saga.api.Saga;
 import no.ssb.saga.execution.adapter.AdapterLoader;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class SagaRepository {
 
     public static final String SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE = "Create or update managed resource";
     public static final String SAGA_DELETE_MANAGED_RESOURCE = "Delete managed resource";
 
-    final Map<String, Saga> sagaByName = new LinkedHashMap<>();
+    final Map<String, Saga> sagaByName = new ConcurrentHashMap<>();
 
     final AdapterLoader adapterLoader;
 
-    private SagaRepository(Specification specification, RxJsonPersistence persistence, SearchIndex indexer) {
-        Saga.SagaBuilder createSagaBuilder = Saga.start(SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE)
-                .linkTo("persistence", "search-index-update");
-        createSagaBuilder.id("persistence").adapter(PersistenceCreateOrOverwriteSagaAdapter.NAME).linkToEnd();
-        if (indexer != null) {
-            createSagaBuilder.id("search-index-update").adapter(UpdateIndexSagaAdapter.NAME).linkToEnd();
-        }
-        register(createSagaBuilder.end());
-
-        Saga.SagaBuilder deleteSagaBuilder = Saga.start(SAGA_DELETE_MANAGED_RESOURCE)
-                .linkTo("persistence", "search-index-delete");
-        deleteSagaBuilder.id("persistence").adapter(PersistenceDeleteSagaAdapter.NAME).linkToEnd();
-        if (indexer != null) {
-            deleteSagaBuilder.id("search-index-delete").adapter(DeleteIndexSagaAdapter.NAME).linkToEnd();
-        }
-        register(deleteSagaBuilder.end());
-
-        this.adapterLoader = new AdapterLoader();
-
+    private SagaRepository(Specification specification, RxJsonPersistence persistence, SearchIndex indexer, RawdataClient txLogClient, String txLogTopic) {
+        adapterLoader = new AdapterLoader();
         adapterLoader.register(new PersistenceCreateOrOverwriteSagaAdapter(persistence, specification));
         adapterLoader.register(new PersistenceDeleteSagaAdapter(persistence));
+        adapterLoader.register(new AppendTxLogAdapter(txLogClient, txLogTopic));
+        adapterLoader.register(new DeleteTxLogAdapter(txLogClient, txLogTopic));
         if (indexer != null) {
             adapterLoader.register(new UpdateIndexSagaAdapter(indexer, specification));
             adapterLoader.register(new DeleteIndexSagaAdapter(indexer, specification));
         }
+
+        register(buildCreateOrUpdateSaga(indexer));
+        register(buildDeleteSaga(indexer));
+    }
+
+    private Saga buildCreateOrUpdateSaga(SearchIndex indexer) {
+        Saga.SagaBuilder createSagaBuilder = Saga.start(SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE)
+                .linkTo("txlog");
+        if (indexer != null) {
+            createSagaBuilder.id("txlog").adapter(AppendTxLogAdapter.NAME).linkTo("persistence", "search-index-update");
+            createSagaBuilder.id("search-index-update").adapter(UpdateIndexSagaAdapter.NAME).linkToEnd();
+        } else {
+            createSagaBuilder.id("txlog").adapter(AppendTxLogAdapter.NAME).linkTo("persistence");
+        }
+        createSagaBuilder.id("persistence").adapter(PersistenceCreateOrOverwriteSagaAdapter.NAME).linkToEnd();
+        return createSagaBuilder.end();
+    }
+
+    private Saga buildDeleteSaga(SearchIndex indexer) {
+        Saga.SagaBuilder deleteSagaBuilder = Saga.start(SAGA_DELETE_MANAGED_RESOURCE)
+                .linkTo("txlog");
+        if (indexer != null) {
+            deleteSagaBuilder.id("txlog").adapter(DeleteTxLogAdapter.NAME).linkTo("persistence", "search-index-delete");
+            deleteSagaBuilder.id("search-index-delete").adapter(DeleteIndexSagaAdapter.NAME).linkToEnd();
+        } else {
+            deleteSagaBuilder.id("txlog").adapter(DeleteTxLogAdapter.NAME).linkTo("persistence");
+        }
+        deleteSagaBuilder.id("persistence").adapter(PersistenceDeleteSagaAdapter.NAME).linkToEnd();
+        return deleteSagaBuilder.end();
     }
 
     public AdapterLoader getAdapterLoader() {
@@ -67,6 +84,8 @@ public class SagaRepository {
         Specification specification;
         RxJsonPersistence persistence;
         SearchIndex indexer;
+        RawdataClient txLogClient;
+        String txLogTopic;
 
         public Builder specification(Specification specification) {
             this.specification = specification;
@@ -83,8 +102,18 @@ public class SagaRepository {
             return this;
         }
 
+        public Builder txLogClient(RawdataClient txLogClient) {
+            this.txLogClient = txLogClient;
+            return this;
+        }
+
+        public Builder txLogTopic(String txLogTopic) {
+            this.txLogTopic = txLogTopic;
+            return this;
+        }
+
         public SagaRepository build() {
-            return new SagaRepository(specification, persistence, indexer);
+            return new SagaRepository(specification, persistence, indexer, txLogClient, txLogTopic);
         }
     }
 }
