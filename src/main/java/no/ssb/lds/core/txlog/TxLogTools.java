@@ -8,6 +8,7 @@ import de.huxhorn.sulky.ulid.ULID;
 import no.ssb.lds.core.saga.SagaInput;
 import no.ssb.rawdata.api.RawdataMessage;
 import no.ssb.rawdata.api.RawdataProducer;
+import org.msgpack.jackson.dataformat.MessagePackFactory;
 
 import java.io.IOException;
 import java.time.ZonedDateTime;
@@ -16,7 +17,7 @@ import java.util.Date;
 
 class TxLogTools {
 
-    static final ObjectMapper mapper = new ObjectMapper();
+    static final ObjectMapper mapper = new ObjectMapper(new MessagePackFactory());
 
     static RawdataMessage.Builder sagaInputToTxEntry(RawdataProducer producer, SagaInput sagaInput) {
         ObjectNode meta = mapper.createObjectNode();

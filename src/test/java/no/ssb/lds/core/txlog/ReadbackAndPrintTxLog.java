@@ -8,6 +8,7 @@ import no.ssb.lds.core.UndertowApplication;
 import no.ssb.rawdata.api.RawdataClient;
 import no.ssb.rawdata.api.RawdataConsumer;
 import no.ssb.rawdata.api.RawdataMessage;
+import org.msgpack.jackson.dataformat.MessagePackFactory;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -26,7 +27,7 @@ public class ReadbackAndPrintTxLog {
         try (RawdataClient rawdataClient = UndertowApplication.configureTxLogRawdataClient(configuration)) {
             String txLogTopic = configuration.evaluateToString("txlog.rawdata.topic");
             try (RawdataConsumer consumer = rawdataClient.consumer(txLogTopic)) {
-                ObjectMapper objectMapper = new ObjectMapper();
+                ObjectMapper objectMapper = new ObjectMapper(new MessagePackFactory());
                 for (int i = 1; ; i++) {
                     RawdataMessage message = consumer.receive(0, TimeUnit.MILLISECONDS);
                     if (message == null) {

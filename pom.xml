@@ -177,6 +177,11 @@
             <artifactId>jackson-annotations</artifactId>
             <version>2.9.9</version>
         </dependency>
+        <dependency>
+            <groupId>org.msgpack</groupId>
+            <artifactId>jackson-dataformat-msgpack</artifactId>
+            <version>0.8.18</version>
+        </dependency>
 
         <dependency>
             <groupId>com.github.akarnokd</groupId>

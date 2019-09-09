@@ -24,6 +24,7 @@ module no.ssb.lds.core {
     requires java.xml; // TODO this should be in test-scope only!
     requires com.fasterxml.jackson.core;
     requires com.fasterxml.jackson.databind;
+    requires jackson.dataformat.msgpack;
 
     requires graphql.java;
     requires io.reactivex.rxjava2;
