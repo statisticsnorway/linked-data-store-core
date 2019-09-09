@@ -48,7 +48,7 @@ public class DataControllerTest {
     }
 
     private HttpUrl.Builder newUrl() {
-        return new HttpUrl.Builder().scheme("http").host(server.getTestServerHost())
+        return new HttpUrl.Builder().scheme("http").host(server.getApplication().getHost())
                 .port(server.getTestServerServicePort());
     }
 

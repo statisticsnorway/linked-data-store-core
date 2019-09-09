@@ -31,9 +31,9 @@ public class EmbeddedResourceHandlerTest {
     private void createTestResource(String entity, String id, String json) {
         ZonedDateTime timestamp = ZonedDateTime.now(ZoneId.of("Etc/UTC"));
         JsonNode jsonObject = JsonTools.toJsonNode(json);
-        RxJsonPersistence persistence = server.getPersistence();
+        RxJsonPersistence persistence = server.getApplication().getPersistence();
         try (Transaction tx = persistence.createTransaction(false)) {
-            persistence.createOrOverwrite(tx, new JsonDocument(new DocumentKey("data", entity, id, timestamp), jsonObject), server.getSpecification()).blockingAwait();
+            persistence.createOrOverwrite(tx, new JsonDocument(new DocumentKey("data", entity, id, timestamp), jsonObject), server.getApplication().getSpecification()).blockingAwait();
         }
     }
 

@@ -139,6 +139,24 @@
         </dependency>
 
         <dependency>
+            <groupId>no.ssb.rawdata</groupId>
+            <artifactId>rawdata-client-api</artifactId>
+            <version>0.19-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>no.ssb.rawdata</groupId>
+            <artifactId>rawdata-client-provider-lmdb</artifactId>
+            <version>0.2-SNAPSHOT</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>no.ssb.rawdata</groupId>
+            <artifactId>rawdata-client-provider-postgres</artifactId>
+            <version>0.3-SNAPSHOT</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
             <groupId>io.reactivex.rxjava2</groupId>
             <artifactId>rxjava</artifactId>
             <version>2.2.8</version>
@@ -158,6 +176,11 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
             <version>2.9.9</version>
+        </dependency>
+        <dependency>
+            <groupId>org.msgpack</groupId>
+            <artifactId>jackson-dataformat-msgpack</artifactId>
+            <version>0.8.18</version>
         </dependency>
 
         <dependency>

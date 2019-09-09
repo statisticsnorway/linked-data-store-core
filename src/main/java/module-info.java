@@ -10,6 +10,8 @@ module no.ssb.lds.core {
     requires no.ssb.saga.api;
     requires no.ssb.saga.execution;
     requires no.ssb.sagalog;
+    requires no.ssb.rawdata.api;
+    requires de.huxhorn.sulky.ulid;
     requires jdk.unsupported;
     requires java.base;
     requires java.net.http;
@@ -22,6 +24,7 @@ module no.ssb.lds.core {
     requires java.xml; // TODO this should be in test-scope only!
     requires com.fasterxml.jackson.core;
     requires com.fasterxml.jackson.databind;
+    requires jackson.dataformat.msgpack;
 
     requires graphql.java;
     requires io.reactivex.rxjava2;

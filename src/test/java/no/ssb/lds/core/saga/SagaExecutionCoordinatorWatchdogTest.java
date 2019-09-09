@@ -45,7 +45,6 @@ public class SagaExecutionCoordinatorWatchdogTest {
      */
     @Test
     @ConfigurationOverride({
-            "transaction.log.enabled", "false",
             "persistence.provider", "mem",
             "sagalog.provider", "no.ssb.sagalog.memory.MemorySagaLogInitializer",
             "saga.number-of-logs", "50",
@@ -55,7 +54,7 @@ public class SagaExecutionCoordinatorWatchdogTest {
             "saga.threadpool.queue.capacity", "100",
     })
     public void thatWatchdogIsTriggeredWhenSagaThreadpoolIsDeadlocked() throws InterruptedException {
-        SagaExecutionCoordinator sec = server.getSagaExecutionCoordinator();
+        SagaExecutionCoordinator sec = server.getApplication().getSec();
 
         {
             /*
