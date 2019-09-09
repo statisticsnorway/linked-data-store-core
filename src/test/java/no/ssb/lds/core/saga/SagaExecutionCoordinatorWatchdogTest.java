@@ -45,7 +45,6 @@ public class SagaExecutionCoordinatorWatchdogTest {
      */
     @Test
     @ConfigurationOverride({
-            "transaction.log.enabled", "false",
             "persistence.provider", "mem",
             "sagalog.provider", "no.ssb.sagalog.memory.MemorySagaLogInitializer",
             "saga.number-of-logs", "50",

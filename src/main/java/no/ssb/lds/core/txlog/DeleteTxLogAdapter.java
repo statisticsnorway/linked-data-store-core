@@ -1,6 +1,7 @@
 package no.ssb.lds.core.txlog;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import no.ssb.lds.core.saga.SagaInput;
 import no.ssb.rawdata.api.RawdataClient;
 import no.ssb.rawdata.api.RawdataProducer;
 import no.ssb.saga.api.SagaNode;
@@ -25,7 +26,7 @@ public class DeleteTxLogAdapter extends Adapter<JsonNode> {
 
     @Override
     public JsonNode executeAction(SagaNode sagaNode, Object sagaInput, Map<SagaNode, Object> dependeesOutput) {
-        producer.publishBuilders(TxLogTools.sagaInputToTxEntry(producer, (JsonNode) sagaInput, "DELETE"));
+        producer.publishBuilders(TxLogTools.sagaInputToTxEntry(producer, new SagaInput((JsonNode) sagaInput)));
         return null;
     }
 }

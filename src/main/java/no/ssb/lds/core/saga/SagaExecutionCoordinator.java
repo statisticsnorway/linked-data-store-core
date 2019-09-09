@@ -1,7 +1,6 @@
 package no.ssb.lds.core.saga;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import de.huxhorn.sulky.ulid.ULID;
 import no.ssb.concurrent.futureselector.SelectableFuture;
 import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
@@ -23,8 +22,6 @@ import no.ssb.sagalog.SagaLogPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -46,7 +43,6 @@ import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 import static java.util.stream.Collectors.groupingBy;
-import static no.ssb.lds.api.persistence.json.JsonTools.mapper;
 
 public class SagaExecutionCoordinator {
 
@@ -106,19 +102,8 @@ public class SagaExecutionCoordinator {
         return threadPool;
     }
 
-    public SelectableFuture<SagaHandoffResult> handoff(boolean sync, AdapterLoader adapterLoader, Saga saga, String schema, String namespace, String entity, String id, ZonedDateTime version, JsonNode data, Map<String, List<SagaCommand>> commandsByNodeId) {
-        String versionStr = version.format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
-        ObjectNode input = mapper.createObjectNode();
-        input.put("namespace", namespace);
-        input.put("entity", entity);
-        input.put("id", id);
-        input.put("version", versionStr);
-        if (data != null) {
-            input.set("data", data);
-        }
-        String executionId = ulid.nextMonotonicValue(prevUlid.get()).toString();
-        input.put("txid", executionId);
-        input.put("schema", schema);
+    public SelectableFuture<SagaHandoffResult> handoff(boolean sync, AdapterLoader adapterLoader, Saga saga, SagaInput sagaInput, Map<String, List<SagaCommand>> commandsByNodeId) {
+        String executionId = sagaInput.txId();
 
         SagaLog sagaLog = acquireCleanSagaLog(c -> {
         }, c -> {
@@ -131,7 +116,7 @@ public class SagaExecutionCoordinator {
         });
         SagaExecution sagaExecution = new SagaExecution(sagaLog, threadPool, saga, adapterLoader);
 
-        SagaHandoffControl handoffControl = startSagaExecutionWithThrottling(sagaExecution, input, executionId, sagaLog, sagaCommandsEnabled ? commandsByNodeId : Collections.emptyMap());
+        SagaHandoffControl handoffControl = startSagaExecutionWithThrottling(sagaExecution, sagaInput, sagaLog, sagaCommandsEnabled ? commandsByNodeId : Collections.emptyMap());
 
         sagasObserver.registerSaga(handoffControl);
 
@@ -149,6 +134,17 @@ public class SagaExecutionCoordinator {
         });
 
         return future;
+    }
+
+    public ULID.Value generateTxId() {
+        ULID.Value previousUlid = prevUlid.get();
+        ULID.Value next = ulid.nextStrictlyMonotonicValue(previousUlid).orElse(null);
+        while (next == null || !prevUlid.compareAndSet(previousUlid, next)) {
+            Thread.yield();
+            previousUlid = prevUlid.get();
+            next = ulid.nextStrictlyMonotonicValue(previousUlid).orElse(null);
+        }
+        return next;
     }
 
     SagaLog acquireCleanSagaLog(Consumer<SagaExecutionTraversalContext> forwardRecoveryPreAction, Consumer<SagaExecutionTraversalContext> forwardRecoveryPostAction) {
@@ -230,7 +226,7 @@ public class SagaExecutionCoordinator {
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()])).thenCompose(v -> from.truncate());
     }
 
-    private SagaHandoffControl startSagaExecutionWithThrottling(SagaExecution sagaExecution, JsonNode input, String executionId, SagaLog sagaLog, Map<String, List<SagaCommand>> commandsByNodeId) {
+    private SagaHandoffControl startSagaExecutionWithThrottling(SagaExecution sagaExecution, SagaInput sagaInput, SagaLog sagaLog, Map<String, List<SagaCommand>> commandsByNodeId) {
         SagaHandoffControl handoffControl;
         try {
             semaphore.acquire();
@@ -240,7 +236,8 @@ public class SagaExecutionCoordinator {
         }
         AtomicBoolean permitReleased = new AtomicBoolean(false);
         try {
-            handoffControl = sagaExecution.executeSaga(executionId, input, false,
+            String executionId = sagaInput.txId();
+            handoffControl = sagaExecution.executeSaga(executionId, sagaInput.asJsonNode(), false,
                     r -> {
                         if (r.isSuccess()) {
                             sagaLog.truncate().join();

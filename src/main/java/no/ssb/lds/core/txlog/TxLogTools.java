@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import de.huxhorn.sulky.ulid.ULID;
+import no.ssb.lds.core.saga.SagaInput;
 import no.ssb.rawdata.api.RawdataMessage;
 import no.ssb.rawdata.api.RawdataProducer;
 
@@ -17,50 +18,37 @@ class TxLogTools {
 
     static final ObjectMapper mapper = new ObjectMapper();
 
-    static RawdataMessage.Builder sagaInputToTxEntry(RawdataProducer producer, JsonNode input, String method) {
-        String txId = input.get("txid").textValue();
-        String schema = input.get("schema").textValue();
-        String namespace = input.get("namespace").textValue();
-        String entity = input.get("entity").textValue();
-        String id = input.get("id").textValue();
-        String versionStr = input.get("version").textValue();
-        ZonedDateTime version = ZonedDateTime.parse(versionStr, DateTimeFormatter.ISO_ZONED_DATE_TIME);
-
+    static RawdataMessage.Builder sagaInputToTxEntry(RawdataProducer producer, SagaInput sagaInput) {
         ObjectNode meta = mapper.createObjectNode();
-        meta.put("method", method);
-        meta.put("schema", schema);
-        meta.put("namespace", namespace);
-        meta.put("entity", entity);
-        meta.put("id", id);
-        meta.put("version", versionStr);
+        meta.put("method", sagaInput.method());
+        meta.put("schema", sagaInput.schema());
+        meta.put("namespace", sagaInput.namespace());
+        meta.put("entity", sagaInput.entity());
+        meta.put("id", sagaInput.resourceId());
+        meta.put("version", sagaInput.versionAsString());
 
-        String uri = String.format("%s/%s/%s", entity, id, Date.from(version.toInstant()).getTime());
+        String uri = String.format("%s/%s/%s", sagaInput.entity(), sagaInput.resourceId(), Date.from(sagaInput.version().toInstant()).getTime());
 
         RawdataMessage.Builder builder = producer.builder()
-                .ulid(ULID.parseULID(txId))
+                .ulid(ULID.parseULID(sagaInput.txId()))
                 .position(uri);
-        if (input.has("data")) {
-            JsonNode data = input.get("data");
-            builder.put("data", toBytes(data));
+        if (sagaInput.data() != null) {
+            builder.put("data", toBytes(sagaInput.data()));
         }
         return builder.put("meta", toBytes(meta));
     }
 
-    static JsonNode txEntryToSagaInput(RawdataMessage message) {
+    static SagaInput txEntryToSagaInput(RawdataMessage message) {
         JsonNode meta = toJson(message.get("meta"));
-        ObjectNode node = mapper.createObjectNode();
-        node.put("txid", message.ulid().toString());
-        node.put("method", meta.get("method").textValue());
-        node.put("schema", meta.get("schema").textValue());
-        node.put("namespace", meta.get("namespace").textValue());
-        node.put("entity", meta.get("entity").textValue());
-        node.put("id", meta.get("id").textValue());
-        node.put("version", meta.get("version").textValue());
-        if (message.keys().contains("data")) {
-            JsonNode data = toJson(message.get("data"));
-            node.set("data", data);
-        }
-        return node;
+        JsonNode data = message.keys().contains("data") ? toJson(message.get("data")) : null;
+        return new SagaInput(message.ulid(),
+                meta.get("method").textValue(),
+                meta.get("schema").textValue(),
+                meta.get("namespace").textValue(),
+                meta.get("entity").textValue(),
+                meta.get("id").textValue(),
+                ZonedDateTime.parse(meta.get("version").textValue(), DateTimeFormatter.ISO_ZONED_DATE_TIME),
+                data);
     }
 
     private static byte[] toBytes(JsonNode node) {

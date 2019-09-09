@@ -1,7 +1,6 @@
 package no.ssb.lds.core.txlog;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import no.ssb.lds.api.persistence.json.JsonTools;
+import no.ssb.lds.core.saga.SagaInput;
 import no.ssb.lds.test.ConfigurationOverride;
 import no.ssb.lds.test.client.TestClient;
 import no.ssb.lds.test.server.TestServer;
@@ -61,31 +60,31 @@ public class ReplayTxLogTest {
 
             RawdataMessage m1 = consumer.receive(0, TimeUnit.MILLISECONDS);
             assertEquals(entityAndId(m1), "provisionagreement/2a41c");
-            assertEquals(TxLogTools.txEntryToSagaInput(m1).get("method").textValue(), "PUT");
+            assertEquals(TxLogTools.txEntryToSagaInput(m1).method(), "PUT");
 
             RawdataMessage m2 = consumer.receive(0, TimeUnit.MILLISECONDS);
             assertEquals(entityAndId(m2), "provisionagreement/2a41c");
-            assertEquals(TxLogTools.txEntryToSagaInput(m2).get("method").textValue(), "PUT");
+            assertEquals(TxLogTools.txEntryToSagaInput(m2).method(), "PUT");
 
             RawdataMessage m3 = consumer.receive(0, TimeUnit.MILLISECONDS);
             assertEquals(entityAndId(m3), "contact/4b2ef");
-            assertEquals(TxLogTools.txEntryToSagaInput(m3).get("method").textValue(), "PUT");
+            assertEquals(TxLogTools.txEntryToSagaInput(m3).method(), "PUT");
 
             RawdataMessage m4 = consumer.receive(0, TimeUnit.MILLISECONDS);
             assertEquals(entityAndId(m4), "contact/821aa");
-            assertEquals(TxLogTools.txEntryToSagaInput(m4).get("method").textValue(), "PUT");
+            assertEquals(TxLogTools.txEntryToSagaInput(m4).method(), "PUT");
 
             RawdataMessage m5 = consumer.receive(0, TimeUnit.MILLISECONDS);
             assertEquals(entityAndId(m5), "provisionagreement/2a41c");
-            assertEquals(TxLogTools.txEntryToSagaInput(m5).get("method").textValue(), "PUT");
+            assertEquals(TxLogTools.txEntryToSagaInput(m5).method(), "PUT");
 
             RawdataMessage m6 = consumer.receive(0, TimeUnit.MILLISECONDS);
             assertEquals(entityAndId(m6), "provisionagreement/2a41c");
-            assertEquals(TxLogTools.txEntryToSagaInput(m6).get("method").textValue(), "PUT");
+            assertEquals(TxLogTools.txEntryToSagaInput(m6).method(), "PUT");
 
             RawdataMessage m7 = consumer.receive(0, TimeUnit.MILLISECONDS);
             assertEquals(entityAndId(m7), "provisionagreement/2a41c");
-            assertEquals(TxLogTools.txEntryToSagaInput(m7).get("method").textValue(), "PUT");
+            assertEquals(TxLogTools.txEntryToSagaInput(m7).method(), "PUT");
         }
     }
 
@@ -100,8 +99,8 @@ public class ReplayTxLogTest {
         try (RawdataConsumer consumer = rawdataClient.consumer(txLogTopic)) {
             RawdataMessage message;
             for (int i = 1; (message = consumer.receive(0, TimeUnit.MILLISECONDS)) != null; i++) {
-                JsonNode sagaInput = TxLogTools.txEntryToSagaInput(message);
-                log.debug("TxLog Entry # {}:\n{}", i, JsonTools.toPrettyJson(sagaInput));
+                SagaInput sagaInput = TxLogTools.txEntryToSagaInput(message);
+                log.debug("TxLog Entry # {}:\n{}", i, sagaInput.toPrettyString());
             }
         }
     }

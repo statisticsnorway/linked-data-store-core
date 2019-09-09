@@ -14,6 +14,7 @@ import no.ssb.lds.core.domain.resource.ResourceContext;
 import no.ssb.lds.core.domain.resource.ResourceElement;
 import no.ssb.lds.core.saga.SagaCommands;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
+import no.ssb.lds.core.saga.SagaInput;
 import no.ssb.lds.core.saga.SagaRepository;
 import no.ssb.lds.core.schema.SchemaRepository;
 import no.ssb.lds.core.validation.LinkedDocumentValidationException;
@@ -141,7 +142,8 @@ public class EmbeddedResourceHandler implements HttpHandler {
                     Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
                     AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-                    SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, "TODO", namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), managedDocument, SagaCommands.getSagaAdminParameterCommands(httpServerExchange));
+                    SagaInput sagaInput = new SagaInput(sec.generateTxId(), "PUT", "TODO", namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), managedDocument);
+                    SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, sagaInput, SagaCommands.getSagaAdminParameterCommands(httpServerExchange));
                     SagaHandoffResult handoffResult = handoff.join();
 
                     exchange.setStatusCode(200);
@@ -182,7 +184,8 @@ public class EmbeddedResourceHandler implements HttpHandler {
                     Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
                     AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-                    SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, "TODO", namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), rootNode, SagaCommands.getSagaAdminParameterCommands(httpServerExchange));
+                    SagaInput sagaInput = new SagaInput(sec.generateTxId(), "PUT", "TODO", namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), rootNode);
+                    SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, sagaInput, SagaCommands.getSagaAdminParameterCommands(httpServerExchange));
                     SagaHandoffResult handoffResult = handoff.join();
 
                     exchange.setStatusCode(200);

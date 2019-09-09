@@ -18,6 +18,7 @@ import no.ssb.lds.core.domain.resource.ResourceContext;
 import no.ssb.lds.core.domain.resource.ResourceElement;
 import no.ssb.lds.core.saga.SagaCommands;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
+import no.ssb.lds.core.saga.SagaInput;
 import no.ssb.lds.core.saga.SagaRepository;
 import no.ssb.lds.core.schema.SchemaRepository;
 import no.ssb.lds.core.validation.LinkedDocumentValidationException;
@@ -159,7 +160,8 @@ public class ManagedResourceHandler implements HttpHandler {
                     Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
                     AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-                    SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, "TODO", namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), requestData, SagaCommands.getSagaAdminParameterCommands(httpServerExchange));
+                    SagaInput sagaInput = new SagaInput(sec.generateTxId(), "PUT", "TODO", namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), requestData);
+                    SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, sagaInput, SagaCommands.getSagaAdminParameterCommands(httpServerExchange));
                     SagaHandoffResult handoffResult = handoff.join();
 
                     exchange.setStatusCode(StatusCodes.CREATED);
@@ -187,7 +189,8 @@ public class ManagedResourceHandler implements HttpHandler {
         Saga saga = sagaRepository.get(SagaRepository.SAGA_DELETE_MANAGED_RESOURCE);
 
         AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-        SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, "TODO", resourceContext.getNamespace(), managedDomain, topLevelElement.id(), resourceContext.getTimestamp(), null, SagaCommands.getSagaAdminParameterCommands(exchange));
+        SagaInput sagaInput = new SagaInput(sec.generateTxId(), "DELETE", "TODO", resourceContext.getNamespace(), managedDomain, topLevelElement.id(), resourceContext.getTimestamp(), null);
+        SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, sagaInput, SagaCommands.getSagaAdminParameterCommands(exchange));
         SagaHandoffResult handoffResult = handoff.join();
 
         HeaderMap responseHeaders = exchange.getResponseHeaders();
