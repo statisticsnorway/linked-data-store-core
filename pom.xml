@@ -126,6 +126,12 @@
         </dependency>
         <dependency>
             <groupId>no.ssb.saga</groupId>
+            <artifactId>sagalog-postgres</artifactId>
+            <version>0.1-SNAPSHOT</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>no.ssb.saga</groupId>
             <artifactId>sagalog-file</artifactId>
             <version>0.5</version>
             <scope>test</scope>
@@ -147,13 +153,13 @@
             <groupId>no.ssb.rawdata</groupId>
             <artifactId>rawdata-client-provider-lmdb</artifactId>
             <version>0.2</version>
-            <scope>runtime</scope>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>no.ssb.rawdata</groupId>
             <artifactId>rawdata-client-provider-postgres</artifactId>
             <version>0.3</version>
-            <scope>runtime</scope>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
