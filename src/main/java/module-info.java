@@ -1,5 +1,6 @@
 import no.ssb.lds.api.persistence.PersistenceInitializer;
 import no.ssb.lds.api.search.SearchIndexProvider;
+import no.ssb.rawdata.api.RawdataClientInitializer;
 import no.ssb.sagalog.SagaLogInitializer;
 
 module no.ssb.lds.core {
@@ -35,6 +36,7 @@ module no.ssb.lds.core {
     opens no.ssb.lds.graphql.graphiql;
 
     uses PersistenceInitializer;
+    uses RawdataClientInitializer;
     uses SearchIndexProvider;
     uses SagaLogInitializer;
 
