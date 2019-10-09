@@ -19,7 +19,8 @@ public class DevServer {
                         "persistence.mem.wait.min", "0",
                         "persistence.mem.wait.max", "0",
                         "persistence.fragment.capacity", "8192",
-                        "specification.schema", "spec/demo/contact.json,spec/demo/provisionagreement.json")
+                        "graphql.enabled", "true",
+                        "specification.schema", "/Users/rupinderkaur/Projects/ssb/gsim-raml-schema/jsonSchemas")
                 .propertiesResource("conf/application.properties")
                 .environment("LDS_")
                 .systemProperties()

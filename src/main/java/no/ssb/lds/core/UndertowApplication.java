@@ -28,6 +28,7 @@ import no.ssb.lds.core.saga.SagasObserver;
 import no.ssb.lds.core.search.SearchIndexConfigurator;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import no.ssb.lds.graphql.GraphqlHttpHandler;
+import no.ssb.lds.graphql.jsonSchema.GraphQLToJsonConverter;
 import no.ssb.lds.graphql.schemas.GraphQLSchemaBuilder;
 import no.ssb.lds.graphql.schemas.SpecificationConverter;
 import no.ssb.rawdata.api.RawdataClient;
@@ -116,6 +117,9 @@ public class UndertowApplication {
 
             GraphQL graphQL = GraphQL.newGraphQL(schema).build();
 
+            GraphQLToJsonConverter graphQLToJsonConverter = new GraphQLToJsonConverter(schema);
+            graphQLToJsonConverter.parseGraphQLSchema(schema);
+
             pathHandler.addExactPath("/graphiql", Handlers.resource(new ClassPathResourceManager(
                     Thread.currentThread().getContextClassLoader(), "no/ssb/lds/graphql/graphiql"
             )).setDirectoryListingEnabled(false).addWelcomeFiles("graphiql.html"));
@@ -130,7 +134,6 @@ public class UndertowApplication {
         ResponseCodeHandler aliveHandler = new ResponseCodeHandler(StatusCodes.OK);
         pathHandler.addExactPath(HealthCheckHandler.HEALTH_READY_PATH, aliveHandler);
         pathHandler.addExactPath(HealthCheckHandler.PING_PATH, aliveHandler);
-
         pathHandler.addPrefixPath("/", namespaceController);
 
         HttpHandler httpHandler;
