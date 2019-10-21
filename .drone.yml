@@ -1,0 +1,126 @@
+kind: pipeline
+name: default
+
+steps:
+
+  - name: authenticate
+    image: robertstettner/drone-mvn-auth
+    pull: true
+    settings:
+      servers:
+        from_secret: maven_servers
+
+  - name: build
+    image: maven:3-jdk-11
+    commands:
+      - mvn compile -P ssb-bip -DskipTests=true -Dmaven.javadoc.skip=true --batch-mode --global-settings settings.xml
+    environment:
+      MAVEN_HOME: /drone/src/.m2
+      M2_HOME: /drone/src/.m2
+    depends_on:
+      - authenticate
+
+  - name: test
+    image: maven:3-jdk-11
+    commands:
+      - mvn verify test -P ssb-bip,coverage --batch-mode --global-settings settings.xml
+    environment:
+      MAVEN_HOME: /drone/src/.m2
+      M2_HOME: /drone/src/.m2
+    depends_on:
+      - build
+
+  - name: codecov
+    image: alpine:3
+    commands:
+      - apk add --no-cache bash curl findutils git
+      - curl -s https://codecov.io/bash | bash
+    environment:
+      CODECOV_TOKEN:
+        from_secret: codecov_token
+    depends_on:
+      - test
+
+  - name: codacy
+    image: maven:3-jdk-11
+    commands:
+      - curl -Ls -o codacy-coverage-reporter "https://dl.bintray.com/codacy/Binaries/6.0.6/codacy-coverage-reporter-linux"
+      - chmod +x codacy-coverage-reporter
+      - ./codacy-coverage-reporter report -l Java -r target/site/jacoco/jacoco.xml
+    environment:
+      CODACY_PROJECT_TOKEN:
+        from_secret: codacy_token
+    depends_on:
+      - test
+
+  - name: sonarqube
+    image: maven:3-jdk-11
+    commands:
+      - mvn -X -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_PROJECTKEY sonar:sonar -P ssb-bip,coverage -Dmaven.javadoc.skip=true --batch-mode --global-settings settings.xml
+    environment:
+      SONAR_HOST_URL: https://sonarqube.prod-bip-ci.ssb.no
+      SONAR_PROJECTKEY:
+        from_secret: sonar_token
+      MAVEN_HOME: /drone/src/.m2
+      M2_HOME: /drone/src/.m2
+    depends_on:
+      - test
+
+  - name: publish-maven
+    image: maven:3-jdk-11
+    commands:
+      - mvn clean package deploy -P ssb-bip, -DskipTests=true -Djdk.tls.client.protocols="TLSv1.2" --batch-mode --global-settings settings.xml
+    when:
+      ref:
+        - refs/heads/develop
+        - refs/tags/*
+    environment:
+      MAVEN_HOME: /drone/src/.m2
+      M2_HOME: /drone/src/.m2
+    depends_on:
+      - sonarqube
+      - codacy
+      - codecov
+
+  - name: slack
+    image: plugins/slack
+    settings:
+      webhook:
+        from_secret: slack_webhook_url
+      channel: bip-ci-test
+    when:
+      status: [ success, failure ]
+    depends_on:
+      - publish-maven
+
+---
+kind: secret
+name: maven_servers
+get:
+  path: drone-maven-servers
+  name: ssb-bip-maven-servers
+
+---
+kind: secret
+name: slack_webhook_url
+get:
+  path: drone-slack-webhook-url
+  name: slack-webhook-url
+---
+kind: secret
+name: sonar_host
+get:
+  path: drone-sonarqube-configuration
+  name: url
+---
+kind: secret
+name: sonar_token
+get:
+  path: drone-sonarqube-configuration
+  name: token
+---
+kind: secret
+name: gcr_credentials
+get:
+  path: drone-gcr-credentials
+  name: gcr-credentials
