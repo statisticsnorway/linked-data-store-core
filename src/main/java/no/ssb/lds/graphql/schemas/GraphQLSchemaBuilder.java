@@ -95,6 +95,7 @@ public class GraphQLSchemaBuilder {
             return;
         }
         GraphQLSchema graphQL = schemaBuilder.getGraphQL(schema);
+        printSchema(schema.getTypeMap().values());
     }
 
     private static String printSchema(GraphQLType type) {
