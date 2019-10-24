@@ -7,7 +7,8 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
@@ -26,24 +27,29 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
 
     @Override
     public TraversalControl visitGraphQLObjectType(GraphQLObjectType node, TraverserContext<GraphQLType> context) {
-       // LOG.info("Parsing [{}]-->[{}]", this.node.getName(), node.getName());
+        // LOG.info("Parsing [{}]-->[{}]", this.node.getName(), node.getName());
+        if ((node.getName().indexOf("Connection") != -1)) {
+            return visitGraphQLConnection(node, context);
+        } else {
+            List<GraphQLDirective> directives = node.getDirectives();
+            boolean isDomainType = directives.stream().map(GraphQLDirective::getName).anyMatch("domain"::equalsIgnoreCase);
 
-        if(!(node.getName().indexOf("Connection") !=-1)){
-            JSONObject definitionElements = new JSONObject();
-            definitionElements.put("type", "object");
-            definitionElements.put("properties", new JSONObject());
-            definitionElements.put("required", new ArrayList<>());
+            if(isDomainType){
+                return visitGraphQLTypeWithDomain(node, context);
+            }else{
+                JSONObject definitionElements = new JSONObject();
+                definitionElements.put("type", "object");
+                definitionElements.put("properties", new JSONObject());
+                definitionElements.put("required", new ArrayList<>());
 
-            JSONObject definitions = (JSONObject) jsonElements.get("definitions");
-            definitions.put(node.getName(), definitionElements);
+                JSONObject definitions = (JSONObject) jsonElements.get("definitions");
+                definitions.put(node.getName(), definitionElements);
 
-            AddReferenceDefinitionVisitor addReferenceDefinitionVisitor = new AddReferenceDefinitionVisitor(node, jsonElements);
-            TRAVERSER.depthFirst(addReferenceDefinitionVisitor, node.getFieldDefinitions());
+                AddReferenceDefinitionVisitor addReferenceDefinitionVisitor = new AddReferenceDefinitionVisitor(node, jsonElements);
+                TRAVERSER.depthFirst(addReferenceDefinitionVisitor, node.getFieldDefinitions());
 
-            return TraversalControl.ABORT;
-        }
-       else{
-           return visitGraphQLConnection(node, context);
+                return TraversalControl.ABORT;
+            }
         }
     }
 
@@ -100,10 +106,10 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
 
         GraphQLType type = ((GraphQLNonNull) node.getWrappedType()).getWrappedType();
 
-        if(type instanceof GraphQLObjectType){
-            itemList.put("$ref", "#/definitions/"+ type.getName());
-        }else if(type instanceof GraphQLScalarType){
-            if(type.getName().equalsIgnoreCase("string")){
+        if (type instanceof GraphQLObjectType) {
+            itemList.put("$ref", "#/definitions/" + type.getName());
+        } else if (type instanceof GraphQLScalarType) {
+            if (type.getName().equalsIgnoreCase("string")) {
                 itemList.put("type", "string");
             }
         }
@@ -125,7 +131,7 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
         return visitGraphQLType(node, context);
     }
 
-    public TraversalControl visitGraphQLConnection(GraphQLObjectType node, TraverserContext<GraphQLType> context){
+    public TraversalControl visitGraphQLConnection(GraphQLObjectType node, TraverserContext<GraphQLType> context) {
         //LOG.info("Parsing connection:: [{}]-->[{}]", this.node.getName(), visitedFieldName);
 
         JSONObject definitionElements = (JSONObject) ((JSONObject) jsonElements.get("definitions")).get(this.node.getName());
@@ -138,6 +144,18 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
         itemList.put("type", "string");
 
         fieldProperties.put("items", itemList);
+
+        return TraversalControl.ABORT;
+    }
+
+    public TraversalControl visitGraphQLTypeWithDomain(GraphQLObjectType node, TraverserContext<GraphQLType> context){
+        JSONObject definitionElements = (JSONObject) ((JSONObject) jsonElements.get("definitions")).get(this.node.getName());
+        JSONObject definitionProperties = (JSONObject) definitionElements.get("properties");
+
+        JSONObject fieldProperties = (JSONObject) definitionProperties.get(visitedFieldName);
+        fieldProperties.put("type", "string");
+        fieldProperties.put("displayName", "");
+        fieldProperties.put("description", node.getDescription());
 
         return TraversalControl.ABORT;
     }

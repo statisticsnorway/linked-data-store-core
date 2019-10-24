@@ -36,17 +36,12 @@ import no.ssb.rawdata.api.RawdataClientInitializer;
 import no.ssb.sagalog.SagaLogInitializer;
 import no.ssb.sagalog.SagaLogPool;
 import no.ssb.service.provider.api.ProviderConfigurator;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.Optional;
-import java.util.ServiceLoader;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -118,7 +113,7 @@ public class UndertowApplication {
             GraphQL graphQL = GraphQL.newGraphQL(schema).build();
 
             GraphQLToJsonConverter graphQLToJsonConverter = new GraphQLToJsonConverter(schema);
-            graphQLToJsonConverter.parseGraphQLSchema(schema);
+            LinkedHashMap<String, JSONObject> jsonSchemaMap = graphQLToJsonConverter.parseGraphQLSchema(schema);
 
             pathHandler.addExactPath("/graphiql", Handlers.resource(new ClassPathResourceManager(
                     Thread.currentThread().getContextClassLoader(), "no/ssb/lds/graphql/graphiql"

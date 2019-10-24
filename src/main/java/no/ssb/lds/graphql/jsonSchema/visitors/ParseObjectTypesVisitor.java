@@ -44,11 +44,8 @@ public class ParseObjectTypesVisitor extends GraphQLTypeVisitorStub {
             jsonElements.put("#schema", "http://json-schema.org/draft-04/schema#");
 
             AddDefinitionVisitor addJsonDefinitionVisitor = new AddDefinitionVisitor(node, jsonElements);
-            List<GraphQLFieldDefinition> fieldDefinitions = node.getFieldDefinitions();
             TRAVERSER.depthFirst(addJsonDefinitionVisitor, node.getFieldDefinitions());
-
             jsonMap.put(node.getName(), jsonElements);
-            System.out.println(jsonMap);
 
         }
         return TraversalControl.ABORT;
