@@ -34,7 +34,7 @@ public class ParseObjectTypesVisitor extends GraphQLTypeVisitorStub {
             LOG.info("Parsing node: {}", node.getName());
             definitionValues.put("type", "object");
             definitionValues.put("properties", new JSONObject());
-            definitionValues.put("required", "");
+            definitionValues.put("required", new ArrayList<>());
             definitionValues.put("description", node.getDescription());
             definitionValues.put("displayName", "");
 

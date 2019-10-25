@@ -3,6 +3,7 @@ package no.ssb.lds.graphql.jsonSchema.visitors;
 import graphql.schema.*;
 import graphql.util.TraversalControl;
 import graphql.util.TraverserContext;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +15,8 @@ public class AddReferenceDefinitionVisitor extends GraphQLTypeVisitorStub {
     private GraphQLObjectType node;
     private JSONObject jsonElements;
     private String visitedFieldName;
+    private ArrayList<String> requiredProperties = new ArrayList<>();
+    private static String lastVisitedNodeType;
 
     public AddReferenceDefinitionVisitor(GraphQLObjectType node, JSONObject jsonElements) {
         this.node = node;
@@ -39,6 +42,7 @@ public class AddReferenceDefinitionVisitor extends GraphQLTypeVisitorStub {
         definitionProperties.put(node.getName(), propertyElements);
 
         visitedFieldName = node.getName();
+        lastVisitedNodeType = GraphQLFieldDefinition.class.getName();
 
         return visitGraphQLType(node, context);
     }
@@ -60,6 +64,8 @@ public class AddReferenceDefinitionVisitor extends GraphQLTypeVisitorStub {
         fieldProperties.put("type", "string");
 
         fieldProperties.put("enum", enumValues);
+
+        lastVisitedNodeType = GraphQLEnumType.class.getName();
 
         return visitGraphQLType(node, context);
     }
@@ -88,11 +94,33 @@ public class AddReferenceDefinitionVisitor extends GraphQLTypeVisitorStub {
 
         fieldProperties.put("items", itemList);
 
+        lastVisitedNodeType = GraphQLList.class.getName();
+
         return visitGraphQLType(node, context);
     }
 
     @Override
     public TraversalControl visitGraphQLNonNull(GraphQLNonNull node, TraverserContext<GraphQLType> context) {
+        /*JSONObject definitionElements = (JSONObject) ((JSONObject) jsonElements.get("definitions")).get(this.node.getName());
+        JSONArray defRequiredProperties = (JSONArray) definitionElements.get("required");
+        GraphQLType wrappedType = node.getWrappedType();
+        if(wrappedType != null){
+            requiredProperties.add(wrappedType.getName());
+        }else{
+            requiredProperties.add(node.getName());
+        }
+        defRequiredProperties.put(requiredProperties);
+*/
+        JSONObject definitionElements = (JSONObject) ((JSONObject) jsonElements.get("definitions")).get(this.node.getName());
+        JSONArray defRequiredProperties = (JSONArray) definitionElements.get("required");
+
+        if(!lastVisitedNodeType.equalsIgnoreCase("graphql.schema.GraphQLList")){
+            //requiredProperties.add(visitedFieldName);
+            defRequiredProperties.put(visitedFieldName);
+        }
+
+        //defRequiredProperties.put(requiredProperties);
+
         return visitGraphQLType(node, context);
     }
 }
