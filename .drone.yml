@@ -19,7 +19,7 @@ steps:
       servers:
         from_secret: maven_servers
 
-  - name: build
+  - name: dependencies
     image: maven:3-jdk-11
     commands:
       - mkdir -p .m2
@@ -28,6 +28,7 @@ steps:
       - mvn dependency:go-offline --batch-mode --global-settings settings.xml
     depends_on:
       - authenticate
+      - restore-cache
 
   - name: build
     image: maven:3-jdk-11
@@ -36,7 +37,7 @@ steps:
       - sed -i -e 's:/usr/share/maven/ref:/drone/src/.m2:' /root/.m2/settings.xml
       - mvn compile -P ssb-bip -DskipTests=true -Dmaven.javadoc.skip=true --batch-mode --global-settings settings.xml
     depends_on:
-      - authenticate
+      - dependencies
 
   - name: test
     image: maven:3-jdk-11
