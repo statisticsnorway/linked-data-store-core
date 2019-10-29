@@ -22,6 +22,9 @@ steps:
   - name: dependencies
     image: maven:3-jdk-11
     commands:
+      - pwd
+      - ls -l /drone/src/.m2/repository
+      - ls -la /drone/src
       - mkdir -p .m2
       - mkdir -p /root/.m2
       - cp /usr/share/maven/ref/settings-docker.xml /root/.m2/settings.xml
