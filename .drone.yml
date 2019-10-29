@@ -19,30 +19,19 @@ steps:
       servers:
         from_secret: maven_servers
 
-  - name: dependencies
+  - name: build
     image: maven:3-jdk-11
     commands:
       - mkdir -p /drone/src/.m2
       - mv /drone/src/drone/src/.m2/repository /drone/src/.m2/repository
       - rm -rf /drone/src/drone
-      - mkdir -p .m2
-      - mkdir -p /root/.m2
-      - cp /usr/share/maven/ref/settings-docker.xml /root/.m2/settings.xml
-      - sed -i -e 's:/usr/share/maven/ref:/drone/src/.m2:' /root/.m2/settings.xml
-      - mvn verify dependency:go-offline -DskipTests=true -P ssb-bip,coverage --batch-mode --global-settings settings.xml
-    depends_on:
-      - authenticate
-      - restore-cache
-
-  - name: build
-    image: maven:3-jdk-11
-    commands:
       - mkdir -p /root/.m2
       - cp /usr/share/maven/ref/settings-docker.xml /root/.m2/settings.xml
       - sed -i -e 's:/usr/share/maven/ref:/drone/src/.m2:' /root/.m2/settings.xml
       - mvn compile -P ssb-bip -DskipTests=true -Dmaven.javadoc.skip=true --batch-mode --global-settings settings.xml
     depends_on:
-      - dependencies
+      - authenticate
+      - restore-cache
 
   - name: test
     image: maven:3-jdk-11
