@@ -72,6 +72,7 @@ steps:
       sonar_host: https://sonarqube.prod-bip-ci.ssb.no
       sonar_token:
         from_secret: sonar_token
+      sources: src/main
     depends_on:
       - test
 
