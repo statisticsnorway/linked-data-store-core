@@ -31,7 +31,7 @@ steps:
   - name: build
     image: maven:3-jdk-11
     commands:
-      - mvn compile -P ssb-bip -Dmaven.repo.local=/drone/src/.m2 -DskipTests=true -Dmaven.javadoc.skip=true --batch-mode --global-settings settings.xml
+      - mvn compile -P ssb-bip -Dmaven.repo.local=/drone/src/.m2/repository -DskipTests=true -Dmaven.javadoc.skip=true --batch-mode --global-settings settings.xml
     depends_on:
       - authenticate
       - restore-cache
