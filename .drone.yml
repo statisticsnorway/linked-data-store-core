@@ -2,6 +2,16 @@ kind: pipeline
 name: default
 
 steps:
+  # Restore the cache if it exists
+  - name: restore-cache
+    image: homerovalle/drone-gcs-cache
+    settings:
+      pull: true
+      bucket: bip-drone-dependency-cache
+      json_key:
+        from_secret: gcs_credentials
+      restore: true
+
   - name: authenticate
     image: robertstettner/drone-mvn-auth
     pull: true
@@ -12,20 +22,28 @@ steps:
   - name: build
     image: maven:3-jdk-11
     commands:
+      - mkdir -p .m2
+      - cp /root/.m2/settings-docker.xml /root/.m2/settings.xml
+      - sed -i -e 's:/usr/share/maven/ref:/drone/src/.m2:' /root/.m2/settings.xml
+      - mvn dependency:go-offline --batch-mode --global-settings settings.xml
+    depends_on:
+      - authenticate
+
+  - name: build
+    image: maven:3-jdk-11
+    commands:
+      - cp /root/.m2/settings-docker.xml /root/.m2/settings.xml
+      - sed -i -e 's:/usr/share/maven/ref:/drone/src/.m2:' /root/.m2/settings.xml
       - mvn compile -P ssb-bip -DskipTests=true -Dmaven.javadoc.skip=true --batch-mode --global-settings settings.xml
-    environment:
-      MAVEN_HOME: /drone/src/.m2
-      M2_HOME: /drone/src/.m2
     depends_on:
       - authenticate
 
   - name: test
     image: maven:3-jdk-11
     commands:
+      - cp /root/.m2/settings-docker.xml /root/.m2/settings.xml
+      - sed -i -e 's:/usr/share/maven/ref:/drone/src/.m2:' /root/.m2/settings.xml
       - mvn verify test -P ssb-bip,coverage --batch-mode --global-settings settings.xml
-    environment:
-      MAVEN_HOME: /drone/src/.m2
-      M2_HOME: /drone/src/.m2
     depends_on:
       - build
 
@@ -55,23 +73,22 @@ steps:
   - name: sonarqube
     image: maven:3-jdk-11
     commands:
+      - cp /root/.m2/settings-docker.xml /root/.m2/settings.xml
+      - sed -i -e 's:/usr/share/maven/ref:/drone/src/.m2:' /root/.m2/settings.xml
       - mvn -X -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_PROJECTKEY sonar:sonar -P ssb-bip,coverage -Dmaven.javadoc.skip=true --batch-mode --global-settings settings.xml
     environment:
       SONAR_HOST_URL: https://sonarqube.prod-bip-ci.ssb.no
       SONAR_PROJECTKEY:
         from_secret: sonar_token
-      MAVEN_HOME: /drone/src/.m2
-      M2_HOME: /drone/src/.m2
     depends_on:
       - test
 
   - name: publish-maven
     image: maven:3-jdk-11
     commands:
+      - cp /root/.m2/settings-docker.xml /root/.m2/settings.xml
+      - sed -i -e 's:/usr/share/maven/ref:/drone/src/.m2:' /root/.m2/settings.xml
       - mvn clean package deploy -P ssb-bip, -DskipTests=true -Djdk.tls.client.protocols="TLSv1.2" --batch-mode --global-settings settings.xml
-    environment:
-      MAVEN_HOME: /drone/src/.m2
-      M2_HOME: /drone/src/.m2
     depends_on:
       - sonarqube
   #      - codacy
@@ -88,6 +105,28 @@ steps:
     depends_on:
       - publish-maven
 
+  # Rebuild cache if it has changed with this build
+  - name: rebuild-cache
+    image: homerovalle/drone-gcs-cache
+    settings:
+      pull: true
+      bucket: bip-drone-dependency-cache
+      json_key:
+        from_secret: gcs_credentials
+      rebuild: true
+      mount:
+        - /drone/src/.m2/repository
+
+  # OPTIONAL: Flush the cache of old cache items (older than 14 days)
+  - name: flush-cache
+    image: homerovalle/drone-gcs-cache
+    settings:
+      pull: true
+      bucket: bip-drone-dependency-cache
+      json_key:
+        from_secret: gcs_credentials
+      flush: true
+      flush_age: 14
 ---
 kind: secret
 name: maven_servers
