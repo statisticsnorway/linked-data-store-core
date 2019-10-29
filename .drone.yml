@@ -73,6 +73,7 @@ steps:
     environment:
       SONAR_HOST_URL: https://sonarqube.prod-bip-ci.ssb.no
       SONAR_PROJECTKEY:
+        from_secret: sonar_token
     depends_on:
       - test
 
