@@ -118,6 +118,8 @@ steps:
       rebuild: true
       mount:
         - /drone/src/.m2/repository
+    depends_on:
+      - publish-maven
 
   # OPTIONAL: Flush the cache of old cache items (older than 14 days)
   - name: flush-cache
@@ -129,6 +131,8 @@ steps:
         from_secret: gcs_credentials
       flush: true
       flush_age: 14
+    depends_on:
+      - publish-maven
 ---
 kind: secret
 name: maven_servers
