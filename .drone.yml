@@ -23,7 +23,7 @@ steps:
     image: maven:3-jdk-11
     commands:
       - mkdir -p .m2
-      - cp /root/.m2/settings-docker.xml /root/.m2/settings.xml
+      - cp /usr/share/maven/ref/settings-docker.xml /root/.m2/settings.xml
       - sed -i -e 's:/usr/share/maven/ref:/drone/src/.m2:' /root/.m2/settings.xml
       - mvn dependency:go-offline --batch-mode --global-settings settings.xml
     depends_on:
@@ -33,7 +33,7 @@ steps:
   - name: build
     image: maven:3-jdk-11
     commands:
-      - cp /root/.m2/settings-docker.xml /root/.m2/settings.xml
+      - cp /usr/share/maven/ref/settings-docker.xml /root/.m2/settings.xml
       - sed -i -e 's:/usr/share/maven/ref:/drone/src/.m2:' /root/.m2/settings.xml
       - mvn compile -o -P ssb-bip -DskipTests=true -Dmaven.javadoc.skip=true --batch-mode --global-settings settings.xml
     depends_on:
@@ -42,7 +42,7 @@ steps:
   - name: test
     image: maven:3-jdk-11
     commands:
-      - cp /root/.m2/settings-docker.xml /root/.m2/settings.xml
+      - cp /usr/share/maven/ref/settings-docker.xml /root/.m2/settings.xml
       - sed -i -e 's:/usr/share/maven/ref:/drone/src/.m2:' /root/.m2/settings.xml
       - mvn verify test -o -P ssb-bip,coverage --batch-mode --global-settings settings.xml
     depends_on:
@@ -74,7 +74,7 @@ steps:
   - name: sonarqube
     image: maven:3-jdk-11
     commands:
-      - cp /root/.m2/settings-docker.xml /root/.m2/settings.xml
+      - cp /usr/share/maven/ref/settings-docker.xml /root/.m2/settings.xml
       - sed -i -e 's:/usr/share/maven/ref:/drone/src/.m2:' /root/.m2/settings.xml
       - mvn -X -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_PROJECTKEY sonar:sonar -o -P ssb-bip,coverage -Dmaven.javadoc.skip=true --batch-mode --global-settings settings.xml
     environment:
@@ -87,7 +87,7 @@ steps:
   - name: publish-maven
     image: maven:3-jdk-11
     commands:
-      - cp /root/.m2/settings-docker.xml /root/.m2/settings.xml
+      - cp /usr/share/maven/ref/settings-docker.xml /root/.m2/settings.xml
       - sed -i -e 's:/usr/share/maven/ref:/drone/src/.m2:' /root/.m2/settings.xml
       - mvn clean package deploy -o -P ssb-bip, -DskipTests=true -Djdk.tls.client.protocols="TLSv1.2" --batch-mode --global-settings settings.xml
     depends_on:
