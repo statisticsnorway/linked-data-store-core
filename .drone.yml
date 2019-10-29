@@ -38,7 +38,7 @@ steps:
       - mkdir -p /root/.m2
       - cp /usr/share/maven/ref/settings-docker.xml /root/.m2/settings.xml
       - sed -i -e 's:/usr/share/maven/ref:/drone/src/.m2:' /root/.m2/settings.xml
-      - mvn compile -o -P ssb-bip -DskipTests=true -Dmaven.javadoc.skip=true --batch-mode --global-settings settings.xml
+      - mvn compile -P ssb-bip -DskipTests=true -Dmaven.javadoc.skip=true --batch-mode --global-settings settings.xml
     depends_on:
       - dependencies
 
@@ -48,7 +48,7 @@ steps:
       - mkdir -p /root/.m2
       - cp /usr/share/maven/ref/settings-docker.xml /root/.m2/settings.xml
       - sed -i -e 's:/usr/share/maven/ref:/drone/src/.m2:' /root/.m2/settings.xml
-      - mvn verify test -o -P ssb-bip,coverage --batch-mode --global-settings settings.xml
+      - mvn verify test -P ssb-bip,coverage --batch-mode --global-settings settings.xml
     depends_on:
       - build
 
