@@ -163,5 +163,5 @@ get:
 kind: secret
 name: gcs_credentials
 get:
-  path: drone-gcs_credentials
-  name: gcs_credentials
+  path: drone-gcs-credentials
+  name: gcs-credentials
