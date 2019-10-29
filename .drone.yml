@@ -16,8 +16,8 @@ steps:
     image: maven:3-jdk-11
     commands:
       - mkdir -p /drone/src/.m2
-      - mv /drone/src/drone/src/.m2/repository /drone/src/.m2/repository
-      - rm -rf /drone/src/drone
+      - mv /drone/src/drone/src/.m2/repository /drone/src/.m2/
+      - rm -rf /drone/src/drone/src/.m2
     depends_on:
       - load-cache
 
