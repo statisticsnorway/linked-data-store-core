@@ -34,6 +34,7 @@ steps:
   - name: build
     image: maven:3-jdk-11
     commands:
+      - ls -l /drone/src/.m2/repository
       - mkdir -p /root/.m2
       - cp /usr/share/maven/ref/settings-docker.xml /root/.m2/settings.xml
       - sed -i -e 's:/usr/share/maven/ref:/drone/src/.m2:' /root/.m2/settings.xml
