@@ -3,7 +3,7 @@ name: default
 
 steps:
   # Restore the cache if it exists
-  - name: restore-cache
+  - name: load-cache
     image: homerovalle/drone-gcs-cache
     settings:
       pull: true
@@ -11,6 +11,15 @@ steps:
       json_key:
         from_secret: gcs_credentials
       restore: true
+
+  - name: restore-cache
+    image: maven:3-jdk-11
+    commands:
+      - mkdir -p /drone/src/.m2
+      - mv /drone/src/drone/src/.m2/repository /drone/src/.m2/repository
+      - rm -rf /drone/src/drone
+    depends_on:
+      - load-cache
 
   - name: authenticate
     image: robertstettner/drone-mvn-auth
@@ -22,13 +31,7 @@ steps:
   - name: build
     image: maven:3-jdk-11
     commands:
-      - mkdir -p /drone/src/.m2
-      - mv /drone/src/drone/src/.m2/repository /drone/src/.m2/repository
-      - rm -rf /drone/src/drone
-      - mkdir -p /root/.m2
-      - cp /usr/share/maven/ref/settings-docker.xml /root/.m2/settings.xml
-      - sed -i -e 's:/usr/share/maven/ref:/drone/src/.m2:' /root/.m2/settings.xml
-      - mvn compile -P ssb-bip -DskipTests=true -Dmaven.javadoc.skip=true --batch-mode --global-settings settings.xml
+      - mvn compile -P ssb-bip -Dmaven.repo.local=/drone/src/.m2 -DskipTests=true -Dmaven.javadoc.skip=true --batch-mode --global-settings settings.xml
     depends_on:
       - authenticate
       - restore-cache
