@@ -26,7 +26,7 @@ steps:
       - mkdir -p /root/.m2
       - cp /usr/share/maven/ref/settings-docker.xml /root/.m2/settings.xml
       - sed -i -e 's:/usr/share/maven/ref:/drone/src/.m2:' /root/.m2/settings.xml
-      - mvn compile verify test dependency:go-offline -P ssb-bip,coverage --batch-mode --global-settings settings.xml
+      - mvn verify dependency:go-offline -DskipTests=true -P ssb-bip,coverage --batch-mode --global-settings settings.xml
     depends_on:
       - authenticate
       - restore-cache
@@ -81,7 +81,7 @@ steps:
       - mkdir -p /root/.m2
       - cp /usr/share/maven/ref/settings-docker.xml /root/.m2/settings.xml
       - sed -i -e 's:/usr/share/maven/ref:/drone/src/.m2:' /root/.m2/settings.xml
-      - mvn -X -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_PROJECTKEY sonar:sonar -o -P ssb-bip,coverage -Dmaven.javadoc.skip=true --batch-mode --global-settings settings.xml
+      - mvn -X -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_PROJECTKEY sonar:sonar -P ssb-bip,coverage -Dmaven.javadoc.skip=true --batch-mode --global-settings settings.xml
     environment:
       SONAR_HOST_URL: https://sonarqube.prod-bip-ci.ssb.no
       SONAR_PROJECTKEY:
@@ -95,7 +95,7 @@ steps:
       - mkdir -p /root/.m2
       - cp /usr/share/maven/ref/settings-docker.xml /root/.m2/settings.xml
       - sed -i -e 's:/usr/share/maven/ref:/drone/src/.m2:' /root/.m2/settings.xml
-      - mvn clean package deploy -o -P ssb-bip, -DskipTests=true -Djdk.tls.client.protocols="TLSv1.2" --batch-mode --global-settings settings.xml
+      - mvn clean package deploy -P ssb-bip, -DskipTests=true -Djdk.tls.client.protocols="TLSv1.2" --batch-mode --global-settings settings.xml
     depends_on:
       - sonarqube
   #      - codacy
