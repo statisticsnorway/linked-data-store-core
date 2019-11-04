@@ -7,9 +7,9 @@ import no.ssb.lds.core.schema.JsonSchemaDefinitionElement;
 
 import java.util.LinkedHashSet;
 
-class SpecificationJsonSchemaBuilder {
+public class SpecificationJsonSchemaBuilder {
 
-    static SpecificationJsonSchemaBuilder createBuilder(JsonSchema jsonSchema) {
+    public static SpecificationJsonSchemaBuilder createBuilder(JsonSchema jsonSchema) {
         return new SpecificationJsonSchemaBuilder(jsonSchema, null, null, null);
     }
 
@@ -35,7 +35,7 @@ class SpecificationJsonSchemaBuilder {
         this.specificationElement = specificationElement;
     }
 
-    JsonSchemaBasedSpecification build() {
+    public JsonSchemaBasedSpecification build() {
         SpecificationElement root = new SpecificationElementBuilder(element)
                 .name("root")
                 .parent(null)

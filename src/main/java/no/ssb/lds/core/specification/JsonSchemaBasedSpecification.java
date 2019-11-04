@@ -67,7 +67,12 @@ public class JsonSchemaBasedSpecification implements Specification, SchemaReposi
 
     private final SpecificationElement root;
 
-    JsonSchemaBasedSpecification(JsonSchema jsonSchema, SpecificationElement root) {
+    public JsonSchemaBasedSpecification() {
+        this.jsonSchema = null;
+        this.root = null;
+    }
+
+    public JsonSchemaBasedSpecification(JsonSchema jsonSchema, SpecificationElement root) {
         this.jsonSchema = jsonSchema;
         this.root = root;
     }

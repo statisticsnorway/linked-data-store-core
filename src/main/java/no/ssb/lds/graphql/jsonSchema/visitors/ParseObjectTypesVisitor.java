@@ -31,7 +31,6 @@ public class ParseObjectTypesVisitor extends GraphQLTypeVisitorStub {
         JSONObject definitionValues = new JSONObject();
 
         if (hasDomainDirective(node)) {
-            LOG.info("Parsing node: {}", node.getName());
             definitionValues.put("type", "object");
             definitionValues.put("properties", new JSONObject());
             definitionValues.put("required", new ArrayList<>());
@@ -50,6 +49,7 @@ public class ParseObjectTypesVisitor extends GraphQLTypeVisitorStub {
         }
         return TraversalControl.ABORT;
     }
+
 
     @Override
     public TraversalControl visitGraphQLFieldDefinition(GraphQLFieldDefinition node, TraverserContext<GraphQLType> context) {

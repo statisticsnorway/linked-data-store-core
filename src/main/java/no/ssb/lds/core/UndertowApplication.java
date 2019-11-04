@@ -25,8 +25,11 @@ import no.ssb.lds.core.saga.SagaExecutionCoordinator;
 import no.ssb.lds.core.saga.SagaRecoveryTrigger;
 import no.ssb.lds.core.saga.SagaRepository;
 import no.ssb.lds.core.saga.SagasObserver;
+import no.ssb.lds.core.schema.JsonSchema;
+import no.ssb.lds.core.schema.JsonSchema04Builder;
 import no.ssb.lds.core.search.SearchIndexConfigurator;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
+import no.ssb.lds.core.specification.SpecificationJsonSchemaBuilder;
 import no.ssb.lds.graphql.GraphqlHttpHandler;
 import no.ssb.lds.graphql.jsonSchema.GraphQLToJsonConverter;
 import no.ssb.lds.graphql.schemas.GraphQLSchemaBuilder;
@@ -50,6 +53,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -108,12 +112,13 @@ public class UndertowApplication {
                 SpecificationConverter specificationConverter = new SpecificationConverter();
                 definitionRegistry = specificationConverter.convert(specification);
             }
+
             GraphQLSchema schema = schemaBuilder.getGraphQL(GraphQLSchemaBuilder.parseSchema(definitionRegistry));
 
             GraphQL graphQL = GraphQL.newGraphQL(schema).build();
 
             GraphQLToJsonConverter graphQLToJsonConverter = new GraphQLToJsonConverter(schema);
-            LinkedHashMap<String, JSONObject> jsonSchemaMap = graphQLToJsonConverter.parseGraphQLSchema(schema);
+            // LinkedHashMap<String, JSONObject> jsonSchemaMap = graphQLToJsonConverter.parseGraphQLSchema(schema);
 
             pathHandler.addExactPath("/graphiql", Handlers.resource(new ClassPathResourceManager(
                     Thread.currentThread().getContextClassLoader(), "no/ssb/lds/graphql/graphiql"
@@ -175,8 +180,28 @@ public class UndertowApplication {
         LOG.info("Initializing Linked Data Store (LDS) server ...");
         String schemaConfigStr = configuration.evaluateToString("specification.schema");
         String[] specificationSchema = ("".equals(schemaConfigStr) ? new String[0] : schemaConfigStr.split(","));
+
+        Optional<String> graphQLSchemaPath = Optional.ofNullable(configuration.evaluateToString("graphql.schema"))
+                .map(path -> path.isEmpty() ? null : path);
+        File graphQLFile = new File(graphQLSchemaPath.get());
+
+        TypeDefinitionRegistry definitionRegistry = new SchemaParser().parse(graphQLFile);
+
+        GraphQLSchema schema = GraphQLSchemaBuilder.parseSchema(definitionRegistry);
+        GraphQLToJsonConverter graphQLToJsonConverter = new GraphQLToJsonConverter(schema);
+        LinkedHashMap<String, JSONObject> jsonMap = graphQLToJsonConverter.createSpecification(schema);
+
+        final JsonSchema[] jsonSchema = new JsonSchema[1];
+
+        final JsonSchemaBasedSpecification[] specificationFromGraphQL = {new JsonSchemaBasedSpecification()};
+
+        jsonMap.forEach((managedDomain, jsonObject) -> {
+            jsonSchema[0] = new JsonSchema04Builder(jsonSchema[0], managedDomain, jsonObject.toString()).build();
+            specificationFromGraphQL[0] = SpecificationJsonSchemaBuilder.createBuilder(jsonSchema[0]).build();
+        });
+
         JsonSchemaBasedSpecification specification = JsonSchemaBasedSpecification.create(specificationSchema);
-        RxJsonPersistence persistence = PersistenceConfigurator.configurePersistence(configuration, specification);
+        RxJsonPersistence persistence = PersistenceConfigurator.configurePersistence(configuration, specificationFromGraphQL[0]);
 
         ServiceLoader<SagaLogInitializer> loader = ServiceLoader.load(SagaLogInitializer.class);
         String sagalogProviderClass = configuration.evaluateToString("sagalog.provider");

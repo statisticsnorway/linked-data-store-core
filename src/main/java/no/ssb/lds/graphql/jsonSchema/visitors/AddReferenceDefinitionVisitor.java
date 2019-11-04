@@ -25,7 +25,7 @@ public class AddReferenceDefinitionVisitor extends GraphQLTypeVisitorStub {
 
     @Override
     public TraversalControl visitGraphQLObjectType(GraphQLObjectType node, TraverserContext<GraphQLType> context) {
-       return TraversalControl.CONTINUE;
+        return TraversalControl.CONTINUE;
     }
 
     @Override
@@ -35,6 +35,30 @@ public class AddReferenceDefinitionVisitor extends GraphQLTypeVisitorStub {
         JSONObject definitionElements = (JSONObject) ((JSONObject) jsonElements.get("definitions")).get(this.node.getName());
         JSONObject definitionProperties = (JSONObject) definitionElements.get("properties");
         JSONObject propertyElements = new JSONObject();
+
+        GraphQLOutputType type = node.getType();
+
+        if (GraphQLTypeUtil.isNonNull(type)) {
+            JSONArray defRequiredProperties = (JSONArray) definitionElements.get("required");
+            defRequiredProperties.put(node.getName());
+        }
+
+        GraphQLType graphQLType = GraphQLTypeUtil.unwrapOne(node.getType());
+        if (GraphQLTypeUtil.isScalar(graphQLType)) {
+            if (graphQLType.getName().equalsIgnoreCase("string")) {
+                propertyElements.put("type", "string");
+            }
+
+            switch (graphQLType.getName()) {
+                case "String":
+                    propertyElements.put("type", "string");
+                    break;
+                case "DateTime":
+                    propertyElements.put("type", "string");
+                    propertyElements.put("format", "date-time");
+                    break;
+            }
+        }
 
         propertyElements.put("description", node.getDescription());
         propertyElements.put("displayName", "");
@@ -84,10 +108,10 @@ public class AddReferenceDefinitionVisitor extends GraphQLTypeVisitorStub {
 
         GraphQLType type = ((GraphQLNonNull) node.getWrappedType()).getWrappedType();
 
-        if(type instanceof GraphQLObjectType){
-            itemList.put("$ref", "#/definitions/"+ type.getName());
-        }else if(type instanceof GraphQLScalarType){
-            if(type.getName().equalsIgnoreCase("string")){
+        if (type instanceof GraphQLObjectType) {
+            itemList.put("$ref", "#/definitions/" + type.getName());
+        } else if (type instanceof GraphQLScalarType) {
+            if (type.getName().equalsIgnoreCase("string")) {
                 itemList.put("type", "string");
             }
         }
@@ -101,25 +125,14 @@ public class AddReferenceDefinitionVisitor extends GraphQLTypeVisitorStub {
 
     @Override
     public TraversalControl visitGraphQLNonNull(GraphQLNonNull node, TraverserContext<GraphQLType> context) {
-        /*JSONObject definitionElements = (JSONObject) ((JSONObject) jsonElements.get("definitions")).get(this.node.getName());
-        JSONArray defRequiredProperties = (JSONArray) definitionElements.get("required");
-        GraphQLType wrappedType = node.getWrappedType();
-        if(wrappedType != null){
-            requiredProperties.add(wrappedType.getName());
-        }else{
-            requiredProperties.add(node.getName());
-        }
-        defRequiredProperties.put(requiredProperties);
-*/
         JSONObject definitionElements = (JSONObject) ((JSONObject) jsonElements.get("definitions")).get(this.node.getName());
         JSONArray defRequiredProperties = (JSONArray) definitionElements.get("required");
 
-        if(!lastVisitedNodeType.equalsIgnoreCase("graphql.schema.GraphQLList")){
-            //requiredProperties.add(visitedFieldName);
-            defRequiredProperties.put(visitedFieldName);
+        if (!lastVisitedNodeType.equalsIgnoreCase("graphql.schema.GraphQLList")) {
+            if (!defRequiredProperties.toList().contains(visitedFieldName)) {
+                defRequiredProperties.put(visitedFieldName);
+            }
         }
-
-        //defRequiredProperties.put(requiredProperties);
 
         return visitGraphQLType(node, context);
     }
