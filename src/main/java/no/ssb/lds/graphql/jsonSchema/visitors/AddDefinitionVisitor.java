@@ -1,9 +1,9 @@
 package no.ssb.lds.graphql.jsonSchema.visitors;
 
+import graphql.language.FieldDefinition;
 import graphql.schema.*;
 import graphql.util.TraversalControl;
 import graphql.util.TraverserContext;
-import graphql.validation.TraversalContext;
 import no.ssb.lds.graphql.directives.LinkDirective;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Stack;
+import java.util.stream.Collectors;
 
 import static no.ssb.lds.graphql.directives.DomainDirective.hasDomainDirective;
 
@@ -34,7 +34,6 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
 
     @Override
     public TraversalControl visitGraphQLObjectType(GraphQLObjectType node, TraverserContext<GraphQLType> context) {
-        // LOG.info("Parsing [{}]-->[{}]", this.node.getName(), node.getName());
         if ((node.getName().indexOf("Connection") != -1)) {
             return visitGraphQLConnection(node, context);
         } else {
@@ -53,7 +52,10 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
                 definitions.put(node.getName(), definitionElements);
 
                 AddReferenceDefinitionVisitor addReferenceDefinitionVisitor = new AddReferenceDefinitionVisitor(node, jsonElements);
-                TRAVERSER.depthFirst(addReferenceDefinitionVisitor, node.getFieldDefinitions());
+                List<GraphQLFieldDefinition> graphQLFieldDefinitions = node.getFieldDefinitions();
+                List<FieldDefinition> fieldDefinitions = node.getDefinition().getFieldDefinitions();
+
+                TRAVERSER.depthFirst(addReferenceDefinitionVisitor, graphQLFieldDefinitions);
 
                 return TraversalControl.ABORT;
             }
@@ -62,8 +64,6 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
 
     @Override
     public TraversalControl visitGraphQLFieldDefinition(GraphQLFieldDefinition node, TraverserContext<GraphQLType> context) {
-        //LOG.info("Parsing field:: [{}]-->[{}]", this.node.getName(), node.getName());
-
         JSONObject definitionElements = (JSONObject) ((JSONObject) jsonElements.get("definitions")).get(this.node.getName());
         JSONObject definitionProperties = (JSONObject) definitionElements.get("properties");
         JSONObject propertyElements = new JSONObject();
@@ -117,14 +117,11 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
             }
         }
 
-        //return redirectVisitor(node.getType(), context);
         return visitGraphQLType(node.getType(), context);
     }
 
     @Override
     public TraversalControl visitGraphQLEnumType(GraphQLEnumType node, TraverserContext<GraphQLType> context) {
-        //LOG.info("Parsing enum:: [{}]-->[{}]", this.node.getName(), node.getName());
-
         JSONObject definitionElements = (JSONObject) ((JSONObject) jsonElements.get("definitions")).get(this.node.getName());
         JSONObject definitionProperties = (JSONObject) definitionElements.get("properties");
         JSONObject fieldProperties = (JSONObject) definitionProperties.get(visitedFieldName);
@@ -146,8 +143,6 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
 
     @Override
     public TraversalControl visitGraphQLList(GraphQLList node, TraverserContext<GraphQLType> context) {
-        //LOG.info("Parsing list:: [{}]-->[{}]", this.node.getName(), visitedFieldName);
-
         JSONObject definitionElements = (JSONObject) ((JSONObject) jsonElements.get("definitions")).get(this.node.getName());
         JSONObject definitionProperties = (JSONObject) definitionElements.get("properties");
 
@@ -191,7 +186,6 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
 
     @Override
     public TraversalControl visitGraphQLScalarType(GraphQLScalarType node, TraverserContext<GraphQLType> context) {
-        //LOG.info("Parsing scalar:: [{}]-->[{}]", this.node.getName(), visitedFieldName);
         return visitGraphQLType(node, context);
     }
 
@@ -215,8 +209,6 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
     }
 
     public TraversalControl visitGraphQLConnection(GraphQLObjectType node, TraverserContext<GraphQLType> context) {
-        //LOG.info("Parsing connection:: [{}]-->[{}]", this.node.getName(), visitedFieldName);
-
         JSONObject definitionElements = (JSONObject) ((JSONObject) jsonElements.get("definitions")).get(this.node.getName());
         JSONObject definitionProperties = (JSONObject) definitionElements.get("properties");
 
@@ -240,23 +232,18 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
         fieldProperties.put("displayName", "");
         fieldProperties.put("description", node.getDescription());
 
+        JSONObject properties = new JSONObject();
+        JSONObject propertyElements = new JSONObject();
+        JSONObject fieldObjects = new JSONObject();
+
+        propertyElements.put("type", "null");
+        properties.put(node.getName(), propertyElements);
+        fieldObjects.put("properties", properties);
+        fieldObjects.put("type", "object");
+
+        definitionProperties.put("_link_property_" + visitedFieldName, fieldObjects);
+
         return TraversalControl.ABORT;
-    }
-
-    public TraversalControl redirectVisitor(GraphQLOutputType node, TraverserContext<GraphQLType> context) {
-        if (GraphQLTypeUtil.isList(node)) {
-            visitGraphQLList((GraphQLList) node, context);
-        } else if (GraphQLTypeUtil.isNonNull(node)) {
-            visitGraphQLNonNull((GraphQLNonNull) node, context);
-        } else if (GraphQLTypeUtil.isEnum(node)) {
-            visitGraphQLEnumType((GraphQLEnumType) node, context);
-        } else if (GraphQLTypeUtil.isScalar(node)) {
-            visitGraphQLScalarType((GraphQLScalarType) node, context);
-        } else {
-            return TraversalControl.CONTINUE;
-        }
-
-        return TraversalControl.CONTINUE;
     }
 
     public TraversalControl visitListLinkProperty(GraphQLType node, TraverserContext<GraphQLType> context) {
