@@ -31,6 +31,16 @@ public class ParseObjectTypesVisitor extends GraphQLTypeVisitorStub {
         JSONObject definitionValues = new JSONObject();
 
         if (hasDomainDirective(node)) {
+            System.out.println(node.getName());
+            if(node.getName().equalsIgnoreCase("RepresentedVariable")){
+                System.out.println(node.getName());
+            }
+            if(node.getName().equalsIgnoreCase("DataResource")){
+                System.out.println(node.getName());
+            }
+            if(node.getName().equalsIgnoreCase("BusinessProcess")){
+                System.out.println(node.getName());
+            }
             definitionValues.put("type", "object");
             definitionValues.put("properties", new JSONObject());
             definitionValues.put("required", new ArrayList<>());

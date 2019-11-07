@@ -178,8 +178,8 @@ public class UndertowApplication {
 
     public static UndertowApplication initializeUndertowApplication(DynamicConfiguration configuration, int port) {
         LOG.info("Initializing Linked Data Store (LDS) server ...");
-        String schemaConfigStr = configuration.evaluateToString("specification.schema");
-        String[] specificationSchema = ("".equals(schemaConfigStr) ? new String[0] : schemaConfigStr.split(","));
+       // String schemaConfigStr = configuration.evaluateToString("specification.schema");
+      //  String[] specificationSchema = ("".equals(schemaConfigStr) ? new String[0] : schemaConfigStr.split(","));
 
         Optional<String> graphQLSchemaPath = Optional.ofNullable(configuration.evaluateToString("graphql.schema"))
                 .map(path -> path.isEmpty() ? null : path);
@@ -200,7 +200,7 @@ public class UndertowApplication {
             specificationFromGraphQL[0] = SpecificationJsonSchemaBuilder.createBuilder(jsonSchema[0]).build();
         });
 
-        JsonSchemaBasedSpecification specification = JsonSchemaBasedSpecification.create(specificationSchema);
+        //JsonSchemaBasedSpecification specification = JsonSchemaBasedSpecification.create(specificationSchema);
         RxJsonPersistence persistence = PersistenceConfigurator.configurePersistence(configuration, specificationFromGraphQL[0]);
 
         ServiceLoader<SagaLogInitializer> loader = ServiceLoader.load(SagaLogInitializer.class);
@@ -209,7 +209,7 @@ public class UndertowApplication {
 
         String host = configuration.evaluateToString("http.host");
         SagaRepository.Builder sagaRepositoryBuilder = new SagaRepository.Builder()
-                .specification(specification)
+                .specification(specificationFromGraphQL[0])
                 .persistence(persistence);
         SearchIndex searchIndex = SearchIndexConfigurator.configureSearchIndex(configuration);
         if (searchIndex != null) {
@@ -265,14 +265,14 @@ public class UndertowApplication {
 
         NamespaceController namespaceController = new NamespaceController(
                 configuration.evaluateToString("namespace.default"),
-                specification,
-                specification,
+                specificationFromGraphQL[0],
+                specificationFromGraphQL[0],
                 persistence,
                 sec,
                 sagaRepository
         );
 
-        return new UndertowApplication(specification, persistence, sec, sagaRepository, sagasObserver, sagaRecoveryTrigger, host, port,
+        return new UndertowApplication(specificationFromGraphQL[0], persistence, sec, sagaRepository, sagasObserver, sagaRecoveryTrigger, host, port,
                 sagaLogPool, sagaThreadPool, namespaceController,
                 searchIndex, configuration, txLogClient);
     }
