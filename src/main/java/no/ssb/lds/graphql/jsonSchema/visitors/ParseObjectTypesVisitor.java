@@ -1,3 +1,4 @@
+
 package no.ssb.lds.graphql.jsonSchema.visitors;
 
 import graphql.schema.*;
@@ -13,11 +14,10 @@ import static no.ssb.lds.graphql.directives.DomainDirective.hasDomainDirective;
 
 public class ParseObjectTypesVisitor extends GraphQLTypeVisitorStub {
     private static final Logger LOG = LoggerFactory.getLogger(ParseObjectTypesVisitor.class);
-
+    private static final TypeTraverser TRAVERSER = new TypeTraverser();
     private final Map<String, GraphQLType> typeMap;
     private final LinkedHashMap<String, JSONObject> jsonMap;
-
-    private static final TypeTraverser TRAVERSER = new TypeTraverser();
+    private String visitedDefinition;
 
     public ParseObjectTypesVisitor(Map<String, GraphQLType> typeMap, LinkedHashMap<String, JSONObject> jsonMap) {
         this.typeMap = typeMap;
@@ -31,16 +31,6 @@ public class ParseObjectTypesVisitor extends GraphQLTypeVisitorStub {
         JSONObject definitionValues = new JSONObject();
 
         if (hasDomainDirective(node)) {
-            System.out.println(node.getName());
-            if(node.getName().equalsIgnoreCase("RepresentedVariable")){
-                System.out.println(node.getName());
-            }
-            if(node.getName().equalsIgnoreCase("DataResource")){
-                System.out.println(node.getName());
-            }
-            if(node.getName().equalsIgnoreCase("BusinessProcess")){
-                System.out.println(node.getName());
-            }
             definitionValues.put("type", "object");
             definitionValues.put("properties", new JSONObject());
             definitionValues.put("required", new ArrayList<>());
@@ -52,22 +42,14 @@ public class ParseObjectTypesVisitor extends GraphQLTypeVisitorStub {
             jsonElements.put("definitions", jsonDefinitions);
             jsonElements.put("#schema", "http://json-schema.org/draft-04/schema#");
 
-            AddDefinitionVisitor addJsonDefinitionVisitor = new AddDefinitionVisitor(node, jsonElements);
+            visitedDefinition = node.getName();
+
+            AddDefinitionVisitor addJsonDefinitionVisitor = new AddDefinitionVisitor(jsonElements, visitedDefinition);
             TRAVERSER.depthFirst(addJsonDefinitionVisitor, node.getFieldDefinitions());
             jsonMap.put(node.getName(), jsonElements);
 
         }
         return TraversalControl.ABORT;
     }
-
-
-    @Override
-    public TraversalControl visitGraphQLFieldDefinition(GraphQLFieldDefinition node, TraverserContext<GraphQLType> context) {
-        return visitGraphQLType(node, context);
-    }
-
-    @Override
-    public TraversalControl visitGraphQLNonNull(GraphQLNonNull node, TraverserContext<GraphQLType> context) {
-        return visitGraphQLType(node, context);
-    }
 }
+
