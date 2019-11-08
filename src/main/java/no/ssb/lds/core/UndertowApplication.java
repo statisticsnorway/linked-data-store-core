@@ -102,7 +102,6 @@ public class UndertowApplication {
 
         PathHandler pathHandler = Handlers.path();
         if (graphqlEnabled) {
-
             GraphQLSchemaBuilder schemaBuilder = new GraphQLSchemaBuilder(namespace, persistence, searchIndex);
             TypeDefinitionRegistry definitionRegistry;
             if (graphQLSchemaPath.isPresent()) {
@@ -116,9 +115,6 @@ public class UndertowApplication {
             GraphQLSchema schema = schemaBuilder.getGraphQL(GraphQLSchemaBuilder.parseSchema(definitionRegistry));
 
             GraphQL graphQL = GraphQL.newGraphQL(schema).build();
-
-            GraphQLToJsonConverter graphQLToJsonConverter = new GraphQLToJsonConverter(schema);
-            // LinkedHashMap<String, JSONObject> jsonSchemaMap = graphQLToJsonConverter.parseGraphQLSchema(schema);
 
             pathHandler.addExactPath("/graphiql", Handlers.resource(new ClassPathResourceManager(
                     Thread.currentThread().getContextClassLoader(), "no/ssb/lds/graphql/graphiql"
@@ -178,8 +174,6 @@ public class UndertowApplication {
 
     public static UndertowApplication initializeUndertowApplication(DynamicConfiguration configuration, int port) {
         LOG.info("Initializing Linked Data Store (LDS) server ...");
-       // String schemaConfigStr = configuration.evaluateToString("specification.schema");
-      //  String[] specificationSchema = ("".equals(schemaConfigStr) ? new String[0] : schemaConfigStr.split(","));
 
         Optional<String> graphQLSchemaPath = Optional.ofNullable(configuration.evaluateToString("graphql.schema"))
                 .map(path -> path.isEmpty() ? null : path);
@@ -200,7 +194,6 @@ public class UndertowApplication {
             specificationFromGraphQL[0] = SpecificationJsonSchemaBuilder.createBuilder(jsonSchema[0]).build();
         });
 
-        //JsonSchemaBasedSpecification specification = JsonSchemaBasedSpecification.create(specificationSchema);
         RxJsonPersistence persistence = PersistenceConfigurator.configurePersistence(configuration, specificationFromGraphQL[0]);
 
         ServiceLoader<SagaLogInitializer> loader = ServiceLoader.load(SagaLogInitializer.class);
