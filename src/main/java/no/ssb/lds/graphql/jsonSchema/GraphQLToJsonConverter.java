@@ -19,16 +19,6 @@ public class GraphQLToJsonConverter {
         this.graphQLSchema = schema;
     }
 
-    /*public LinkedHashMap<String, JSONObject> parseGraphQLSchema(GraphQLSchema schema) {
-        Map<String, GraphQLType> typeMap = schema.getTypeMap();
-        LinkedHashMap<String, JSONObject> jsonMap = new LinkedHashMap<>();
-
-        ParseObjectTypesVisitor parseObjectTypesVisitor = new ParseObjectTypesVisitor(typeMap, jsonMap);
-        TRAVERSER.depthFirst(parseObjectTypesVisitor, typeMap.values());
-
-        return jsonMap;
-    }*/
-
     public LinkedHashMap<String, JSONObject>  createSpecification(GraphQLSchema graphQLSchema) {
         Map<String, GraphQLType> typeMap = graphQLSchema.getTypeMap();
         LinkedHashMap<String, JSONObject> jsonMap = new LinkedHashMap<>();

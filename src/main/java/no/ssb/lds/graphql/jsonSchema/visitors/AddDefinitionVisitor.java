@@ -21,8 +21,8 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
 
     private JSONObject jsonElements;
     private String visitedFieldName;
-    private String visitedDefinition;
-    private static String lastVisitedNodeType;
+    private final String visitedDefinition;
+    private String lastVisitedNodeType;
 
 
     public AddDefinitionVisitor(JSONObject jsonElements, String visitedDefinition) {
