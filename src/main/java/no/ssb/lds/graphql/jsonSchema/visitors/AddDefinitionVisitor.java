@@ -36,6 +36,7 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
         List<GraphQLDirective> directives = node.getDirectives();
         boolean isDomainType = directives.stream().map(GraphQLDirective::getName).anyMatch("domain"::equalsIgnoreCase);
 
+        // Add objects in reference list for non-domain types.
         if (isDomainType) {
             return visitGraphQLDomainType(node, context);
         } else {
@@ -67,11 +68,13 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
 
         lastVisitedNodeType = GraphQLFieldDefinition.class.getName();
 
+        // add non-null type is the required list
         if (GraphQLTypeUtil.isNonNull(type)) {
             JSONArray defRequiredProperties = (JSONArray) definitionElements.get("required");
             defRequiredProperties.put(node.getName());
         }
 
+        // handle scalar types(string, date-time)
         GraphQLType graphQLType = GraphQLTypeUtil.unwrapOne(node.getType());
         if (GraphQLTypeUtil.isScalar(graphQLType)) {
             if (graphQLType.getName().equalsIgnoreCase("string")) {
@@ -90,9 +93,9 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
 
         propertyElements.put("description", node.getDescription());
         propertyElements.put("displayName", "");
-
         definitionProperties.put(node.getName(), propertyElements);
 
+        // handle link types
         for (GraphQLDirective directive : node.getDirectives()) {
             if (directive.getName().equals(LinkDirective.NAME)) {
                 GraphQLType subType;
@@ -177,6 +180,12 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
                     visitListLinkProperty(type, context);
                     return TraversalControl.ABORT;
                 }
+            }
+            // to handle embedded types
+            else if (((GraphQLObjectType) type).getFieldDefinitions().size() > 0) {
+                fieldProperties.put("type", "object");
+                visitEmbeddedType(node, context);
+                return TraversalControl.ABORT;
             } else {
                 itemList.put("$ref", "#/definitions/" + type.getName());
             }
@@ -192,6 +201,7 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
 
         return visitGraphQLType(node, context);
     }
+
 
     @Override
     public TraversalControl visitGraphQLScalarType(GraphQLScalarType node, TraverserContext<GraphQLType> context) {
@@ -291,6 +301,48 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
         fieldObjects.put("type", "object");
 
         definitionsProperties.put("_link_property_" + visitedFieldName, fieldObjects);
+
+        return TraversalControl.ABORT;
+    }
+
+    public TraversalControl visitEmbeddedType(GraphQLList node, TraverserContext<GraphQLType> context) {
+        JSONObject definitionElements = (JSONObject) ((JSONObject) jsonElements.get("definitions")).get(visitedDefinition);
+        JSONObject definitionsProperties = (JSONObject) definitionElements.get("properties");
+        JSONObject definitionProperties = (JSONObject) definitionsProperties.get(visitedFieldName);
+        JSONObject embeddedProperties = new JSONObject();
+
+        if (GraphQLTypeUtil.isList(node)) {
+            GraphQLType graphQLType = GraphQLTypeUtil.unwrapOne(node);
+            if (graphQLType instanceof GraphQLObjectType) {
+                ((GraphQLObjectType) graphQLType).getFieldDefinitions().forEach(fieldDef -> {
+                    System.out.println(fieldDef);
+                    if (GraphQLTypeUtil.isList(fieldDef.getType())) {
+                        JSONObject propertiesValues = new JSONObject();
+                        JSONObject itemList = new JSONObject();
+
+                        propertiesValues.put("type", "array");
+                        itemList.put("type", "string");
+                        propertiesValues.put("items", itemList);
+
+                        embeddedProperties.put(fieldDef.getName(), propertiesValues);
+
+                        JSONObject linkedProperties = new JSONObject();
+                        JSONObject linkedObjects = new JSONObject();
+
+                        linkedProperties.put("type", "object");
+                        propertiesValues = new JSONObject();
+                        linkedObjects.put("type", "null");
+                        propertiesValues.put(((GraphQLList) fieldDef.getType()).getWrappedType().getName(), linkedObjects);
+                        linkedProperties.put("properties", propertiesValues);
+
+                        embeddedProperties.put("_link_property_" + fieldDef.getName(), linkedProperties);
+                    }
+                });
+            }
+
+        }
+        definitionProperties.put("properties", embeddedProperties);
+        System.out.println(definitionProperties);
 
         return TraversalControl.ABORT;
     }

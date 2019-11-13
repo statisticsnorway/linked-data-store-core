@@ -22,9 +22,16 @@ public class GraphQLToJsonConverter {
     public LinkedHashMap<String, JSONObject>  createSpecification(GraphQLSchema graphQLSchema) {
         Map<String, GraphQLType> typeMap = graphQLSchema.getTypeMap();
         LinkedHashMap<String, JSONObject> jsonMap = new LinkedHashMap<>();
+        StringBuilder sb = new StringBuilder();
 
         ParseObjectTypesVisitor parseObjectTypesVisitor = new ParseObjectTypesVisitor(typeMap, jsonMap);
         TRAVERSER.depthFirst(parseObjectTypesVisitor, typeMap.values());
+
+        jsonMap.forEach((managedDomain, jsonObject) -> {
+            sb.append(" /" + managedDomain);
+        });
+
+        LOG.info("{}", (sb.length() == 0 ? "No schemas configured!" : "Managed domains: " + sb.toString().substring(1)));
 
         return jsonMap;
     }
