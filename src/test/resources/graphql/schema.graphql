@@ -239,15 +239,15 @@ type contact @domain{
     email: String!
 }
 
-type address @domain {
+type address{
     street: String!
     city: String!
 }
 type provisionagreement @domain{
     contacts: [contact] @link
     name: String
-    address: address @link
-    friend: [contact] @link
+    address: address
+    friend: contact @link
     support: [support]
 
 }
@@ -255,9 +255,8 @@ type provisionagreement @domain{
 type support{
     technicalSupport: [contact] @link
     businessSupport: [contact] @link
-    otherSupport: [contact] @link
+    otherSupport: contact @link
 }
-
 
 #An RFC-3339 compliant Full Date Scalar
 scalar Date

@@ -273,7 +273,7 @@ public class PersistenceLinksConnectionFetcherTest {
 
         @Override
         public QueryDirectives getQueryDirectives() {
-            return null;
+            throw new UnsupportedOperationException();
         }
 
         @Override

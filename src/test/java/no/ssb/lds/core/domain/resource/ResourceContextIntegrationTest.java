@@ -9,6 +9,7 @@ import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.test.client.TestClient;
 import no.ssb.lds.test.server.TestServer;
 import no.ssb.lds.test.server.TestServerListener;
+import org.testng.annotations.Ignore;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -42,6 +43,7 @@ public class ResourceContextIntegrationTest {
         return URLEncoder.encode(decoded, StandardCharsets.UTF_8);
     }
 
+    @Ignore
     @Test
     public void thatFreakyResourceURLsAreDecodedProperly() {
         createTestResource("provisionagreement", "rc1", "{\"id\":\"rc1\",\"str/ange=Prop#Name\":\"some-value\"}");
