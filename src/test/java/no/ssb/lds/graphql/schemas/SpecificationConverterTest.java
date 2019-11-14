@@ -21,6 +21,7 @@ import static no.ssb.lds.core.specification.SpecificationBuilder.required;
 import static no.ssb.lds.core.specification.SpecificationBuilder.stringNode;
 import static org.assertj.core.api.Assertions.assertThat;
 
+
 public class SpecificationConverterTest {
 
     private SpecificationConverter converter;
@@ -32,7 +33,8 @@ public class SpecificationConverterTest {
 
     private String serializeSchema(TypeDefinitionRegistry registry) {
         GraphQLSchema schema = GraphQLSchemaBuilder.parseSchema(registry);
-        return new SchemaPrinter().print(schema);
+        String print = new SchemaPrinter().print(schema);
+        return print;
     }
 
     @Test
@@ -63,6 +65,8 @@ public class SpecificationConverterTest {
 
         TypeDefinitionRegistry registry = converter.convert(specification);
         assertThat(serializeSchema(registry)).isEqualToIgnoringWhitespace("" +
+                "directive @domain on OBJECT" +
+                "directive @link on FIELD_DEFINITION" +
                 "\"Description: TestSpecificationElement{path='$.EmbeddedObject', Type=EMBEDDED, jsonTypes=[object]}\"" +
                 "type EmbeddedObject {" +
                 "  \"Description: TestSpecificationElement{path='$.EmbeddedObject.booleanArrayProperty', Type=EMBEDDED, jsonTypes=[array]}\"" +
@@ -101,6 +105,7 @@ public class SpecificationConverterTest {
                 "" +
                 "type Query {" +
                 "}"
+
         );
     }
 
@@ -133,6 +138,8 @@ public class SpecificationConverterTest {
 
         TypeDefinitionRegistry registry = converter.convert(specification);
         assertThat(serializeSchema(registry)).isEqualToIgnoringWhitespace("" +
+                "directive @domain on OBJECT" +
+                "directive @link on FIELD_DEFINITION" +
                 "\"Description: TestSpecificationElement{path='$.EmbeddedObject', Type=EMBEDDED, jsonTypes=[object]}\"" +
                 "type EmbeddedObject {" +
                 "  \"Description: TestSpecificationElement{path='$.LeafObject', Type=EMBEDDED, jsonTypes=[object]}\"" +
@@ -208,6 +215,8 @@ public class SpecificationConverterTest {
 
         TypeDefinitionRegistry registry = converter.convert(specification);
         assertThat(serializeSchema(registry)).isEqualToIgnoringWhitespace("" +
+                "directive @domain on OBJECT" +
+                "directive @link on FIELD_DEFINITION" +
                 "\"Description: TestSpecificationElement{path='$.EmbeddedObject', Type=EMBEDDED, jsonTypes=[object]}\"" +
                 "type EmbeddedObject {" +
                 "  \"Description: TestSpecificationElement{path='$.LeafObject', Type=EMBEDDED, jsonTypes=[object]}\"" +

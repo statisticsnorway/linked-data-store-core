@@ -19,7 +19,7 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
     private static final Logger LOG = LoggerFactory.getLogger(AddDefinitionVisitor.class);
     private static final TypeTraverser TRAVERSER = new TypeTraverser();
 
-    private JSONObject jsonElements;
+    private final JSONObject jsonElements;
     private String visitedFieldName;
     private final String visitedDefinition;
     private String lastVisitedNodeType;
@@ -141,9 +141,7 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
 
         ArrayList<String> enumValues = new ArrayList<>();
 
-        node.getValues().stream().forEach(value -> {
-            enumValues.add(value.getName());
-        });
+        node.getValues().stream().forEach(value -> { enumValues.add(value.getName()); });
 
         fieldProperties.put("type", "string");
         fieldProperties.put("enum", enumValues);
@@ -227,7 +225,7 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
         return visitGraphQLType(node.getWrappedType(), context);
     }
 
-    public TraversalControl visitGraphQLDomainType(GraphQLObjectType node, TraverserContext<GraphQLType> context) {
+    private TraversalControl visitGraphQLDomainType(GraphQLObjectType node, TraverserContext<GraphQLType> context) {
         JSONObject definitionElements = (JSONObject) ((JSONObject) jsonElements.get("definitions")).get(visitedDefinition);
         JSONObject definitionProperties = (JSONObject) definitionElements.get("properties");
 
@@ -250,7 +248,7 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
         return TraversalControl.ABORT;
     }
 
-    public TraversalControl visitListLinkProperty(GraphQLType node, TraverserContext<GraphQLType> context) {
+    private TraversalControl visitListLinkProperty(GraphQLType node, TraverserContext<GraphQLType> context) {
         JSONObject definitionElements = (JSONObject) ((JSONObject) jsonElements.get("definitions")).get(visitedDefinition);
         JSONObject definitionsProperties = (JSONObject) definitionElements.get("properties");
         JSONObject definitionProperties = (JSONObject) definitionsProperties.get(visitedFieldName);
@@ -284,7 +282,7 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
         return TraversalControl.ABORT;
     }
 
-    public TraversalControl visitUnionLinkProperty(GraphQLType node, TraverserContext<GraphQLType> context) {
+    private TraversalControl visitUnionLinkProperty(GraphQLType node, TraverserContext<GraphQLType> context) {
         JSONObject definitionElements = (JSONObject) ((JSONObject) jsonElements.get("definitions")).get(visitedDefinition);
         JSONObject definitionsProperties = (JSONObject) definitionElements.get("properties");
 
@@ -305,7 +303,7 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
         return TraversalControl.ABORT;
     }
 
-    public TraversalControl visitEmbeddedType(GraphQLList node, TraverserContext<GraphQLType> context) {
+    private TraversalControl visitEmbeddedType(GraphQLList node, TraverserContext<GraphQLType> context) {
         JSONObject definitionElements = (JSONObject) ((JSONObject) jsonElements.get("definitions")).get(visitedDefinition);
         JSONObject definitionsProperties = (JSONObject) definitionElements.get("properties");
         JSONObject definitionProperties = (JSONObject) definitionsProperties.get(visitedFieldName);
