@@ -7,6 +7,7 @@ import no.ssb.lds.test.ConfigurationOverride;
 import no.ssb.lds.test.client.TestClient;
 import no.ssb.lds.test.server.TestServerListener;
 import org.testng.Assert;
+import org.testng.annotations.Ignore;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -17,6 +18,7 @@ import static no.ssb.lds.core.utils.FileAndClasspathReaderUtils.readFileOrClassp
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.testng.Assert.assertEquals;
 
+@Ignore
 @Listeners(TestServerListener.class)
 public class GraphQLIntegrationTest {
 
