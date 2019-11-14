@@ -44,6 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -106,7 +107,8 @@ public class UndertowApplication {
             TypeDefinitionRegistry definitionRegistry;
             if (graphQLSchemaPath.isPresent()) {
                 File graphQLFile = new File(graphQLSchemaPath.get());
-                definitionRegistry = new SchemaParser().parse(graphQLFile);
+                URL systemResource = ClassLoader.getSystemResource(graphQLFile.getPath());
+                definitionRegistry = new SchemaParser().parse(new File(systemResource.getPath()));
             } else {
                 SpecificationConverter specificationConverter = new SpecificationConverter();
                 definitionRegistry = specificationConverter.convert(specification);
@@ -185,8 +187,8 @@ public class UndertowApplication {
 
         if (graphQLSchemaPath.isPresent()) {
             File graphQLFile = new File(graphQLSchemaPath.get());
-
-            TypeDefinitionRegistry definitionRegistry = new SchemaParser().parse(graphQLFile);
+            URL systemResource = ClassLoader.getSystemResource(graphQLFile.getPath());
+            TypeDefinitionRegistry definitionRegistry = new SchemaParser().parse(new File(systemResource.getPath()));
 
             GraphQLSchema schema = GraphQLSchemaBuilder.parseSchema(definitionRegistry);
             GraphQLToJsonConverter graphQLToJsonConverter = new GraphQLToJsonConverter(schema);
