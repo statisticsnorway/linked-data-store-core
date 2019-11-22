@@ -18,6 +18,7 @@ import static no.ssb.lds.core.utils.FileAndClasspathReaderUtils.readFileOrClassp
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.testng.Assert.assertEquals;
 
+
 @Ignore
 @Listeners(TestServerListener.class)
 public class GraphQLIntegrationTest {

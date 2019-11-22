@@ -252,7 +252,7 @@ type provisionagreement @domain{
 
 }
 
-type support{
+type support @domain{
     technicalSupport: [contact] @link
     businessSupport: [contact] @link
     otherSupport: contact @link

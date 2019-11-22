@@ -141,7 +141,9 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
 
         ArrayList<String> enumValues = new ArrayList<>();
 
-        node.getValues().stream().forEach(value -> { enumValues.add(value.getName()); });
+        node.getValues().stream().forEach(value -> {
+            enumValues.add(value.getName());
+        });
 
         fieldProperties.put("type", "string");
         fieldProperties.put("enum", enumValues);
@@ -162,6 +164,7 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
         JSONObject itemList = new JSONObject();
 
         GraphQLType type;
+        boolean isEmbeddedType = false;
 
         if (GraphQLTypeUtil.isNonNull(node.getWrappedType())) {
             type = ((GraphQLNonNull) node.getWrappedType()).getWrappedType();
@@ -170,34 +173,46 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
         }
 
         if (type instanceof GraphQLObjectType) {
-            if (hasDomainDirective((GraphQLObjectType) type)) {
-                if (type instanceof GraphQLUnionType) {
-                    visitUnionLinkProperty(type, context);
-                    return TraversalControl.ABORT;
-                } else {
-                    visitListLinkProperty(type, context);
+            if (!hasDomainDirective((GraphQLDirectiveContainer) type)) {
+                itemList.put("$ref", "#/definitions/" + type.getName());
+                fieldProperties.put("items", itemList);
+                lastVisitedNodeType = GraphQLList.class.getName();
+
+                return visitGraphQLType(node, context);
+            } else {
+                for (GraphQLFieldDefinition def : ((GraphQLObjectType) type).getFieldDefinitions()) {
+                    GraphQLUnmodifiedType graphQLUnmodifiedType = GraphQLTypeUtil.unwrapAll(def.getType());
+                    if (hasDomainDirective(def) || hasDomainDirective((GraphQLDirectiveContainer) graphQLUnmodifiedType)) {
+                        isEmbeddedType = true;
+                    }
+                }
+                if (isEmbeddedType) {
+                    fieldProperties.put("type", "object");
+                    visitEmbeddedType(node, context);
                     return TraversalControl.ABORT;
                 }
-            }
-            // to handle embedded types
-            else if (((GraphQLObjectType) type).getFieldDefinitions().size() > 0) {
-                fieldProperties.put("type", "object");
-                visitEmbeddedType(node, context);
-                return TraversalControl.ABORT;
-            } else {
-                itemList.put("$ref", "#/definitions/" + type.getName());
+
+                if (hasDomainDirective((GraphQLObjectType) type)) {
+                    if (type instanceof GraphQLUnionType) {
+                        visitUnionLinkProperty(type, context);
+                        return TraversalControl.ABORT;
+                    } else {
+                        visitListLinkProperty(type, context);
+                        return TraversalControl.ABORT;
+                    }
+                }
             }
         } else if (type instanceof GraphQLScalarType) {
             if (type.getName().equalsIgnoreCase("string")) {
                 itemList.put("type", "string");
             }
+            fieldProperties.put("items", itemList);
+            lastVisitedNodeType = GraphQLList.class.getName();
+
+            return visitGraphQLType(node, context);
         }
 
-        fieldProperties.put("items", itemList);
-
-        lastVisitedNodeType = GraphQLList.class.getName();
-
-        return visitGraphQLType(node, context);
+        return TraversalControl.CONTINUE;
     }
 
 

@@ -107,8 +107,8 @@ public class UndertowApplication {
             TypeDefinitionRegistry definitionRegistry;
             if (graphQLSchemaPath.isPresent()) {
                 File graphQLFile = new File(graphQLSchemaPath.get());
-                URL systemResource = ClassLoader.getSystemResource(graphQLFile.getPath());
-                definitionRegistry = new SchemaParser().parse(new File(systemResource.getPath()));
+                definitionRegistry = parseSchemaFile(graphQLFile);
+
             } else {
                 SpecificationConverter specificationConverter = new SpecificationConverter();
                 definitionRegistry = specificationConverter.convert(specification);
@@ -165,6 +165,18 @@ public class UndertowApplication {
                 .build();
     }
 
+    private static TypeDefinitionRegistry parseSchemaFile(File graphQLFile) {
+        TypeDefinitionRegistry definitionRegistry;
+        URL systemResource = ClassLoader.getSystemResource(graphQLFile.getPath());
+
+        if (Optional.ofNullable(systemResource).isPresent()) {
+            definitionRegistry = new SchemaParser().parse(new File(systemResource.getPath()));
+        } else {
+            definitionRegistry = new SchemaParser().parse(new File(graphQLFile.getPath()));
+        }
+        return definitionRegistry;
+    }
+
     public static String getDefaultConfigurationResourcePath() {
         return "application-defaults.properties";
     }
@@ -187,8 +199,8 @@ public class UndertowApplication {
 
         if (graphQLSchemaPath.isPresent()) {
             File graphQLFile = new File(graphQLSchemaPath.get());
-            URL systemResource = ClassLoader.getSystemResource(graphQLFile.getPath());
-            TypeDefinitionRegistry definitionRegistry = new SchemaParser().parse(new File(systemResource.getPath()));
+
+            TypeDefinitionRegistry definitionRegistry = parseSchemaFile(graphQLFile);
 
             GraphQLSchema schema = GraphQLSchemaBuilder.parseSchema(definitionRegistry);
             GraphQLToJsonConverter graphQLToJsonConverter = new GraphQLToJsonConverter(schema);
@@ -278,7 +290,7 @@ public class UndertowApplication {
         Set<Map.Entry<String, JSONObject>> entries = jsonMap.entrySet();
         Iterator<Map.Entry<String, JSONObject>> iterator = entries.iterator();
 
-        while(iterator.hasNext()){
+        while (iterator.hasNext()) {
             Map.Entry item = iterator.next();
             jsonSchema = new JsonSchema04Builder(jsonSchema, item.getKey().toString(), item.getValue().toString()).build();
             graphQLBasedSpecification = SpecificationJsonSchemaBuilder.createBuilder(jsonSchema).build();
