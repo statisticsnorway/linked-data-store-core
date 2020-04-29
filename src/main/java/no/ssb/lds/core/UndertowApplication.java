@@ -211,9 +211,7 @@ public class UndertowApplication {
 
         RxJsonPersistence persistence = PersistenceConfigurator.configurePersistence(configuration, specification);
 
-        ServiceLoader<SagaLogInitializer> loader = ServiceLoader.load(SagaLogInitializer.class);
-        String sagalogProviderClass = configuration.evaluateToString("sagalog.provider");
-        SagaLogPool sagaLogPool = loader.stream().filter(c -> sagalogProviderClass.equals(c.type().getName())).findFirst().orElseThrow().get().initialize(configuration.asMap());
+        SagaLogPool sagaLogPool = configureSagaLogProvider(configuration);
 
         String host = configuration.evaluateToString("http.host");
         SagaRepository.Builder sagaRepositoryBuilder = new SagaRepository.Builder()
@@ -299,18 +297,28 @@ public class UndertowApplication {
         return graphQLBasedSpecification;
     }
 
+    private static SagaLogPool configureSagaLogProvider(DynamicConfiguration configuration) {
+        String providerClass = configuration.evaluateToString("sagalog.provider");
+        ServiceLoader<SagaLogInitializer> loader = ServiceLoader.load(SagaLogInitializer.class);
+        SagaLogInitializer initializer = loader.stream().filter(c -> providerClass.equals(c.type().getName())).findFirst().orElseThrow().get();
+        Map<String, String> providerConfig = subMapFromPrefix(new TreeMap<>(configuration.asMap()), "sagalog.config.");
+        return initializer.initialize(providerConfig);
+    }
+
     public static RawdataClient configureTxLogRawdataClient(DynamicConfiguration configuration) {
-        String txLogRawdataProvider = configuration.evaluateToString("txlog.rawdata.provider");
-        NavigableMap<String, String> configMap = new TreeMap<>(configuration.asMap());
-        String txLogRawdataProviderConfigPrefix = "txlog.rawdata." + txLogRawdataProvider + ".";
-        NavigableMap<String, String> txLogRawdataProviderConfigWithPrefix = configMap.subMap(
-                txLogRawdataProviderConfigPrefix, true,
-                txLogRawdataProviderConfigPrefix + "~", false);
-        Map<String, String> txLogRawdataProviderConfig = txLogRawdataProviderConfigWithPrefix.entrySet().stream().collect(Collectors.toMap(
-                e -> e.getKey().substring(txLogRawdataProviderConfigPrefix.length()),
-                e -> e.getValue())
+        String provider = configuration.evaluateToString("txlog.rawdata.provider");
+        Map<String, String> providerConfig = subMapFromPrefix(new TreeMap<>(configuration.asMap()), "txlog.rawdata." + provider + ".");
+        return ProviderConfigurator.configure(providerConfig, provider, RawdataClientInitializer.class);
+    }
+
+    private static Map<String, String> subMapFromPrefix(NavigableMap<String, String> configMap, String prefix) {
+        NavigableMap<String, String> map = configMap.subMap(
+                prefix, true,
+                prefix + "~", false);
+        return map.entrySet().stream().collect(Collectors.toMap(
+                e -> e.getKey().substring(prefix.length()),
+                Map.Entry::getValue)
         );
-        return ProviderConfigurator.configure(txLogRawdataProviderConfig, txLogRawdataProvider, RawdataClientInitializer.class);
     }
 
     static void shutdownAndAwaitTermination(ExecutorService pool) {
