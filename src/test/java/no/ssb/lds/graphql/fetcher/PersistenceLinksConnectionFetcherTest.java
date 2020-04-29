@@ -6,7 +6,6 @@ import graphql.cachecontrol.CacheControl;
 import graphql.execution.ExecutionId;
 import graphql.execution.ExecutionStepInfo;
 import graphql.execution.MergedField;
-import graphql.execution.directives.QueryDirectives;
 import graphql.language.Document;
 import graphql.language.Field;
 import graphql.language.FragmentDefinition;
@@ -268,11 +267,6 @@ public class PersistenceLinksConnectionFetcherTest {
 
         @Override
         public DataFetchingFieldSelectionSet getSelectionSet() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public QueryDirectives getQueryDirectives() {
             throw new UnsupportedOperationException();
         }
 

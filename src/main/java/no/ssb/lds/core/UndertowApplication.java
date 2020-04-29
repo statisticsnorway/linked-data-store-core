@@ -33,7 +33,6 @@ import no.ssb.lds.core.specification.SpecificationJsonSchemaBuilder;
 import no.ssb.lds.graphql.GraphqlHttpHandler;
 import no.ssb.lds.graphql.jsonSchema.GraphQLToJsonConverter;
 import no.ssb.lds.graphql.schemas.GraphQLSchemaBuilder;
-import no.ssb.lds.graphql.schemas.SpecificationConverter;
 import no.ssb.rawdata.api.RawdataClient;
 import no.ssb.rawdata.api.RawdataClientInitializer;
 import no.ssb.sagalog.SagaLogInitializer;
@@ -45,7 +44,15 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.URL;
-import java.util.*;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.Optional;
+import java.util.ServiceLoader;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -54,7 +61,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -102,17 +108,11 @@ public class UndertowApplication {
 
 
         PathHandler pathHandler = Handlers.path();
-        if (graphqlEnabled) {
+        if (graphqlEnabled && graphQLSchemaPath.isPresent()) {
             GraphQLSchemaBuilder schemaBuilder = new GraphQLSchemaBuilder(namespace, persistence, searchIndex);
             TypeDefinitionRegistry definitionRegistry;
-            if (graphQLSchemaPath.isPresent()) {
-                File graphQLFile = new File(graphQLSchemaPath.get());
-                definitionRegistry = parseSchemaFile(graphQLFile);
-
-            } else {
-                SpecificationConverter specificationConverter = new SpecificationConverter();
-                definitionRegistry = specificationConverter.convert(specification);
-            }
+            File graphQLFile = new File(graphQLSchemaPath.get());
+            definitionRegistry = parseSchemaFile(graphQLFile);
 
             GraphQLSchema schema = schemaBuilder.getGraphQL(GraphQLSchemaBuilder.parseSchema(definitionRegistry));
 
@@ -188,14 +188,11 @@ public class UndertowApplication {
 
     public static UndertowApplication initializeUndertowApplication(DynamicConfiguration configuration, int port) {
         LOG.info("Initializing Linked Data Store (LDS) server ...");
-        String schemaConfigStr = configuration.evaluateToString("specification.schema");
-        String[] specificationSchema = ("".equals(schemaConfigStr) ? new String[0] : schemaConfigStr.split(","));
-        JsonSchemaBasedSpecification specification = JsonSchemaBasedSpecification.create(specificationSchema);
+
+        JsonSchemaBasedSpecification specification;
 
         Optional<String> graphQLSchemaPath = Optional.ofNullable(configuration.evaluateToString("graphql.schema"))
                 .map(path -> path.isEmpty() ? null : path);
-
-        JsonSchema jsonSchema = null;
 
         if (graphQLSchemaPath.isPresent()) {
             File graphQLFile = new File(graphQLSchemaPath.get());
@@ -206,7 +203,12 @@ public class UndertowApplication {
             GraphQLToJsonConverter graphQLToJsonConverter = new GraphQLToJsonConverter(schema);
             LinkedHashMap<String, JSONObject> jsonMap = graphQLToJsonConverter.createSpecification(schema);
 
-            specification = createJsonSpecification(jsonSchema, jsonMap);
+            specification = createJsonSpecification(jsonMap);
+
+        } else {
+            String schemaConfigStr = configuration.evaluateToString("specification.schema");
+            String[] specificationSchema = ("".equals(schemaConfigStr) ? new String[0] : schemaConfigStr.split(","));
+            specification = JsonSchemaBasedSpecification.create(specificationSchema);
         }
 
         RxJsonPersistence persistence = PersistenceConfigurator.configurePersistence(configuration, specification);
@@ -283,18 +285,19 @@ public class UndertowApplication {
                 searchIndex, configuration, txLogClient);
     }
 
-    private static JsonSchemaBasedSpecification createJsonSpecification(JsonSchema jsonSchema, LinkedHashMap<String, JSONObject> jsonMap) {
-        JsonSchemaBasedSpecification graphQLBasedSpecification = null;
+    private static JsonSchemaBasedSpecification createJsonSpecification(LinkedHashMap<String, JSONObject> jsonMap) {
+        JsonSchemaBasedSpecification jsonSchemaBasedSpecification = null;
         Set<Map.Entry<String, JSONObject>> entries = jsonMap.entrySet();
         Iterator<Map.Entry<String, JSONObject>> iterator = entries.iterator();
 
+        JsonSchema jsonSchema = null;
         while (iterator.hasNext()) {
             Map.Entry item = iterator.next();
             jsonSchema = new JsonSchema04Builder(jsonSchema, item.getKey().toString(), item.getValue().toString()).build();
-            graphQLBasedSpecification = SpecificationJsonSchemaBuilder.createBuilder(jsonSchema).build();
+            jsonSchemaBasedSpecification = SpecificationJsonSchemaBuilder.createBuilder(jsonSchema).build();
         }
 
-        return graphQLBasedSpecification;
+        return jsonSchemaBasedSpecification;
     }
 
     private static SagaLogPool configureSagaLogProvider(DynamicConfiguration configuration) {
