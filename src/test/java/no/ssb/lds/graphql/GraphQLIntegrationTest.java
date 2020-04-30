@@ -57,7 +57,7 @@ public class GraphQLIntegrationTest {
     public void thatGraphQLEndpointSupportsCors() {
 
         client.options("/graphql",
-                "Access-Controll-Request-Method", "POST"
+                "Access-Control-Request-Method", "POST"
         ).response().headers();
     }
 
