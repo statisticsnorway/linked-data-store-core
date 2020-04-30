@@ -17,7 +17,10 @@
           "type" : "string"
         },
         "animals" : {
-          "type" : "array"
+          "type" : "array",
+          "items" : {
+            "type" : "string"
+          }
         },
         "_link_property_favorite" : {
           "type" : "object",
@@ -42,7 +45,8 @@
           }
         }
       },
-      "required" : [ "name", "email" ]
+      "required" : [ "name", "email" ],
+      "additionalProperties" : false
     }
   },
   "$schema" : "http://json-schema.org/draft-04/schema#"

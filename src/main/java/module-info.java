@@ -41,4 +41,5 @@ module no.ssb.lds.core {
     uses SagaLogInitializer;
 
     exports no.ssb.lds.core;
+    exports no.ssb.lds.test.server; // Needed to run tests in IntelliJ
 }
