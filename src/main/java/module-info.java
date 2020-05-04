@@ -35,6 +35,8 @@ module no.ssb.lds.core {
 
     opens no.ssb.lds.graphql.graphiql;
 
+    provides SearchIndexProvider with no.ssb.lds.core.search.TestSearchIndex;
+
     uses PersistenceInitializer;
     uses RawdataClientInitializer;
     uses SearchIndexProvider;
