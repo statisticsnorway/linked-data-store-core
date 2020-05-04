@@ -30,7 +30,8 @@ public class GraphQLIntegrationTest {
     @ConfigurationOverride({
             "graphql.enabled", "true",
             "graphql.search.enabled", "false",
-            "specification.schema", "spec/abstract/Dog.json,spec/abstract/Cat.json,spec/abstract/Owner.json"
+            "specification.schema", "src/test/resources/spec/abstract/jsonschemas",
+            "graphql.schema", "src/test/resources/spec/abstract/graphqlschemas/schema.graphql"
     })
     public void testAbstractRelations() throws IOException {
         putResource("/data/Cat/cat1", "spec/abstract/cat1.json");
