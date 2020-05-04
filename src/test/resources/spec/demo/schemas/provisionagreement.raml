@@ -1,0 +1,21 @@
+#%RAML 1.0 Library
+uses:
+  Link: ./annotation/Link.raml
+
+types:
+  provisionagreement:
+    properties:
+      name?:
+        type: string
+      email?:
+        type: string
+      address?:
+        type: object
+        properties:
+          street:
+            type: string
+          city:
+            type: string
+      contacts?:
+        type: string[]
+        (Link.types): [contact]
