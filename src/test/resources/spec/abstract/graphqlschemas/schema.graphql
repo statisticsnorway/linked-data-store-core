@@ -12,17 +12,17 @@ union animals = Cat | Dog
 #The list of types are [Cat, Dog].
 union favorite = Cat | Dog
 
-type Cat {
+type Cat @domain {
   age: Float
   name: String!
 }
 
-type Dog {
+type Dog @domain {
   age: Float
   name: String!
 }
 
-type Owner {
+type Owner @domain {
   age: Float
   animals: [animals] @link
   email: String!
