@@ -222,6 +222,10 @@
                     <artifactId>wildfly-common</artifactId>
                     <groupId>org.wildfly.common</groupId>
                 </exclusion>
+                <exclusion>
+                    <artifactId>jboss-logging</artifactId>
+                    <groupId>org.jboss.logging</groupId>
+                </exclusion>
             </exclusions>
         </dependency>
 
@@ -229,6 +233,12 @@
             <groupId>org.jboss.threads</groupId>
             <artifactId>jboss-threads</artifactId>
             <scope>runtime</scope>
+            <exclusions>
+                <exclusion>
+                    <artifactId>jboss-logging</artifactId>
+                    <groupId>org.jboss.logging</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
