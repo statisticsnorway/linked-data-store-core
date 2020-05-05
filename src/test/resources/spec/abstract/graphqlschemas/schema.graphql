@@ -1,0 +1,46 @@
+directive @domain on OBJECT
+
+directive @link on FIELD_DEFINITION
+
+#Automatically generated because of anonymous type in RAML
+#Please consider defining your own union types or use an interface type.
+#The list of types are [Cat, Dog].
+union animals = Cat | Dog
+
+#Automatically generated because of anonymous type in RAML
+#Please consider defining your own union types or use an interface type.
+#The list of types are [Cat, Dog].
+union favorite = Cat | Dog
+
+type Cat @domain {
+  age: Float
+  name: String!
+}
+
+type Dog @domain {
+  age: Float
+  name: String!
+}
+
+type Owner @domain {
+  age: Float
+  animals: [animals] @link
+  email: String!
+  favorite: favorite @link
+  name: String!
+}
+
+type Query {
+  CatById: [Cat]
+  DogById: [Dog]
+  OwnerById: [Owner]
+}
+
+#An RFC-3339 compliant Full Date Scalar
+scalar Date
+
+#An RFC-3339 compliant DateTime Scalar
+scalar DateTime
+
+#An RFC-3339 compliant Full Time Scalar
+scalar Time

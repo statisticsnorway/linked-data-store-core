@@ -1,0 +1,19 @@
+#%RAML 1.0 Library
+uses:
+  Link: ./annotation/Link.raml
+
+types:
+  Owner:
+    properties:
+      name:
+        type: string
+      age?:
+        type: number
+      email:
+        type: string
+      favorite?:
+        type: string
+        (Link.types): [Cat, Dog]
+      animals?:
+        type: string[]
+        (Link.types): [Cat, Dog]

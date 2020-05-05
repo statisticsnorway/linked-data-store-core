@@ -25,20 +25,27 @@ import no.ssb.lds.core.saga.SagaExecutionCoordinator;
 import no.ssb.lds.core.saga.SagaRecoveryTrigger;
 import no.ssb.lds.core.saga.SagaRepository;
 import no.ssb.lds.core.saga.SagasObserver;
+import no.ssb.lds.core.schema.JsonSchema;
+import no.ssb.lds.core.schema.JsonSchema04Builder;
 import no.ssb.lds.core.search.SearchIndexConfigurator;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
+import no.ssb.lds.core.specification.SpecificationJsonSchemaBuilder;
 import no.ssb.lds.graphql.GraphqlHttpHandler;
+import no.ssb.lds.graphql.jsonSchema.GraphQLToJsonConverter;
 import no.ssb.lds.graphql.schemas.GraphQLSchemaBuilder;
-import no.ssb.lds.graphql.schemas.SpecificationConverter;
 import no.ssb.rawdata.api.RawdataClient;
 import no.ssb.rawdata.api.RawdataClientInitializer;
 import no.ssb.sagalog.SagaLogInitializer;
 import no.ssb.sagalog.SagaLogPool;
 import no.ssb.service.provider.api.ProviderConfigurator;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.net.URL;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -101,17 +108,12 @@ public class UndertowApplication {
 
 
         PathHandler pathHandler = Handlers.path();
-        if (graphqlEnabled) {
-
+        if (graphqlEnabled && graphQLSchemaPath.isPresent()) {
             GraphQLSchemaBuilder schemaBuilder = new GraphQLSchemaBuilder(namespace, persistence, searchIndex);
             TypeDefinitionRegistry definitionRegistry;
-            if (graphQLSchemaPath.isPresent()) {
-                File graphQLFile = new File(graphQLSchemaPath.get());
-                definitionRegistry = new SchemaParser().parse(graphQLFile);
-            } else {
-                SpecificationConverter specificationConverter = new SpecificationConverter();
-                definitionRegistry = specificationConverter.convert(specification);
-            }
+            File graphQLFile = new File(graphQLSchemaPath.get());
+            definitionRegistry = parseSchemaFile(graphQLFile);
+
             GraphQLSchema schema = schemaBuilder.getGraphQL(GraphQLSchemaBuilder.parseSchema(definitionRegistry));
 
             GraphQL graphQL = GraphQL.newGraphQL(schema).build();
@@ -130,7 +132,6 @@ public class UndertowApplication {
         ResponseCodeHandler aliveHandler = new ResponseCodeHandler(StatusCodes.OK);
         pathHandler.addExactPath(HealthCheckHandler.HEALTH_READY_PATH, aliveHandler);
         pathHandler.addExactPath(HealthCheckHandler.PING_PATH, aliveHandler);
-
         pathHandler.addPrefixPath("/", namespaceController);
 
         HttpHandler httpHandler;
@@ -164,6 +165,18 @@ public class UndertowApplication {
                 .build();
     }
 
+    private static TypeDefinitionRegistry parseSchemaFile(File graphQLFile) {
+        TypeDefinitionRegistry definitionRegistry;
+        URL systemResource = ClassLoader.getSystemResource(graphQLFile.getPath());
+
+        if (Optional.ofNullable(systemResource).isPresent()) {
+            definitionRegistry = new SchemaParser().parse(new File(systemResource.getPath()));
+        } else {
+            definitionRegistry = new SchemaParser().parse(new File(graphQLFile.getPath()));
+        }
+        return definitionRegistry;
+    }
+
     public static String getDefaultConfigurationResourcePath() {
         return "application-defaults.properties";
     }
@@ -175,14 +188,34 @@ public class UndertowApplication {
 
     public static UndertowApplication initializeUndertowApplication(DynamicConfiguration configuration, int port) {
         LOG.info("Initializing Linked Data Store (LDS) server ...");
-        String schemaConfigStr = configuration.evaluateToString("specification.schema");
-        String[] specificationSchema = ("".equals(schemaConfigStr) ? new String[0] : schemaConfigStr.split(","));
-        JsonSchemaBasedSpecification specification = JsonSchemaBasedSpecification.create(specificationSchema);
+
+        JsonSchemaBasedSpecification specification;
+
+        Optional<String> graphQLSchemaPath = Optional.ofNullable(configuration.evaluateToString("graphql.schema"))
+                .map(path -> path.isEmpty() ? null : path);
+
+        if (graphQLSchemaPath.isPresent()) {
+            File graphQLFile = new File(graphQLSchemaPath.get());
+
+            TypeDefinitionRegistry definitionRegistry = parseSchemaFile(graphQLFile);
+
+            GraphQLSchema schema = GraphQLSchemaBuilder.parseSchema(definitionRegistry);
+            GraphQLToJsonConverter graphQLToJsonConverter = new GraphQLToJsonConverter(schema);
+            LinkedHashMap<String, JSONObject> jsonMap = graphQLToJsonConverter.createSpecification(schema);
+
+            LOG.info("Creating specification using GraphQL schema: {}", graphQLSchemaPath.get());
+            specification = createJsonSpecification(jsonMap);
+
+        } else {
+            String schemaConfigStr = configuration.evaluateToString("specification.schema");
+            String[] specificationSchema = ("".equals(schemaConfigStr) ? new String[0] : schemaConfigStr.split(","));
+            LOG.info("Creating specification using json-schema: {}", schemaConfigStr);
+            specification = JsonSchemaBasedSpecification.create(specificationSchema);
+        }
+
         RxJsonPersistence persistence = PersistenceConfigurator.configurePersistence(configuration, specification);
 
-        ServiceLoader<SagaLogInitializer> loader = ServiceLoader.load(SagaLogInitializer.class);
-        String sagalogProviderClass = configuration.evaluateToString("sagalog.provider");
-        SagaLogPool sagaLogPool = loader.stream().filter(c -> sagalogProviderClass.equals(c.type().getName())).findFirst().orElseThrow().get().initialize(configuration.asMap());
+        SagaLogPool sagaLogPool = configureSagaLogProvider(configuration);
 
         String host = configuration.evaluateToString("http.host");
         SagaRepository.Builder sagaRepositoryBuilder = new SagaRepository.Builder()
@@ -254,18 +287,43 @@ public class UndertowApplication {
                 searchIndex, configuration, txLogClient);
     }
 
+    private static JsonSchemaBasedSpecification createJsonSpecification(LinkedHashMap<String, JSONObject> jsonMap) {
+        JsonSchemaBasedSpecification jsonSchemaBasedSpecification = null;
+        Set<Map.Entry<String, JSONObject>> entries = jsonMap.entrySet();
+        Iterator<Map.Entry<String, JSONObject>> iterator = entries.iterator();
+
+        JsonSchema jsonSchema = null;
+        while (iterator.hasNext()) {
+            Map.Entry item = iterator.next();
+            jsonSchema = new JsonSchema04Builder(jsonSchema, item.getKey().toString(), item.getValue().toString()).build();
+            jsonSchemaBasedSpecification = SpecificationJsonSchemaBuilder.createBuilder(jsonSchema).build();
+        }
+
+        return jsonSchemaBasedSpecification;
+    }
+
+    private static SagaLogPool configureSagaLogProvider(DynamicConfiguration configuration) {
+        String providerClass = configuration.evaluateToString("sagalog.provider");
+        ServiceLoader<SagaLogInitializer> loader = ServiceLoader.load(SagaLogInitializer.class);
+        SagaLogInitializer initializer = loader.stream().filter(c -> providerClass.equals(c.type().getName())).findFirst().orElseThrow().get();
+        Map<String, String> providerConfig = subMapFromPrefix(new TreeMap<>(configuration.asMap()), "sagalog.config.");
+        return initializer.initialize(providerConfig);
+    }
+
     public static RawdataClient configureTxLogRawdataClient(DynamicConfiguration configuration) {
-        String txLogRawdataProvider = configuration.evaluateToString("txlog.rawdata.provider");
-        NavigableMap<String, String> configMap = new TreeMap<>(configuration.asMap());
-        String txLogRawdataProviderConfigPrefix = "txlog.rawdata." + txLogRawdataProvider + ".";
-        NavigableMap<String, String> txLogRawdataProviderConfigWithPrefix = configMap.subMap(
-                txLogRawdataProviderConfigPrefix, true,
-                txLogRawdataProviderConfigPrefix + "~", false);
-        Map<String, String> txLogRawdataProviderConfig = txLogRawdataProviderConfigWithPrefix.entrySet().stream().collect(Collectors.toMap(
-                e -> e.getKey().substring(txLogRawdataProviderConfigPrefix.length()),
-                e -> e.getValue())
+        String provider = configuration.evaluateToString("txlog.rawdata.provider");
+        Map<String, String> providerConfig = subMapFromPrefix(new TreeMap<>(configuration.asMap()), "txlog.rawdata." + provider + ".");
+        return ProviderConfigurator.configure(providerConfig, provider, RawdataClientInitializer.class);
+    }
+
+    private static Map<String, String> subMapFromPrefix(NavigableMap<String, String> configMap, String prefix) {
+        NavigableMap<String, String> map = configMap.subMap(
+                prefix, true,
+                prefix + "~", false);
+        return map.entrySet().stream().collect(Collectors.toMap(
+                e -> e.getKey().substring(prefix.length()),
+                Map.Entry::getValue)
         );
-        return ProviderConfigurator.configure(txLogRawdataProviderConfig, txLogRawdataProvider, RawdataClientInitializer.class);
     }
 
     static void shutdownAndAwaitTermination(ExecutorService pool) {

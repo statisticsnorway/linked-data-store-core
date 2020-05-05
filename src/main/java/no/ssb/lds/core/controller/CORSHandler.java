@@ -95,17 +95,17 @@ public class CORSHandler implements HttpHandler {
         try {
             hasOrigin(exchange);
             if (isOption(exchange)) {
-                log.debug("Preflight check: {}", exchange);
+                log.trace("Preflight check: {}", exchange);
                 handlePreflight(exchange);
             } else {
-                log.debug("Simple check: {}", exchange);
+                log.trace("Simple check: {}", exchange);
                 String origin = checkOrigin(exchange);
                 addAllowOrigin(exchange, origin);
                 addExposeHeaders(exchange);
                 next.handleRequest(exchange);
             }
         } catch (OutOfScopeException oose) {
-            log.debug("Request out of scope: {}", oose.getMessage());
+            log.warn("Request out of scope: {}", oose.getMessage());
             fail.handleRequest(exchange);
         }
     }

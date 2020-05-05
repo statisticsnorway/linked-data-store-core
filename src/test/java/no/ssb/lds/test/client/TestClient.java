@@ -60,6 +60,7 @@ public final class TestClient {
             HttpRequest request = HttpRequest.newBuilder(URI.create(server.testURL(uri)))
                     .headers(headersKeyAndValue)
                     .method("OPTIONS", HttpRequest.BodyPublishers.noBody())
+                    .header("Origin", "localhost")
                     .build();
             return new ResponseHelper<>(client.send(request, bodyHandler));
         } catch (Exception e) {
@@ -76,6 +77,7 @@ public final class TestClient {
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create(server.testURL(uri)))
                     .method("HEAD", HttpRequest.BodyPublishers.noBody())
+                    .header("Origin", "localhost")
                     .build();
             return new ResponseHelper<>(client.send(request, bodyHandler));
         } catch (Exception e) {
@@ -96,6 +98,7 @@ public final class TestClient {
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create(server.testURL(uri)))
                     .PUT(bodyPublisher)
+                    .header("Origin", "localhost")
                     .build();
             return new ResponseHelper<>(client.send(request, bodyHandler));
         } catch (Exception e) {
@@ -120,6 +123,7 @@ public final class TestClient {
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create(server.testURL(uri)))
                     .POST(bodyPublisher)
+                    .header("Origin", "localhost")
                     .build();
             return new ResponseHelper<>(client.send(request, bodyHandler));
         } catch (Exception e) {
@@ -133,6 +137,7 @@ public final class TestClient {
             HttpRequest request = HttpRequest.newBuilder(URI.create(server.testURL(uri)))
                     .POST(bodyPublisher)
                     .header("Content-Type", "application/json")
+                    .header("Origin", "localhost")
                     .build();
             return new ResponseHelper<>(client.send(request, bodyHandler));
         } catch (Exception e) {
@@ -146,6 +151,7 @@ public final class TestClient {
             HttpRequest request = HttpRequest.newBuilder(URI.create(server.testURL(uri)))
                     .POST(bodyPublisher)
                     .header("Content-Type", "application/x-www-form-urlencoded")
+                    .header("Origin", "localhost")
                     .build();
             return new ResponseHelper<>(client.send(request, bodyHandler));
         } catch (Exception e) {
@@ -162,6 +168,7 @@ public final class TestClient {
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create(server.testURL(uri)))
                     .GET()
+                    .header("Origin", "localhost")
                     .build();
             return new ResponseHelper<>(client.send(request, bodyHandler));
         } catch (Exception e) {
@@ -178,6 +185,7 @@ public final class TestClient {
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create(server.testURL(uri)))
                     .DELETE()
+                    .header("Origin", "localhost")
                     .build();
             return new ResponseHelper<>(client.send(request, bodyHandler));
         } catch (Exception e) {

@@ -1,0 +1,268 @@
+directive @link on FIELD_DEFINITION
+
+directive @domain on OBJECT
+
+type Query {
+
+}
+
+#IdentifiableArtefact is reusable abstract object (type). All identifiable objects inherits all attributes from this object (type).
+interface IdentifiableArtefact {
+    #Administrative details (e.g. default language, documentation, localID, ...).
+    administrativeDetails: [AdministrativeDetails!]
+    #Indicator for access to an item.
+    administrativeStatus: AdministrativeStatusType
+    #Agent(s) acting in the Role(s) for this information object.
+    agentInRoles: [AgentInRole] @link
+    #Information object created by.
+    createdBy: String!
+    #The date on which the information object was created
+    createdDate: DateTime!
+    #The description of the information object
+    description: [MultilingualText!]
+    #The global unique identifier (GUID) of the information object assigned by the owner agency.
+    id: String!
+    #Last updated by.
+    lastUpdatedBy: String
+    #The date on which the object was last updated.
+    lastUpdatedDate: DateTime
+    #A term which designates a concept, in this case an information object. The identifying name will be the preferred designation. There will be many terms to designate the same information object, such as synonyms and terms in other languages.
+    name: [MultilingualText!]!
+    #The date on which the information object is effective or valid. Set this date only once (constant). The same date for all versions of this information object.
+    validFrom: DateTime!
+    #The date on which the information object is no longer effective or valid.
+    validUntil: DateTime
+    #Formal versioning of the information object. The version designator of the information object assigned by the owner agency. "major.minor.patch", e.g. "1.12.5".
+    version: String
+    #The reason for making this version of the information object.
+    versionRationale: [MultilingualText!]
+    #The date on which the current version of the infomation object is effective or valid.
+    versionValidFrom: DateTime!
+}
+
+#A generic and expandable key-value-store for adding present and future AdministrativeDetails-attributes to any information object.
+type AdministrativeDetails {
+    #The type (key) of the AdministrativeDetails-attribute.
+    administrativeDetailType: AdministrativeDetailType!
+    #One or more values (a list) for this administrativeDetailType.
+    values: [String!]!
+}
+
+#A reusable type for supporting multilingual texts.
+type MultilingualText {
+    #The language code. Use only ISO 639-1 codes.
+    languageCode: LanguageCodeType!
+    #The text (e.g. label, title, description)
+    languageText: String!
+}
+
+
+#A generic and expandable key-value-store for adding present and future AgentDetails-attributes to the Agent-object.
+type AgentDetails {
+    #The type (key) of the AgentDetails-attribute.
+    agentDetailType: AgentDetailType!
+    #One or more values (a list) for this agentDetailType.
+    values: [String!]!
+}
+
+#Reflects an agent acting in a specific role.
+type AgentInRole implements IdentifiableArtefact @domain {
+    #Administrative details (e.g. default language, documentation, localID, ...).
+    administrativeDetails: [AdministrativeDetails!]
+    #Indicator for access to an item.
+    administrativeStatus: AdministrativeStatusType
+    #Agent(s) acting in the Role(s) for this information object.
+    agentInRoles: [AgentInRole] @link
+    agents: [Agent]! @link
+    #Information object created by.
+    createdBy: String!
+    #The date on which the information object was created
+    createdDate: DateTime!
+    #The description of the information object
+    description: [MultilingualText!]
+    #The global unique identifier (GUID) of the information object assigned by the owner agency.
+    id: String!
+    #Last updated by.
+    lastUpdatedBy: String
+    #The date on which the object was last updated.
+    lastUpdatedDate: DateTime
+    #A term which designates a concept, in this case an information object. The identifying name will be the preferred designation. There will be many terms to designate the same information object, such as synonyms and terms in other languages.
+    name: [MultilingualText!]!
+    role: Role! @link
+    #The date on which the information object is effective or valid. Set this date only once (constant). The same date for all versions of this information object.
+    validFrom: DateTime!
+    #The date on which the information object is no longer effective or valid.
+    validUntil: DateTime
+    #Formal versioning of the information object. The version designator of the information object assigned by the owner agency. "major.minor.patch", e.g. "1.12.5".
+    version: String
+    #The reason for making this version of the information object.
+    versionRationale: [MultilingualText!]
+    #The date on which the current version of the infomation object is effective or valid.
+    versionValidFrom: DateTime!
+}
+
+
+#The responsible function involved in the statistical Business Process.
+type Role implements IdentifiableArtefact @domain {
+    #Administrative details (e.g. default language, documentation, localID, ...).
+    administrativeDetails: [AdministrativeDetails!]
+    #Indicator for access to an item.
+    administrativeStatus: AdministrativeStatusType
+    #Agent(s) acting in the Role(s) for this information object.
+    agentInRoles: [AgentInRole] @link
+    #Information object created by.
+    createdBy: String!
+    #The date on which the information object was created
+    createdDate: DateTime!
+    #The description of the information object
+    description: [MultilingualText!]
+    #The global unique identifier (GUID) of the information object assigned by the owner agency.
+    id: String!
+    #Last updated by.
+    lastUpdatedBy: String
+    #The date on which the object was last updated.
+    lastUpdatedDate: DateTime
+    #A term which designates a concept, in this case an information object. The identifying name will be the preferred designation. There will be many terms to designate the same information object, such as synonyms and terms in other languages.
+    name: [MultilingualText!]!
+    #The date on which the information object is effective or valid. Set this date only once (constant). The same date for all versions of this information object.
+    validFrom: DateTime!
+    #The date on which the information object is no longer effective or valid.
+    validUntil: DateTime
+    #Formal versioning of the information object. The version designator of the information object assigned by the owner agency. "major.minor.patch", e.g. "1.12.5".
+    version: String
+    #The reason for making this version of the information object.
+    versionRationale: [MultilingualText!]
+    #The date on which the current version of the infomation object is effective or valid.
+    versionValidFrom: DateTime!
+}
+
+#An actor that performs a role in relation to the statistical Business Process.
+type Agent implements IdentifiableArtefact @domain {
+    #Administrative details (e.g. default language, documentation, localID, ...).
+    administrativeDetails: [AdministrativeDetails!]
+    #Indicator for access to an item.
+    administrativeStatus: AdministrativeStatusType
+    #Agent details (e.g. contackt adress, email, phone, mobile ...).
+    agentDetails: [AgentDetails!]
+    #Agent(s) acting in the Role(s) for this information object.
+    agentInRoles: [AgentInRole] @link
+    #The type of agent.
+    agentType: AgentType!
+    #Information object created by.
+    createdBy: String!
+    #The date on which the information object was created
+    createdDate: DateTime!
+    #The description of the information object
+    description: [MultilingualText!]
+    #The global unique identifier (GUID) of the information object assigned by the owner agency.
+    id: String!
+    #Is this an external agent?
+    isExternal: Boolean!
+    #Last updated by.
+    lastUpdatedBy: String
+    #The date on which the object was last updated.
+    lastUpdatedDate: DateTime
+    #A term which designates a concept, in this case an information object. The identifying name will be the preferred designation. There will be many terms to designate the same information object, such as synonyms and terms in other languages.
+    name: [MultilingualText!]!
+    parentAgents: [Agent] @link
+    #The date on which the information object is effective or valid. Set this date only once (constant). The same date for all versions of this information object.
+    validFrom: DateTime!
+    #The date on which the information object is no longer effective or valid.
+    validUntil: DateTime
+    #Formal versioning of the information object. The version designator of the information object assigned by the owner agency. "major.minor.patch", e.g. "1.12.5".
+    version: String
+    #The reason for making this version of the information object.
+    versionRationale: [MultilingualText!]
+    #The date on which the current version of the infomation object is effective or valid.
+    versionValidFrom: DateTime!
+}
+
+enum AdministrativeDetailType {
+    ALIAS
+    ANNOTATION
+    DEFAULTLANGUAGE
+    DOCUMENTATION
+    LOCALID
+    ORIGIN
+    URL
+}
+
+enum AdministrativeStatusType {
+    DEPRECATED
+    DRAFT
+    INTERNAL
+    OPEN
+}
+
+enum LanguageCodeType {
+    en
+    nb
+    nn
+}
+
+enum AgentDetailType {
+    CONTACT_ADDRESS
+    CONTACT_EMAIL
+    CONTACT_MOBILE
+    CONTACT_PHONE
+}
+
+enum AgentType {
+    INDIVIDUAL
+    ORGANIZATION
+    SYSTEM
+}
+
+
+type Cat @domain{
+    name: String!
+    age: Int
+}
+
+type Dog @domain{
+    name: String!
+    age: Int
+}
+
+type Owner @domain{
+    name: String!
+    age: Int
+    email: String!
+    favorite: [animals] @link
+    animals: [animals] @link
+}
+
+union animals = Cat | Dog
+
+type contact @domain{
+    name: String!
+    email: String!
+}
+
+type address{
+    street: String!
+    city: String!
+}
+type provisionagreement @domain{
+    contacts: [contact] @link
+    name: String
+    address: address
+    friend: contact @link
+    support: [support]
+
+}
+
+type support @domain{
+    technicalSupport: [contact] @link
+    businessSupport: [contact] @link
+    otherSupport: contact @link
+}
+
+#An RFC-3339 compliant Full Date Scalar
+scalar Date
+
+#An RFC-3339 compliant DateTime Scalar
+scalar DateTime
+
+#An RFC-3339 compliant Full Time Scalar
+scalar Time
