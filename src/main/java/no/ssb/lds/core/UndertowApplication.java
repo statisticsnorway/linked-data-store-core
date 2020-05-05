@@ -203,11 +203,13 @@ public class UndertowApplication {
             GraphQLToJsonConverter graphQLToJsonConverter = new GraphQLToJsonConverter(schema);
             LinkedHashMap<String, JSONObject> jsonMap = graphQLToJsonConverter.createSpecification(schema);
 
+            LOG.info("Creating specification using GraphQL schema: {}", graphQLSchemaPath.get());
             specification = createJsonSpecification(jsonMap);
 
         } else {
             String schemaConfigStr = configuration.evaluateToString("specification.schema");
             String[] specificationSchema = ("".equals(schemaConfigStr) ? new String[0] : schemaConfigStr.split(","));
+            LOG.info("Creating specification using json-schema: {}", schemaConfigStr);
             specification = JsonSchemaBasedSpecification.create(specificationSchema);
         }
 
