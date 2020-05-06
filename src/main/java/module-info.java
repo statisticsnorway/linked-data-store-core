@@ -26,6 +26,7 @@ module no.ssb.lds.core {
     requires com.fasterxml.jackson.core;
     requires com.fasterxml.jackson.databind;
     requires jackson.dataformat.msgpack;
+    requires org.apache.tika.core;
 
     requires graphql.java;
     requires io.reactivex.rxjava2;

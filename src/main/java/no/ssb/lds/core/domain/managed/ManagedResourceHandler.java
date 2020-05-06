@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
+import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 import no.ssb.concurrent.futureselector.SelectableFuture;
@@ -14,6 +15,7 @@ import no.ssb.lds.api.persistence.json.JsonTools;
 import no.ssb.lds.api.persistence.reactivex.Range;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
+import no.ssb.lds.core.domain.BodyParser;
 import no.ssb.lds.core.domain.resource.ResourceContext;
 import no.ssb.lds.core.domain.resource.ResourceElement;
 import no.ssb.lds.core.saga.SagaCommands;
@@ -34,6 +36,7 @@ import java.util.Deque;
 import java.util.LinkedList;
 import java.util.Map;
 
+import static java.util.Optional.ofNullable;
 import static no.ssb.lds.api.persistence.json.JsonTools.mapper;
 
 public class ManagedResourceHandler implements HttpHandler {
@@ -46,6 +49,7 @@ public class ManagedResourceHandler implements HttpHandler {
     private final ResourceContext resourceContext;
     private final SagaExecutionCoordinator sec;
     private final SagaRepository sagaRepository;
+    private final BodyParser bodyParser = new BodyParser();
 
     public ManagedResourceHandler(RxJsonPersistence persistence, Specification specification, SchemaRepository schemaRepository, ResourceContext resourceContext, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
         this.persistence = persistence;
@@ -117,7 +121,7 @@ public class ManagedResourceHandler implements HttpHandler {
 
         exchange.getRequestReceiver().receiveFullString(
                 (httpServerExchange, requestBody) -> {
-                    // check if we received an emtpy payload
+                    // check if we received an empty payload
                     if ("".equals(requestBody)) {
                         LOG.error("Received empty payload for: {}", exchange.getRequestPath());
                         exchange.setStatusCode(400);
@@ -134,8 +138,9 @@ public class ManagedResourceHandler implements HttpHandler {
                         return;
                     }
 
-                    // deserialize request data
-                    JsonNode requestData = JsonTools.toJsonNode(requestBody);
+                    String contentType = ofNullable(exchange.getRequestHeaders().get(Headers.CONTENT_TYPE))
+                            .map(HeaderValues::getFirst).orElse("application/json");
+                    JsonNode requestData = bodyParser.deserializeBody(contentType, requestBody);
 
                     if (LOG.isTraceEnabled()) {
                         LOG.trace("{} {}\n{}", exchange.getRequestMethod(), exchange.getRequestPath(), requestBody);
