@@ -42,7 +42,7 @@ public class SagaRecoveryTriggerTest {
         Saga saga = Saga.start("ZigZagSaga").linkTo("zigzag").id("zigzag").adapter("zigzag").linkToEnd().end();
         sec.sagaRepository.register(saga);
         SagaLogPool sagaLogPool = sec.getSagaLogPool();
-        SagaInput sagaInput = new SagaInput(sec.generateTxId(), "PUT", "testng-schema-v1.0", "ns", "SomeEntity", "x123", ZonedDateTime.now(), JsonTools.mapper.createObjectNode());
+        SagaInput sagaInput = new SagaInput(sec.generateTxId(), "PUT", "testng-schema-v1.0", "ns", "SomeEntity", "x123", ZonedDateTime.now(), null, null, JsonTools.mapper.createObjectNode());
         SelectableFuture<SagaHandoffResult> handoff = sec.handoff(true, sec.sagaRepository.getAdapterLoader(), saga, sagaInput, Collections.emptyMap());
         try {
             handoff.join(); // wait for saga-execution to fail

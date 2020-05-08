@@ -30,6 +30,7 @@ import no.ssb.lds.core.schema.JsonSchema04Builder;
 import no.ssb.lds.core.search.SearchIndexConfigurator;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import no.ssb.lds.core.specification.SpecificationJsonSchemaBuilder;
+import no.ssb.lds.core.txlog.TxlogRawdataPool;
 import no.ssb.lds.graphql.GraphqlHttpHandler;
 import no.ssb.lds.graphql.jsonSchema.GraphQLToJsonConverter;
 import no.ssb.lds.graphql.schemas.GraphQLSchemaBuilder;
@@ -79,13 +80,13 @@ public class UndertowApplication {
     private final SagaLogPool sagaLogPool;
     private final SelectableThreadPoolExectutor sagaThreadPool;
     private final SagaRecoveryTrigger sagaRecoveryTrigger;
-    private final RawdataClient txLogClient;
+    private final TxlogRawdataPool txlogRawdataPool;
 
     UndertowApplication(Specification specification, RxJsonPersistence persistence, SagaExecutionCoordinator sec,
                         SagaRepository sagaRepository, SagasObserver sagasObserver, SagaRecoveryTrigger sagaRecoveryTrigger, String host, int port,
                         SagaLogPool sagaLogPool, SelectableThreadPoolExectutor sagaThreadPool,
                         NamespaceController namespaceController, SearchIndex searchIndex,
-                        DynamicConfiguration configuration, RawdataClient txLogClient) {
+                        DynamicConfiguration configuration, TxlogRawdataPool txlogRawdataPool) {
         this.specification = specification;
         this.sagaRecoveryTrigger = sagaRecoveryTrigger;
         this.host = host;
@@ -96,7 +97,7 @@ public class UndertowApplication {
         this.sagasObserver = sagasObserver;
         this.sagaLogPool = sagaLogPool;
         this.sagaThreadPool = sagaThreadPool;
-        this.txLogClient = txLogClient;
+        this.txlogRawdataPool = txlogRawdataPool;
 
         String namespace = configuration.evaluateToString("namespace.default");
         boolean enableRequestDump = configuration.evaluateToBoolean("http.request.dump");
@@ -225,11 +226,14 @@ public class UndertowApplication {
         if (searchIndex != null) {
             sagaRepositoryBuilder.indexer(searchIndex);
         }
+
         RawdataClient txLogClient = configureTxLogRawdataClient(configuration);
-        if (txLogClient != null) {
-            String txLogTopic = configuration.evaluateToString("txlog.rawdata.topic");
-            sagaRepositoryBuilder.txLogClient(txLogClient).txLogTopic(txLogTopic);
-        }
+        boolean splitSources = configuration.evaluateToBoolean("txlog.split.sources");
+        String defaultSource = configuration.evaluateToString("txlog.default-source");
+        String txLogTopicPrefix = configuration.evaluateToString("txlog.rawdata.topic-prefix");
+        TxlogRawdataPool txlogRawdataPool = new TxlogRawdataPool(txLogClient, splitSources, defaultSource, txLogTopicPrefix);
+        sagaRepositoryBuilder.txLogRawdataPool(txlogRawdataPool);
+
         SagaRepository sagaRepository = sagaRepositoryBuilder.build();
         final SagasObserver sagasObserver = new SagasObserver(sagaRepository).start();
         final AtomicLong nextWorkerId = new AtomicLong(1);
@@ -284,7 +288,7 @@ public class UndertowApplication {
 
         return new UndertowApplication(specification, persistence, sec, sagaRepository, sagasObserver, sagaRecoveryTrigger, host, port,
                 sagaLogPool, sagaThreadPool, namespaceController,
-                searchIndex, configuration, txLogClient);
+                searchIndex, configuration, txlogRawdataPool);
     }
 
     private static JsonSchemaBasedSpecification createJsonSpecification(LinkedHashMap<String, JSONObject> jsonMap) {
@@ -312,7 +316,7 @@ public class UndertowApplication {
 
     public static RawdataClient configureTxLogRawdataClient(DynamicConfiguration configuration) {
         String provider = configuration.evaluateToString("txlog.rawdata.provider");
-        Map<String, String> providerConfig = subMapFromPrefix(new TreeMap<>(configuration.asMap()), "txlog.rawdata." + provider + ".");
+        Map<String, String> providerConfig = subMapFromPrefix(new TreeMap<>(configuration.asMap()), "txlog.config.");
         return ProviderConfigurator.configure(providerConfig, provider, RawdataClientInitializer.class);
     }
 
@@ -373,7 +377,7 @@ public class UndertowApplication {
         server.stop();
         persistence.close();
         try {
-            txLogClient.close();
+            txlogRawdataPool.getClient().close();
         } catch (Error | RuntimeException e) {
             throw e;
         } catch (Exception e) {
@@ -429,7 +433,7 @@ public class UndertowApplication {
         return specification;
     }
 
-    public RawdataClient getTxLogClient() {
-        return txLogClient;
+    public TxlogRawdataPool getTxlogRawdataPool() {
+        return txlogRawdataPool;
     }
 }

@@ -9,7 +9,7 @@ import no.ssb.lds.core.search.DeleteIndexSagaAdapter;
 import no.ssb.lds.core.search.UpdateIndexSagaAdapter;
 import no.ssb.lds.core.txlog.AppendTxLogAdapter;
 import no.ssb.lds.core.txlog.DeleteTxLogAdapter;
-import no.ssb.rawdata.api.RawdataClient;
+import no.ssb.lds.core.txlog.TxlogRawdataPool;
 import no.ssb.saga.api.Saga;
 import no.ssb.saga.execution.adapter.AdapterLoader;
 
@@ -25,12 +25,12 @@ public class SagaRepository {
 
     final AdapterLoader adapterLoader;
 
-    private SagaRepository(Specification specification, RxJsonPersistence persistence, SearchIndex indexer, RawdataClient txLogClient, String txLogTopic) {
+    private SagaRepository(Specification specification, RxJsonPersistence persistence, SearchIndex indexer, TxlogRawdataPool txLogPool) {
         adapterLoader = new AdapterLoader();
         adapterLoader.register(new PersistenceCreateOrOverwriteSagaAdapter(persistence, specification));
         adapterLoader.register(new PersistenceDeleteSagaAdapter(persistence));
-        adapterLoader.register(new AppendTxLogAdapter(txLogClient, txLogTopic));
-        adapterLoader.register(new DeleteTxLogAdapter(txLogClient, txLogTopic));
+        adapterLoader.register(new AppendTxLogAdapter(txLogPool));
+        adapterLoader.register(new DeleteTxLogAdapter(txLogPool));
         if (indexer != null) {
             adapterLoader.register(new UpdateIndexSagaAdapter(indexer, specification));
             adapterLoader.register(new DeleteIndexSagaAdapter(indexer, specification));
@@ -84,8 +84,7 @@ public class SagaRepository {
         Specification specification;
         RxJsonPersistence persistence;
         SearchIndex indexer;
-        RawdataClient txLogClient;
-        String txLogTopic;
+        TxlogRawdataPool txlogRawdataPool;
 
         public Builder specification(Specification specification) {
             this.specification = specification;
@@ -102,18 +101,13 @@ public class SagaRepository {
             return this;
         }
 
-        public Builder txLogClient(RawdataClient txLogClient) {
-            this.txLogClient = txLogClient;
-            return this;
-        }
-
-        public Builder txLogTopic(String txLogTopic) {
-            this.txLogTopic = txLogTopic;
+        public Builder txLogRawdataPool(TxlogRawdataPool txlogRawdataPool) {
+            this.txlogRawdataPool = txlogRawdataPool;
             return this;
         }
 
         public SagaRepository build() {
-            return new SagaRepository(specification, persistence, indexer, txLogClient, txLogTopic);
+            return new SagaRepository(specification, persistence, indexer, txlogRawdataPool);
         }
     }
 }
