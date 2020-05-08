@@ -40,7 +40,7 @@ public class ReplayTxLogTest {
         /*
          * Produce 7 entries in tx-log through http api
          */
-        client.put("/data/provisionagreement/2a41c?sync=true", readFileOrClasspathResource("demo/1-sirius.json")).expect201Created();
+        client.put("/data/provisionagreement/2a41c?sync=true&source=test&sourceId=abc123", readFileOrClasspathResource("demo/1-sirius.json")).expect201Created();
         client.put("/data/provisionagreement/2a41c/address?sync=true", readFileOrClasspathResource("demo/2-sirius-address.json")).expect200Ok();
         client.put("/data/contact/4b2ef?sync=true", readFileOrClasspathResource("demo/3-skrue.json")).expect201Created();
         client.put("/data/contact/821aa?sync=true", readFileOrClasspathResource("demo/4-donald.json")).expect201Created();
@@ -53,8 +53,9 @@ public class ReplayTxLogTest {
         /*
          * Read and check that the tx-log contains exactly the 7 elements in the correct order
          */
-        RawdataClient rawdataClient = server.getApplication().getTxLogClient();
-        String txLogTopic = server.getConfiguration().evaluateToString("txlog.rawdata.topic");
+        TxlogRawdataPool txlogRawdataPool = server.getApplication().getTxlogRawdataPool();
+        RawdataClient rawdataClient = txlogRawdataPool.getClient();
+        String txLogTopic = txlogRawdataPool.topicOf(null);
 
         try (RawdataConsumer consumer = rawdataClient.consumer(txLogTopic)) {
 
@@ -94,8 +95,9 @@ public class ReplayTxLogTest {
     }
 
     private void dumpCurrentTxLog() throws Exception {
-        RawdataClient rawdataClient = server.getApplication().getTxLogClient();
-        String txLogTopic = server.getConfiguration().evaluateToString("txlog.rawdata.topic");
+        TxlogRawdataPool txlogRawdataPool = server.getApplication().getTxlogRawdataPool();
+        RawdataClient rawdataClient = txlogRawdataPool.getClient();
+        String txLogTopic = txlogRawdataPool.topicOf(null);
         try (RawdataConsumer consumer = rawdataClient.consumer(txLogTopic)) {
             RawdataMessage message;
             for (int i = 1; (message = consumer.receive(0, TimeUnit.MILLISECONDS)) != null; i++) {

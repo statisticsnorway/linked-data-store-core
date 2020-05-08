@@ -3,6 +3,7 @@ package no.ssb.lds.core.domain.embedded;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import no.ssb.concurrent.futureselector.SelectableFuture;
 import no.ssb.lds.api.persistence.Transaction;
@@ -10,6 +11,7 @@ import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.api.persistence.json.JsonTools;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
+import no.ssb.lds.core.domain.BodyParser;
 import no.ssb.lds.core.domain.resource.ResourceContext;
 import no.ssb.lds.core.domain.resource.ResourceElement;
 import no.ssb.lds.core.saga.SagaCommands;
@@ -26,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Deque;
 import java.util.LinkedList;
 
 import static java.util.Optional.ofNullable;
@@ -41,6 +44,7 @@ public class EmbeddedResourceHandler implements HttpHandler {
     private final SagaExecutionCoordinator sec;
     private final RxJsonPersistence persistence;
     private final SagaRepository sagaRepository;
+    private final BodyParser bodyParser = new BodyParser();
 
     public EmbeddedResourceHandler(RxJsonPersistence persistence, Specification specification, SchemaRepository schemaRepository, ResourceContext resourceContext, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
         this.persistence = persistence;
@@ -117,7 +121,9 @@ public class EmbeddedResourceHandler implements HttpHandler {
                         return;
                     }
 
-                    JsonNode embeddedJson = JsonTools.toJsonNode(message);
+                    String contentType = ofNullable(exchange.getRequestHeaders().get(Headers.CONTENT_TYPE))
+                            .map(HeaderValues::getFirst).orElse("application/json");
+                    JsonNode embeddedJson = bodyParser.deserializeBody(contentType, message);
 
                     if (LOG.isTraceEnabled()) {
                         LOG.trace("{} {}\n{}", exchange.getRequestMethod(), exchange.getRequestPath(), message);
@@ -141,8 +147,11 @@ public class EmbeddedResourceHandler implements HttpHandler {
 
                     Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
+                    String source = ofNullable(exchange.getQueryParameters().get("source")).map(Deque::peekFirst).orElse(null);
+                    String sourceId = ofNullable(exchange.getQueryParameters().get("sourceId")).map(Deque::peekFirst).orElse(null);
+
                     AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-                    SagaInput sagaInput = new SagaInput(sec.generateTxId(), "PUT", "TODO", namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), managedDocument);
+                    SagaInput sagaInput = new SagaInput(sec.generateTxId(), "PUT", "TODO", namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), source, sourceId, managedDocument);
                     SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, sagaInput, SagaCommands.getSagaAdminParameterCommands(httpServerExchange));
                     SagaHandoffResult handoffResult = handoff.join();
 
@@ -183,8 +192,11 @@ public class EmbeddedResourceHandler implements HttpHandler {
 
                     Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
+                    String source = ofNullable(exchange.getQueryParameters().get("source")).map(Deque::peekFirst).orElse(null);
+                    String sourceId = ofNullable(exchange.getQueryParameters().get("sourceId")).map(Deque::peekFirst).orElse(null);
+
                     AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-                    SagaInput sagaInput = new SagaInput(sec.generateTxId(), "PUT", "TODO", namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), rootNode);
+                    SagaInput sagaInput = new SagaInput(sec.generateTxId(), "PUT", "TODO", namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), source, sourceId, rootNode);
                     SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, sagaInput, SagaCommands.getSagaAdminParameterCommands(httpServerExchange));
                     SagaHandoffResult handoffResult = handoff.join();
 

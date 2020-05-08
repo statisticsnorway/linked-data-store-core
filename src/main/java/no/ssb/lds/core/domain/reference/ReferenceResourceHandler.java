@@ -23,8 +23,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Deque;
 import java.util.LinkedList;
 
+import static java.util.Optional.ofNullable;
 import static no.ssb.lds.api.persistence.json.JsonTools.mapper;
 
 public class ReferenceResourceHandler implements HttpHandler {
@@ -109,8 +111,11 @@ public class ReferenceResourceHandler implements HttpHandler {
 
                         Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
+                        String source = ofNullable(exchange.getQueryParameters().get("source")).map(Deque::peekFirst).orElse(null);
+                        String sourceId = ofNullable(exchange.getQueryParameters().get("sourceId")).map(Deque::peekFirst).orElse(null);
+
                         AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-                        SagaInput sagaInput = new SagaInput(sec.generateTxId(), "PUT", "TODO", namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), jsonDocument.jackson());
+                        SagaInput sagaInput = new SagaInput(sec.generateTxId(), "PUT", "TODO", namespace, managedDomain, managedDocumentId, resourceContext.getTimestamp(), source, sourceId, jsonDocument.jackson());
                         SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, sagaInput, SagaCommands.getSagaAdminParameterCommands(httpServerExchange));
                         SagaHandoffResult sagaHandoffResult = handoff.join();
 
@@ -164,8 +169,11 @@ public class ReferenceResourceHandler implements HttpHandler {
 
         Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
+        String source = ofNullable(exchange.getQueryParameters().get("source")).map(Deque::peekFirst).orElse(null);
+        String sourceId = ofNullable(exchange.getQueryParameters().get("sourceId")).map(Deque::peekFirst).orElse(null);
+
         AdapterLoader adapterLoader = sagaRepository.getAdapterLoader();
-        SagaInput sagaInput = new SagaInput(sec.generateTxId(), "PUT", "TODO", resourceContext.getNamespace(), resourceContext.getFirstElement().name(), resourceContext.getFirstElement().id(), resourceContext.getTimestamp(), rootNode);
+        SagaInput sagaInput = new SagaInput(sec.generateTxId(), "PUT", "TODO", resourceContext.getNamespace(), resourceContext.getFirstElement().name(), resourceContext.getFirstElement().id(), resourceContext.getTimestamp(), source, sourceId, rootNode);
         SelectableFuture<SagaHandoffResult> handoff = sec.handoff(sync, adapterLoader, saga, sagaInput, SagaCommands.getSagaAdminParameterCommands(exchange));
         SagaHandoffResult handoffResult = handoff.join();
 

@@ -8,6 +8,7 @@ import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
 import no.ssb.lds.core.saga.SagaRepository;
 import no.ssb.lds.core.schema.SchemaRepository;
+import no.ssb.lds.core.txlog.TxlogRawdataPool;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -22,14 +23,16 @@ public class NamespaceController implements HttpHandler {
     private final RxJsonPersistence persistence;
     private final SagaExecutionCoordinator sec;
     private final SagaRepository sagaRepository;
+    private final TxlogRawdataPool txLogPool;
 
     public NamespaceController(String namespaceDefault, Specification specification, SchemaRepository schemaRepository,
                                RxJsonPersistence persistence, SagaExecutionCoordinator sec,
-                               SagaRepository sagaRepository) {
+                               SagaRepository sagaRepository, TxlogRawdataPool txLogPool) {
         this.specification = specification;
         this.schemaRepository = schemaRepository;
         this.persistence = persistence;
         this.sagaRepository = sagaRepository;
+        this.txLogPool = txLogPool;
         if (!namespaceDefault.startsWith("/")) {
             namespaceDefault = "/" + namespaceDefault;
         }
@@ -63,6 +66,11 @@ public class NamespaceController implements HttpHandler {
 
         if (requestPath.startsWith(defaultNamespace)) {
             new DataController(specification, schemaRepository, persistence, sec, sagaRepository).handleRequest(exchange);
+            return;
+        }
+
+        if (requestPath.startsWith("/source/")) {
+            new SourceHandler(txLogPool).handleRequest(exchange);
             return;
         }
 

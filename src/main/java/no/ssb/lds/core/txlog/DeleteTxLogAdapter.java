@@ -2,7 +2,6 @@ package no.ssb.lds.core.txlog;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import no.ssb.lds.core.saga.SagaInput;
-import no.ssb.rawdata.api.RawdataClient;
 import no.ssb.rawdata.api.RawdataProducer;
 import no.ssb.saga.api.SagaNode;
 import no.ssb.saga.execution.adapter.Adapter;
@@ -13,20 +12,18 @@ public class DeleteTxLogAdapter extends Adapter<JsonNode> {
 
     public static final String NAME = "TxLog-delete-entry";
 
-    final RawdataClient client;
-    final RawdataProducer producer;
-    final String topic;
+    final TxlogRawdataPool pool;
 
-    public DeleteTxLogAdapter(RawdataClient client, String topic) {
+    public DeleteTxLogAdapter(TxlogRawdataPool pool) {
         super(JsonNode.class, NAME);
-        this.client = client;
-        this.topic = topic;
-        this.producer = client.producer(topic);
+        this.pool = pool;
     }
 
     @Override
-    public JsonNode executeAction(SagaNode sagaNode, Object sagaInput, Map<SagaNode, Object> dependeesOutput) {
-        producer.publishBuilders(TxLogTools.sagaInputToTxEntry(producer, new SagaInput((JsonNode) sagaInput)));
+    public JsonNode executeAction(SagaNode sagaNode, Object input, Map<SagaNode, Object> dependeesOutput) {
+        SagaInput sagaInput = new SagaInput((JsonNode) input);
+        RawdataProducer producer = pool.producer(sagaInput.source());
+        producer.publishBuilders(TxLogTools.sagaInputToTxEntry(producer.builder(), sagaInput));
         return null;
     }
 }

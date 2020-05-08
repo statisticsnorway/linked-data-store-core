@@ -8,6 +8,8 @@ import no.ssb.lds.api.persistence.json.JsonTools;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
+import static java.util.Optional.ofNullable;
+
 public class SagaInput {
 
     final JsonNode node;
@@ -16,7 +18,8 @@ public class SagaInput {
         this.node = node;
     }
 
-    public SagaInput(ULID.Value txId, String method, String schema, String namespace, String entity, String id, ZonedDateTime version, JsonNode data) {
+    public SagaInput(ULID.Value txId, String method, String schema, String namespace, String entity,
+                     String id, ZonedDateTime version, String source, String sourceId, JsonNode data) {
         ObjectNode node = JsonTools.mapper.createObjectNode();
         node.put("txid", txId.toString());
         node.put("method", method);
@@ -25,6 +28,12 @@ public class SagaInput {
         node.put("entity", entity);
         node.put("id", id);
         node.put("version", DateTimeFormatter.ISO_ZONED_DATE_TIME.format(version));
+        if (source != null) {
+            node.put("source", source);
+        }
+        if (sourceId != null) {
+            node.put("sourceId", sourceId);
+        }
         if (data != null) {
             node.set("data", data);
         }
@@ -69,6 +78,14 @@ public class SagaInput {
         return versionStr;
     }
 
+    public String source() {
+        return ofNullable(node.get("source")).map(JsonNode::textValue).orElse(null);
+    }
+
+    public String sourceId() {
+        return ofNullable(node.get("sourceId")).map(JsonNode::textValue).orElse(null);
+    }
+
     public JsonNode data() {
         return node.get("data");
     }
@@ -83,6 +100,8 @@ public class SagaInput {
                 ", entity='" + entity() + '\'' +
                 ", id='" + resourceId() + '\'' +
                 ", version='" + versionAsString() + '\'' +
+                ", source='" + source() + '\'' +
+                ", sourceId='" + sourceId() + '\'' +
                 ", data=" + data() +
                 '}';
     }
