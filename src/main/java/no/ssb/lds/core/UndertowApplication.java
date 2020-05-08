@@ -283,7 +283,8 @@ public class UndertowApplication {
                 specification,
                 persistence,
                 sec,
-                sagaRepository
+                sagaRepository,
+                txlogRawdataPool
         );
 
         return new UndertowApplication(specification, persistence, sec, sagaRepository, sagasObserver, sagaRecoveryTrigger, host, port,

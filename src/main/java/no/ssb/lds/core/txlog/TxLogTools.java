@@ -16,11 +16,11 @@ import java.util.Date;
 
 import static java.util.Optional.ofNullable;
 
-class TxLogTools {
+public class TxLogTools {
 
     static final ObjectMapper mapper = new ObjectMapper(new MessagePackFactory());
 
-    static RawdataMessage.Builder sagaInputToTxEntry(RawdataMessage.Builder builder, SagaInput sagaInput) {
+    public static RawdataMessage.Builder sagaInputToTxEntry(RawdataMessage.Builder builder, SagaInput sagaInput) {
         ObjectNode meta = mapper.createObjectNode();
         meta.put("method", sagaInput.method());
         meta.put("schema", sagaInput.schema());
@@ -45,7 +45,7 @@ class TxLogTools {
         return builder.put("meta", toBytes(meta));
     }
 
-    static SagaInput txEntryToSagaInput(RawdataMessage message) {
+    public static SagaInput txEntryToSagaInput(RawdataMessage message) {
         JsonNode meta = toJson(message.get("meta"));
         JsonNode data = message.keys().contains("data") ? toJson(message.get("data")) : null;
         return new SagaInput(message.ulid(),
@@ -60,7 +60,7 @@ class TxLogTools {
                 data);
     }
 
-    private static byte[] toBytes(JsonNode node) {
+    public static byte[] toBytes(JsonNode node) {
         try {
             return mapper.writeValueAsBytes(node);
         } catch (JsonProcessingException e) {
@@ -68,7 +68,7 @@ class TxLogTools {
         }
     }
 
-    private static JsonNode toJson(byte[] buf) {
+    public static JsonNode toJson(byte[] buf) {
         try {
             return mapper.readTree(buf);
         } catch (IOException e) {
