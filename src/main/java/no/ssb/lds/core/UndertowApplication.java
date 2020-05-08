@@ -66,6 +66,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.util.Optional.ofNullable;
+
 public class UndertowApplication {
 
     private static final Logger LOG = LoggerFactory.getLogger(UndertowApplication.class);
@@ -104,7 +106,7 @@ public class UndertowApplication {
         boolean graphqlEnabled = configuration.evaluateToBoolean("graphql.enabled");
         String pathPrefix = configuration.evaluateToString("http.prefix");
 
-        Optional<String> graphQLSchemaPath = Optional.ofNullable(configuration.evaluateToString("graphql.schema"))
+        Optional<String> graphQLSchemaPath = ofNullable(configuration.evaluateToString("graphql.schema"))
                 .map(path -> path.isEmpty() ? null : path);
 
 
@@ -170,7 +172,7 @@ public class UndertowApplication {
         TypeDefinitionRegistry definitionRegistry;
         URL systemResource = ClassLoader.getSystemResource(graphQLFile.getPath());
 
-        if (Optional.ofNullable(systemResource).isPresent()) {
+        if (ofNullable(systemResource).isPresent()) {
             definitionRegistry = new SchemaParser().parse(new File(systemResource.getPath()));
         } else {
             definitionRegistry = new SchemaParser().parse(new File(graphQLFile.getPath()));
@@ -192,7 +194,7 @@ public class UndertowApplication {
 
         JsonSchemaBasedSpecification specification;
 
-        Optional<String> graphQLSchemaPath = Optional.ofNullable(configuration.evaluateToString("graphql.schema"))
+        Optional<String> graphQLSchemaPath = ofNullable(configuration.evaluateToString("graphql.schema"))
                 .map(path -> path.isEmpty() ? null : path);
 
         if (graphQLSchemaPath.isPresent()) {
@@ -229,8 +231,8 @@ public class UndertowApplication {
 
         RawdataClient txLogClient = configureTxLogRawdataClient(configuration);
         boolean splitSources = configuration.evaluateToBoolean("txlog.split.sources");
-        String defaultSource = configuration.evaluateToString("txlog.default-source");
-        String txLogTopicPrefix = configuration.evaluateToString("txlog.rawdata.topic-prefix");
+        String defaultSource = ofNullable(configuration.evaluateToString("txlog.default-source")).filter(s -> !s.isBlank()).orElse("default");
+        String txLogTopicPrefix = ofNullable(configuration.evaluateToString("txlog.rawdata.topic-prefix")).map(String::trim).orElse("");
         TxlogRawdataPool txlogRawdataPool = new TxlogRawdataPool(txLogClient, splitSources, defaultSource, txLogTopicPrefix);
         sagaRepositoryBuilder.txLogRawdataPool(txlogRawdataPool);
 
