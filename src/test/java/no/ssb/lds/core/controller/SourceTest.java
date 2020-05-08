@@ -29,7 +29,7 @@ public class SourceTest {
     @ConfigurationOverride({
             "txlog.split.sources", "true",
             "txlog.default-source", "default",
-            "txlog.rawdata.topic-prefix", "tx-sourcetest-",
+            "txlog.rawdata.topic-prefix", "tx-empty-",
             "txlog.rawdata.provider", "memory"
     })
     public void thatLastSourceIdIsNullWhenNoDataHasBeenReceivedForSource() {
@@ -45,19 +45,17 @@ public class SourceTest {
     @ConfigurationOverride({
             "txlog.split.sources", "true",
             "txlog.default-source", "default",
-            "txlog.rawdata.topic-prefix", "tx-sourcetest-",
+            "txlog.rawdata.topic-prefix", "tx-split-",
             "txlog.rawdata.provider", "memory"
     })
     public void thatLastSourceIdIsReturnsLastOfThreeMessages() throws InterruptedException {
-        client.put("/data/provisionagreement/2a41c?source=A&sourceId=a1", readFileOrClasspathResource("demo/1-sirius.json")).expect201Created();
-        client.put("/data/provisionagreement/2a41c/address?source=A&sourceId=a2", readFileOrClasspathResource("demo/2-sirius-address.json")).expect200Ok();
-        client.put("/data/contact/4b2ef?source=B&sourceId=b1", readFileOrClasspathResource("demo/3-skrue.json")).expect201Created();
-        client.put("/data/contact/821aa?source=B&sourceId=b2", readFileOrClasspathResource("demo/4-donald.json")).expect201Created();
-        client.put("/data/provisionagreement/2a41c/contacts/contact/4b2ef?source=A&sourceId=a3").expect200Ok();
-        client.put("/data/provisionagreement/2a41c/contacts/contact/821aa?source=B&sourceId=b3").expect200Ok();
-        client.delete("/data/provisionagreement/2a41c/contacts/contact/4b2ef?source=B&sourceId=b4").expect200Ok();
-
-        Thread.sleep(1000);
+        client.put("/data/provisionagreement/2a41c?sync=true&source=A&sourceId=a1", readFileOrClasspathResource("demo/1-sirius.json")).expect201Created();
+        client.put("/data/provisionagreement/2a41c/address?sync=true&source=A&sourceId=a2", readFileOrClasspathResource("demo/2-sirius-address.json")).expect200Ok();
+        client.put("/data/contact/4b2ef?sync=true&source=B&sourceId=b1", readFileOrClasspathResource("demo/3-skrue.json")).expect201Created();
+        client.put("/data/contact/821aa?sync=true&source=B&sourceId=b2", readFileOrClasspathResource("demo/4-donald.json")).expect201Created();
+        client.put("/data/provisionagreement/2a41c/contacts/contact/4b2ef?sync=true&source=A&sourceId=a3").expect200Ok();
+        client.put("/data/provisionagreement/2a41c/contacts/contact/821aa?sync=true&source=B&sourceId=b3").expect200Ok();
+        client.delete("/data/provisionagreement/2a41c/contacts/contact/4b2ef?sync=true&source=B&sourceId=b4").expect200Ok();
 
         {
             ObjectNode expected = JsonTools.mapper.createObjectNode();
@@ -70,6 +68,45 @@ public class SourceTest {
             ObjectNode expected = JsonTools.mapper.createObjectNode();
             expected.put("lastSourceId", "b4");
             String response = client.get("/source/B").expect200Ok().body();
+            JsonNode actual = JsonTools.toJsonNode(response);
+            assertEquals(actual, expected);
+        }
+    }
+
+    @Test
+    @ConfigurationOverride({
+            "txlog.split.sources", "false",
+            "txlog.default-source", "default",
+            "txlog.rawdata.topic-prefix", "tx-merged-",
+            "txlog.rawdata.provider", "memory"
+    })
+    public void thatLastSourceIdIsOnlyReturnedForDefaultSourceWhenTxLogIsNotSplitUp() throws Exception {
+        client.put("/data/provisionagreement/2a41c?sync=true&source=A&sourceId=a1", readFileOrClasspathResource("demo/1-sirius.json")).expect201Created();
+        client.put("/data/provisionagreement/2a41c/address?sync=true&source=A&sourceId=a2", readFileOrClasspathResource("demo/2-sirius-address.json")).expect200Ok();
+        client.put("/data/contact/4b2ef?sync=true&source=B&sourceId=b1", readFileOrClasspathResource("demo/3-skrue.json")).expect201Created();
+        client.put("/data/contact/821aa?sync=true&source=B&sourceId=b2", readFileOrClasspathResource("demo/4-donald.json")).expect201Created();
+        client.put("/data/provisionagreement/2a41c/contacts/contact/4b2ef?sync=true&source=A&sourceId=a3").expect200Ok();
+        client.put("/data/provisionagreement/2a41c/contacts/contact/821aa?sync=true&source=B&sourceId=b3").expect200Ok();
+        client.delete("/data/provisionagreement/2a41c/contacts/contact/4b2ef?sync=true&source=B&sourceId=b4").expect200Ok();
+
+        {
+            ObjectNode expected = JsonTools.mapper.createObjectNode();
+            expected.putNull("lastSourceId");
+            String response = client.get("/source/A").expect200Ok().body();
+            JsonNode actual = JsonTools.toJsonNode(response);
+            assertEquals(actual, expected);
+        }
+        {
+            ObjectNode expected = JsonTools.mapper.createObjectNode();
+            expected.putNull("lastSourceId");
+            String response = client.get("/source/B").expect200Ok().body();
+            JsonNode actual = JsonTools.toJsonNode(response);
+            assertEquals(actual, expected);
+        }
+        {
+            ObjectNode expected = JsonTools.mapper.createObjectNode();
+            expected.put("lastSourceId", "b4");
+            String response = client.get("/source/default").expect200Ok().body();
             JsonNode actual = JsonTools.toJsonNode(response);
             assertEquals(actual, expected);
         }

@@ -56,6 +56,9 @@ public class TxlogRawdataPool {
     }
 
     public RawdataMessage getLastMessage(String source) {
+        if (!splitSources && !source.equals(defaultSource)) {
+            return null;
+        }
         String topic = topicOf(source);
         return client.lastMessage(topic);
     }
