@@ -45,6 +45,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -55,11 +56,14 @@ import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
@@ -377,22 +381,56 @@ public class UndertowApplication {
     }
 
     public void stop() {
-        server.stop();
-        persistence.close();
-        try {
-            txlogRawdataPool.getClient().close();
-        } catch (Error | RuntimeException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        sagasObserver.shutdown();
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        futures.add(CompletableFuture.runAsync(() -> {
+            server.stop();
+            LOG.debug("Undertow was shutdown");
+        }));
+        futures.add(CompletableFuture.runAsync(() -> {
+            persistence.close();
+            LOG.debug("Persistence provider was shutdown");
+        }));
+        futures.add(CompletableFuture.runAsync(() -> {
+            try {
+                txlogRawdataPool.getClient().close();
+                LOG.debug("Transaction log (rawdata client) was shutdown");
+            } catch (Error | RuntimeException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }));
+        futures.add(CompletableFuture.runAsync(() -> {
+            sagasObserver.shutdown();
+            LOG.debug("SagaObserver was shutdown");
+        }));
         if (sagaRecoveryTrigger != null) {
-            sagaRecoveryTrigger.stop();
+            futures.add(CompletableFuture.runAsync(sagaRecoveryTrigger::stop));
+            LOG.debug("SagaRecoveryTrigger was shutdown");
         }
-        sec.shutdown();
-        shutdownAndAwaitTermination(sagaThreadPool);
-        sagaLogPool.shutdown();
+        futures.add(CompletableFuture.runAsync(() -> {
+            sec.shutdown();
+            LOG.debug("Saga Execution Coordinator was shutdown");
+        }));
+        futures.add(CompletableFuture.runAsync(() -> {
+            shutdownAndAwaitTermination(sagaThreadPool);
+            LOG.debug("Saga thread-pool was shutdown");
+        }));
+        futures.add(CompletableFuture.runAsync(() -> {
+            sagaLogPool.shutdown();
+            LOG.debug("SagaLogPool was shutdown");
+        }));
+        CompletableFuture<Void> all = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        try {
+            all.orTimeout(10, TimeUnit.SECONDS).join();
+            LOG.debug("All internal services was shutdown.");
+        } catch (CompletionException e) {
+            if (e.getCause() != null && e.getCause() instanceof TimeoutException) {
+                LOG.warn("Timeout before shutdown of internal services could complete.");
+            } else {
+                LOG.error("Error while waiting for all services to shut down.", e);
+            }
+        }
         LOG.info("Leaving.. Bye!");
     }
 
