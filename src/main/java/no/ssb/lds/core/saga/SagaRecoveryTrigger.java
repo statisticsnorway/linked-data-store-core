@@ -7,9 +7,11 @@ import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class SagaRecoveryTrigger {
 
@@ -25,6 +27,7 @@ public class SagaRecoveryTrigger {
 
     private final static AtomicInteger triggerThreadId = new AtomicInteger();
     private final ScheduledExecutorService recoveryTriggerSingleThreadedPool = Executors.newScheduledThreadPool(1, runnable -> new Thread(runnable, "saga-recovery-trigger-" + triggerThreadId.incrementAndGet()));
+    private final AtomicReference<ScheduledFuture<?>> triggerScheduleRef = new AtomicReference<>();
     private final ExecutorService recoveryThreadPool;
 
     public SagaRecoveryTrigger(SagaExecutionCoordinator sec, int intervalMinSec, int intervalMaxSec, ScheduledExecutorService recoveryThreadPool) {
@@ -50,7 +53,7 @@ public class SagaRecoveryTrigger {
     }
 
     public void start() {
-        recoveryTriggerSingleThreadedPool.schedule(triggerRecoveryTask(), randomizedWaitSec(), TimeUnit.SECONDS);
+        triggerScheduleRef.set(recoveryTriggerSingleThreadedPool.schedule(triggerRecoveryTask(), randomizedWaitSec(), TimeUnit.SECONDS));
     }
 
     private Runnable triggerRecoveryTask() {
@@ -66,7 +69,7 @@ public class SagaRecoveryTrigger {
             } catch (Throwable t) {
                 LOG.error("Error while attempting to run cluster-wide saga recovery", t);
             }
-            recoveryTriggerSingleThreadedPool.schedule(triggerRecoveryTask(), randomizedWaitSec(), TimeUnit.SECONDS);
+            triggerScheduleRef.set(recoveryTriggerSingleThreadedPool.schedule(triggerRecoveryTask(), randomizedWaitSec(), TimeUnit.SECONDS));
         };
     }
 
@@ -76,5 +79,29 @@ public class SagaRecoveryTrigger {
 
     public void stop() {
         stopped.set(true);
+        ScheduledFuture<?> scheduledFuture = triggerScheduleRef.get();
+        if (scheduledFuture != null) {
+            scheduledFuture.cancel(true);
+        }
+        LOG.debug("Shutting down single-thread-pool");
+        shutdownAndAwaitTermination(recoveryTriggerSingleThreadedPool);
+        LOG.debug("Shutting down recovery thread-pool");
+        shutdownAndAwaitTermination(recoveryThreadPool);
+        LOG.debug("Shutting down recovery thread-pool done!");
+    }
+
+    static void shutdownAndAwaitTermination(ExecutorService pool) {
+        pool.shutdown();
+        try {
+            if (!pool.awaitTermination(10, TimeUnit.SECONDS)) {
+                pool.shutdownNow();
+                if (!pool.awaitTermination(10, TimeUnit.SECONDS)) {
+                    LOG.error("Pool did not terminate");
+                }
+            }
+        } catch (InterruptedException ie) {
+            pool.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 }
