@@ -17,6 +17,8 @@ import no.ssb.lds.core.schema.SchemaRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeParseException;
@@ -59,7 +61,8 @@ class DataController implements HttpHandler {
             } else {
                 String timestampParam = timestampParams.getLast();
                 try {
-                    timestamp = ZonedDateTime.parse(timestampParam); // ISO-8601
+                    String decodedTimestampParam = URLDecoder.decode(timestampParam, StandardCharsets.UTF_8);
+                    timestamp = ZonedDateTime.parse(decodedTimestampParam); // ISO-8601
                 } catch (DateTimeParseException e) {
                     exchange.setStatusCode(StatusCodes.BAD_REQUEST);
                     exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
