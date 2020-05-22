@@ -61,13 +61,18 @@ class DataController implements HttpHandler {
             } else {
                 String timestampParam = timestampParams.getLast();
                 try {
-                    String decodedTimestampParam = URLDecoder.decode(timestampParam, StandardCharsets.UTF_8);
-                    timestamp = ZonedDateTime.parse(decodedTimestampParam); // ISO-8601
+                    timestamp = ZonedDateTime.parse(timestampParam); // ISO-8601
                 } catch (DateTimeParseException e) {
-                    exchange.setStatusCode(StatusCodes.BAD_REQUEST);
-                    exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
-                    exchange.getResponseSender().send("The 'timestamp' query-parameter must follow the ISO-8601 standard. Example of a valid formatted timestamp is '2018-12-06T11:05:31.000+01:00'");
-                    return;
+                    // attempt to url-decode query parameter even though this is already done by web-server
+                    try {
+                        String decodedTimestampParam = URLDecoder.decode(timestampParam, StandardCharsets.UTF_8);
+                        timestamp = ZonedDateTime.parse(decodedTimestampParam); // ISO-8601
+                    } catch (IllegalArgumentException | DateTimeParseException e2) {
+                        exchange.setStatusCode(StatusCodes.BAD_REQUEST);
+                        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
+                        exchange.getResponseSender().send("The 'timestamp' query-parameter must follow the ISO-8601 standard. Example of a valid formatted timestamp is '2018-12-06T11:05:31.000+01:00'");
+                        return;
+                    }
                 }
                 timestamp.withZoneSameInstant(ZoneId.of("Etc/UTC"));
             }
