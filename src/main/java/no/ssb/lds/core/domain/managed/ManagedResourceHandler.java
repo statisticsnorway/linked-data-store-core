@@ -2,6 +2,8 @@ package no.ssb.lds.core.domain.managed;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.reactivex.Flowable;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
@@ -102,11 +104,23 @@ public class ManagedResourceHandler implements HttpHandler {
                 }
                 exchange.getResponseSender().send(JsonTools.toJson(output), StandardCharsets.UTF_8);
             } else {
-                JsonDocument jsonDocument = persistence.readDocument(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).blockingGet();
-                if (jsonDocument != null && !jsonDocument.deleted()) {
-                    exchange.getResponseSender().send(JsonTools.toJson(jsonDocument.jackson()), StandardCharsets.UTF_8);
+                if (exchange.getQueryParameters().containsKey("timeline")) {
+                    ArrayNode output = mapper.createArrayNode();
+                    // TODO Support pagination or time-range based query parameters
+                    Flowable<JsonDocument> jsonDocumentFlowable = persistence.readDocumentVersions(tx, resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id(), Range.unbounded());
+                    for (JsonDocument jsonDocument : jsonDocumentFlowable.blockingIterable()) {
+                        ObjectNode timeVersionedInstance = output.addObject();
+                        timeVersionedInstance.put("version", jsonDocument.key().timestamp().toString());
+                        timeVersionedInstance.set("document", jsonDocument.jackson());
+                    }
+                    exchange.getResponseSender().send(JsonTools.toJson(output), StandardCharsets.UTF_8);
                 } else {
-                    exchange.setStatusCode(StatusCodes.NOT_FOUND);
+                    JsonDocument jsonDocument = persistence.readDocument(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).blockingGet();
+                    if (jsonDocument != null && !jsonDocument.deleted()) {
+                        exchange.getResponseSender().send(JsonTools.toJson(jsonDocument.jackson()), StandardCharsets.UTF_8);
+                    } else {
+                        exchange.setStatusCode(StatusCodes.NOT_FOUND);
+                    }
                 }
             }
         }

@@ -16,9 +16,12 @@ import org.testng.annotations.Test;
 
 import javax.inject.Inject;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.util.Iterator;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 @Listeners(TestServerListener.class)
@@ -32,6 +35,10 @@ public class ManagedResourceHandlerTest {
 
     private void createTestResource(String entity, String id, String json) {
         ZonedDateTime timestamp = ZonedDateTime.now(ZoneId.of("Etc/UTC"));
+        createTestResource(entity, id, timestamp, json);
+    }
+
+    private void createTestResource(String entity, String id, ZonedDateTime timestamp, String json) {
         JsonNode jsonObject = JsonTools.toJsonNode(json);
         RxJsonPersistence persistence = server.getApplication().getPersistence();
         try (Transaction tx = persistence.createTransaction(false)) {
@@ -67,5 +74,41 @@ public class ManagedResourceHandlerTest {
     public void thatJsonSchemaIsFoundForNamespace() {
         ResponseHelper<String> response = client.get("/data/contact?schema");
         assertTrue(response.body().contains("\"$ref\":\"#/definitions/contact\""));
+    }
+
+    @Test
+    public void thatTimelineIsCorrectForGivenResource() {
+        createTestResource("provisionagreement", "5gTH4iagnrGHJ94gkf43JdcFB2",
+                ZonedDateTime.of(2018, 2, 12, 12, 1, 0, 0, ZoneOffset.UTC),
+                "{\"name\":\"first\"}");
+        createTestResource("provisionagreement", "5gTH4iagnrGHJ94gkf43JdcFB2",
+                ZonedDateTime.of(2018, 5, 3, 13, 2, 0, 0, ZoneOffset.UTC),
+                "{\"name\":\"second\"}");
+        createTestResource("provisionagreement", "5gTH4iagnrGHJ94gkf43JdcFB2",
+                ZonedDateTime.of(2019, 9, 28, 14, 3, 0, 0, ZoneOffset.UTC),
+                "{\"name\":\"third\"}");
+        createTestResource("provisionagreement", "5gTH4iagnrGHJ94gkf43JdcFB2",
+                ZonedDateTime.of(2020, 4, 30, 15, 4, 0, 0, ZoneOffset.UTC),
+                "{\"name\":\"fourth\"}");
+
+        ResponseHelper<String> response = client.get("/data/provisionagreement/5gTH4iagnrGHJ94gkf43JdcFB2?timeline").expect200Ok();
+
+        JsonNode timelineResult = JsonTools.toJsonNode(response.body());
+        assertTrue(timelineResult.isArray());
+        assertEquals(timelineResult.size(), 4);
+        Iterator<JsonNode> it = timelineResult.elements();
+        JsonNode first = it.next();
+        assertEquals(first.get("version").textValue(), "2018-02-12T12:01Z[Etc/UTC]");
+        assertEquals(first.get("document").get("name").textValue(), "first");
+        JsonNode second = it.next();
+        assertEquals(second.get("version").textValue(), "2018-05-03T13:02Z[Etc/UTC]");
+        assertEquals(second.get("document").get("name").textValue(), "second");
+        JsonNode third = it.next();
+        assertEquals(third.get("version").textValue(), "2019-09-28T14:03Z[Etc/UTC]");
+        assertEquals(third.get("document").get("name").textValue(), "third");
+        JsonNode fourth = it.next();
+        assertEquals(fourth.get("version").textValue(), "2020-04-30T15:04Z[Etc/UTC]");
+        assertEquals(fourth.get("document").get("name").textValue(), "fourth");
+        assertFalse(it.hasNext());
     }
 }
