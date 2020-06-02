@@ -105,6 +105,8 @@ public class UndertowApplication {
         this.sagaThreadPool = sagaThreadPool;
         this.txlogRawdataPool = txlogRawdataPool;
 
+        LOG.info("Initializing Http handlers ...");
+
         String namespace = configuration.evaluateToString("namespace.default");
         boolean enableRequestDump = configuration.evaluateToBoolean("http.request.dump");
         boolean graphqlEnabled = configuration.evaluateToBoolean("graphql.enabled");
@@ -113,9 +115,11 @@ public class UndertowApplication {
         Optional<String> graphQLSchemaPath = ofNullable(configuration.evaluateToString("graphql.schema"))
                 .map(path -> path.isEmpty() ? null : path);
 
-
         PathHandler pathHandler = Handlers.path();
         if (graphqlEnabled && graphQLSchemaPath.isPresent()) {
+
+            LOG.info("Initializing GraphQL Web API ...");
+
             GraphQLSchemaBuilder schemaBuilder = new GraphQLSchemaBuilder(namespace, persistence, searchIndex);
             TypeDefinitionRegistry definitionRegistry;
             File graphQLFile = new File(graphQLSchemaPath.get());
@@ -133,6 +137,7 @@ public class UndertowApplication {
             pathHandler.addExactPath("/graphql", graphqlHttpHandler);
         }
 
+        LOG.info("Initializing health handlers ...");
 
         HealthCheckHandler healthHandler = new HealthCheckHandler(persistence);
         pathHandler.addExactPath(HealthCheckHandler.HEALTH_ALIVE_PATH, healthHandler);
@@ -143,6 +148,7 @@ public class UndertowApplication {
 
         HttpHandler httpHandler;
         if (enableRequestDump) {
+            LOG.info("Initializing request-dump ...");
             httpHandler = Handlers.requestDump(pathHandler);
         } else {
             httpHandler = pathHandler;
@@ -152,6 +158,8 @@ public class UndertowApplication {
             LOG.info("Using http prefix: {}", pathPrefix);
             httpHandler = Handlers.path(ResponseCodeHandler.HANDLE_404).addPrefixPath(pathPrefix, httpHandler);
         }
+
+        LOG.info("Initializing CORS-handler ...");
 
         List<Pattern> corsAllowOrigin = Stream.of(configuration.evaluateToString("http.cors.allow.origin")
                 .split(",")).map(Pattern::compile).collect(Collectors.toUnmodifiableList());
@@ -165,6 +173,8 @@ public class UndertowApplication {
         CORSHandler corsHandler = new CORSHandler(httpHandler, httpHandler, corsAllowOrigin,
                 corsAllowCredentials, StatusCodes.NO_CONTENT, corsMaxAge, corsAllowMethods, corsAllowHeaders
         );
+
+        LOG.info("Initializing Undertow ...");
 
         this.server = Undertow.builder()
                 .addHttpListener(port, host)
@@ -196,6 +206,8 @@ public class UndertowApplication {
     public static UndertowApplication initializeUndertowApplication(DynamicConfiguration configuration, int port) {
         LOG.info("Initializing Linked Data Store (LDS) server ...");
 
+        LOG.info("Initializing specification ...");
+
         JsonSchemaBasedSpecification specification;
 
         Optional<String> graphQLSchemaPath = ofNullable(configuration.evaluateToString("graphql.schema"))
@@ -220,18 +232,26 @@ public class UndertowApplication {
             specification = JsonSchemaBasedSpecification.create(specificationSchema);
         }
 
+        LOG.info("Initializing primary persistence ...");
+
         RxJsonPersistence persistence = PersistenceConfigurator.configurePersistence(configuration, specification);
+
+        LOG.info("Initializing saga-log pool ...");
 
         SagaLogPool sagaLogPool = configureSagaLogProvider(configuration);
 
-        String host = configuration.evaluateToString("http.host");
         SagaRepository.Builder sagaRepositoryBuilder = new SagaRepository.Builder()
                 .specification(specification)
                 .persistence(persistence);
+
+        LOG.info("Initializing search-index ...");
+
         SearchIndex searchIndex = SearchIndexConfigurator.configureSearchIndex(configuration);
         if (searchIndex != null) {
             sagaRepositoryBuilder.indexer(searchIndex);
         }
+
+        LOG.info("Initializing transaction-log ...");
 
         RawdataClient txLogClient = configureTxLogRawdataClient(configuration);
         boolean splitSources = configuration.evaluateToBoolean("txlog.split.sources");
@@ -240,8 +260,16 @@ public class UndertowApplication {
         TxlogRawdataPool txlogRawdataPool = new TxlogRawdataPool(txLogClient, splitSources, defaultSource, txLogTopicPrefix);
         sagaRepositoryBuilder.txLogRawdataPool(txlogRawdataPool);
 
+        LOG.info("Initializing saga repository ...");
+
         SagaRepository sagaRepository = sagaRepositoryBuilder.build();
+
+        LOG.info("Initializing saga observer ...");
+
         final SagasObserver sagasObserver = new SagasObserver(sagaRepository).start();
+
+        LOG.info("Initializing saga thread-pool ...");
+
         final AtomicLong nextWorkerId = new AtomicLong(1);
         int sagaThreadPoolQueueCapacity = configuration.evaluateToInt("saga.threadpool.queue.capacity");
         int sagaThreadPoolCoreSize = configuration.evaluateToInt("saga.threadpool.core");
@@ -268,12 +296,18 @@ public class UndertowApplication {
 
         boolean sagaCommandsEnabled = configuration.evaluateToBoolean("saga.commands.enabled");
 
+        LOG.info("Initializing saga-recovery thread-pool ...");
+
         AtomicInteger executorThreadId = new AtomicInteger();
         ScheduledExecutorService recoveryThreadPool = Executors.newScheduledThreadPool(10, runnable -> new Thread(runnable, "saga-recovery-" + executorThreadId.incrementAndGet()));
+
+        LOG.info("Initializing saga-execution-coordinator ...");
 
         SagaExecutionCoordinator sec = new SagaExecutionCoordinator(sagaLogPool, numberOfSagaLogs, sagaRepository, sagasObserver, sagaThreadPool, sagaCommandsEnabled, recoveryThreadPool);
 
         HystrixThreadPoolProperties.Setter().withMaximumSize(50); // TODO Configure Hystrix properly
+
+        LOG.info("Initializing saga-recovery-trigger ...");
 
         boolean sagaRecoveryEnabled = configuration.evaluateToBoolean("saga.recovery.enabled");
         SagaRecoveryTrigger sagaRecoveryTrigger = null;
@@ -282,6 +316,8 @@ public class UndertowApplication {
             int intervalMaxSec = configuration.evaluateToInt("saga.recovery.interval.seconds.max");
             sagaRecoveryTrigger = new SagaRecoveryTrigger(sec, intervalMinSec, intervalMaxSec, recoveryThreadPool);
         }
+
+        LOG.info("Initializing namespace-controller ...");
 
         NamespaceController namespaceController = new NamespaceController(
                 configuration.evaluateToString("namespace.default"),
@@ -292,6 +328,8 @@ public class UndertowApplication {
                 sagaRepository,
                 txlogRawdataPool
         );
+
+        String host = configuration.evaluateToString("http.host");
 
         return new UndertowApplication(specification, persistence, sec, sagaRepository, sagasObserver, sagaRecoveryTrigger, host, port,
                 sagaLogPool, sagaThreadPool, namespaceController,
@@ -365,13 +403,16 @@ public class UndertowApplication {
     }
 
     public void start() {
+        LOG.info("Starting Undertow ...");
         server.start();
         if (sagaRecoveryTrigger != null) {
+            LOG.info("Starting saga-recovery (instance-local) ...");
             // attempt to recover local saga-logs immediately, then attempt cluster wide recovery regularly
             sec.completeLocalIncompleteSagas(sec.getRecoveryThreadPool()).handle((v, t) -> {
                 if (t != null) {
                     LOG.error("Error during initial local saga-logs recovery attempt", t);
                 }
+                LOG.info("Starting saga-recovery-trigger ...");
                 sagaRecoveryTrigger.start();
                 return (Void) null;
             });
