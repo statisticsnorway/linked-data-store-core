@@ -31,6 +31,7 @@ import no.ssb.lds.core.search.SearchIndexConfigurator;
 import no.ssb.lds.core.specification.JsonSchemaBasedSpecification;
 import no.ssb.lds.core.specification.SpecificationJsonSchemaBuilder;
 import no.ssb.lds.core.txlog.TxlogRawdataPool;
+import no.ssb.lds.core.utils.LDSProviderConfigurator;
 import no.ssb.lds.graphql.GraphqlHttpHandler;
 import no.ssb.lds.graphql.jsonSchema.GraphQLToJsonConverter;
 import no.ssb.lds.graphql.schemas.GraphQLSchemaBuilder;
@@ -38,7 +39,6 @@ import no.ssb.rawdata.api.RawdataClient;
 import no.ssb.rawdata.api.RawdataClientInitializer;
 import no.ssb.sagalog.SagaLogInitializer;
 import no.ssb.sagalog.SagaLogPool;
-import no.ssb.service.provider.api.ProviderConfigurator;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -353,26 +353,78 @@ public class UndertowApplication {
 
     private static SagaLogPool configureSagaLogProvider(DynamicConfiguration configuration) {
         String providerClass = configuration.evaluateToString("sagalog.provider");
+        LOG.info("Using saga-log-pool provider-class: {}", providerClass);
         ServiceLoader<SagaLogInitializer> loader = ServiceLoader.load(SagaLogInitializer.class);
         SagaLogInitializer initializer = loader.stream().filter(c -> providerClass.equals(c.type().getName())).findFirst().orElseThrow().get();
-        Map<String, String> providerConfig = subMapFromPrefix(new TreeMap<>(configuration.asMap()), "sagalog.config.");
-        return initializer.initialize(providerConfig);
+        Map<String, String> providerConfig = subMapFromPrefix(configuration.asMap(), "sagalog.config.");
+
+        int retryIntervalSeconds = configuration.evaluateToInt("sagalog.provider.initialization.retry-interval-seconds");
+        int maxWaitSeconds = configuration.evaluateToInt("sagalog.provider.initialization.max-wait-seconds");
+        long start = System.currentTimeMillis();
+        for (int i = 1; ; i++) {
+            try {
+                LOG.info("SagaLogPool provider initialization attempt # {}", i);
+                SagaLogPool sagaLogPool = initializer.initialize(providerConfig);
+                LOG.info("SagaLogPool initialized!");
+                return sagaLogPool;
+            } catch (Exception e) {
+                long durationMs = System.currentTimeMillis() - start;
+                long remainingMs = TimeUnit.SECONDS.toMillis(maxWaitSeconds) - durationMs;
+                if (remainingMs > 0) {
+                    try {
+                        Thread.sleep(Math.min(retryIntervalSeconds * 1000, remainingMs));
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException("Interrupted while attempting to sleep, interrupt status preserved.", e);
+                    }
+                } else {
+                    throw e;
+                }
+            }
+        }
     }
 
     public static RawdataClient configureTxLogRawdataClient(DynamicConfiguration configuration) {
         String provider = configuration.evaluateToString("txlog.rawdata.provider");
-        Map<String, String> providerConfig = subMapFromPrefix(new TreeMap<>(configuration.asMap()), "txlog.config.");
-        return ProviderConfigurator.configure(providerConfig, provider, RawdataClientInitializer.class);
+        LOG.info("Using transaction-log provider: {}", provider);
+        Map<String, String> providerConfig = subMapFromPrefix(configuration.asMap(), "txlog.config.");
+        RawdataClientInitializer clientInitializer = LDSProviderConfigurator.configure(providerConfig, provider, RawdataClientInitializer.class);
+
+        int retryIntervalSeconds = configuration.evaluateToInt("txlog.rawdata.provider.initialization.retry-interval-seconds");
+        int maxWaitSeconds = configuration.evaluateToInt("txlog.rawdata.provider.initialization.max-wait-seconds");
+        long start = System.currentTimeMillis();
+        for (int i = 1; ; i++) {
+            try {
+                LOG.info("Transaction-log provider initialization attempt # {}", i);
+                RawdataClient txLogRawdataClient = clientInitializer.initialize(providerConfig);
+                LOG.info("Transaction-log initialized");
+                return txLogRawdataClient;
+            } catch (Exception e) {
+                long durationMs = System.currentTimeMillis() - start;
+                long remainingMs = TimeUnit.SECONDS.toMillis(maxWaitSeconds) - durationMs;
+                if (remainingMs > 0) {
+                    try {
+                        Thread.sleep(Math.min(retryIntervalSeconds * 1000, remainingMs));
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException("Interrupted while attempting to sleep, interrupt status preserved.", e);
+                    }
+                } else {
+                    throw e;
+                }
+            }
+        }
     }
 
-    private static Map<String, String> subMapFromPrefix(NavigableMap<String, String> configMap, String prefix) {
-        NavigableMap<String, String> map = configMap.subMap(
-                prefix, true,
-                prefix + "~", false);
-        return map.entrySet().stream().collect(Collectors.toMap(
-                e -> e.getKey().substring(prefix.length()),
-                Map.Entry::getValue)
-        );
+    public static Map<String, String> subMapFromPrefix(Map<String, String> configMap, String prefix) {
+        NavigableMap<String, String> navConf;
+        if (configMap instanceof NavigableMap) {
+            navConf = (NavigableMap) configMap;
+        } else {
+            navConf = new TreeMap<>(configMap);
+        }
+        return navConf.subMap(prefix, true, prefix + "\uFFFF", false)
+                .entrySet().stream().collect(Collectors.toMap(e -> e.getKey().substring(prefix.length()), Map.Entry::getValue));
     }
 
     static void shutdownAndAwaitTermination(ExecutorService pool) {

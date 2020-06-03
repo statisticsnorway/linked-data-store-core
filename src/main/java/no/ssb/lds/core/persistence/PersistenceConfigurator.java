@@ -23,6 +23,7 @@ public class PersistenceConfigurator {
 
     public static RxJsonPersistence configurePersistence(DynamicConfiguration configuration, Specification specification) {
         final String providerId = configuration.evaluateToString("persistence.provider");
+        LOG.info("Using persistence provider: {}", providerId);
 
         ServiceLoader<PersistenceInitializer> loader = ServiceLoader.load(PersistenceInitializer.class);
 
@@ -67,10 +68,11 @@ public class PersistenceConfigurator {
 
         int maxWaitSeconds = configuration.evaluateToInt("persistence.initialization.max-wait-seconds");
         long start = System.currentTimeMillis();
-        do {
+        for (int i = 1; ; i++) {
             try {
+                LOG.info("Persistence provider initialization attempt # {}", i);
                 RxJsonPersistence persistence = initializer.initialize(configuration.evaluateToString("namespace.default"), configurationByKey, specification.getManagedDomains());
-                LOG.info("Persistence service-provider configured: {}", providerId);
+                LOG.info("Persistence service-provider configured");
                 return persistence;
             } catch (RuntimeException e) {
                 long durationMs = System.currentTimeMillis() - start;
@@ -86,6 +88,6 @@ public class PersistenceConfigurator {
                     throw e;
                 }
             }
-        } while (true);
+        }
     }
 }
