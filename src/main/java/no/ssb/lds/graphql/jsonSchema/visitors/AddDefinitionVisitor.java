@@ -84,6 +84,9 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
                 case "String":
                     propertyElements.put("type", "string");
                     break;
+                case "Boolean":
+                    propertyElements.put("type", "boolean");
+                    break;
                 case "DateTime":
                     propertyElements.put("type", "string");
                     propertyElements.put("format", "date-time");

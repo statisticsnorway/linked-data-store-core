@@ -35,6 +35,17 @@ public class GraphQLToJsonConverterTest {
         Assert.assertTrue(jsonMap.get("Dog").getJSONObject("definitions").getJSONObject("Dog")
                 .getString("displayName").equals("This is a dog"));
 
+        Assert.assertTrue(jsonMap.get("Dog").getJSONObject("definitions").getJSONObject("Dog")
+                .getJSONObject("properties").getJSONObject("friendly")
+                .getString("type").equals("boolean"));
+
+        Assert.assertTrue(jsonMap.get("Cat").getJSONObject("definitions").getJSONObject("Cat")
+                .getJSONObject("properties").getJSONObject("alive")
+                .getString("type").equals("boolean"));
+
+        Assert.assertTrue(jsonMap.get("Cat").getJSONObject("definitions").getJSONObject("Cat")
+                .getJSONArray("required").length() == 1);
+
         Assert.assertNotEmpty(jsonMap.values());
     }
 

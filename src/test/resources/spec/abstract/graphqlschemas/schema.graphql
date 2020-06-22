@@ -20,6 +20,7 @@ new lines.
 type Cat @domain {
   age: Float
   name: String!
+  alive: Boolean
 }
 
 # This is a dog
@@ -27,6 +28,7 @@ type Cat @domain {
 type Dog @domain {
   age: Float
   name: String!
+  friendly: Boolean!
 }
 
 type Owner @domain {
