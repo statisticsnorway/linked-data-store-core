@@ -1,14 +1,20 @@
 
 package no.ssb.lds.graphql.jsonSchema.visitors;
 
-import graphql.schema.*;
+import graphql.schema.GraphQLObjectType;
+import graphql.schema.GraphQLType;
+import graphql.schema.GraphQLTypeVisitorStub;
+import graphql.schema.TypeTraverser;
 import graphql.util.TraversalControl;
 import graphql.util.TraverserContext;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.stream.Stream;
 
 import static no.ssb.lds.graphql.directives.DomainDirective.hasDomainDirective;
 
@@ -34,8 +40,17 @@ public class ParseObjectTypesVisitor extends GraphQLTypeVisitorStub {
             definitionValues.put("type", "object");
             definitionValues.put("properties", new JSONObject());
             definitionValues.put("required", new ArrayList<>());
-            definitionValues.put("description", node.getDescription());
-            definitionValues.put("displayName", "");
+
+            String description = node.getDescription();
+            // Using the first line of the description as display name if possible.
+            if (description != null) {
+                String displayName = Stream.of(description.split(System.lineSeparator()))
+                        .findFirst().map(String::strip).orElse(description);
+                definitionValues.put("displayName", displayName);
+
+                definitionValues.put("description", description.strip());
+            }
+
 
             jsonDefinitions.put(node.getName(), definitionValues);
             jsonElements.put("$ref", "#/definitions/" + node.getName());

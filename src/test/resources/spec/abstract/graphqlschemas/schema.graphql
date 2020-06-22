@@ -12,11 +12,18 @@ union animals = Cat | Dog
 #The list of types are [Cat, Dog].
 union favorite = Cat | Dog
 
+"""This is a cat
+
+And this is a long description of what a cat is. It contains
+new lines.
+"""
 type Cat @domain {
   age: Float
   name: String!
 }
 
+# This is a dog
+# Kinda like a cat.
 type Dog @domain {
   age: Float
   name: String!

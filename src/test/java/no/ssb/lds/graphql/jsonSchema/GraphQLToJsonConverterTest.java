@@ -29,6 +29,12 @@ public class GraphQLToJsonConverterTest {
             System.out.printf("%s :: %s%n", name, json);
         });
 
+        Assert.assertTrue(jsonMap.get("Cat").getJSONObject("definitions").getJSONObject("Cat")
+                .getString("displayName").equals("This is a cat"));
+
+        Assert.assertTrue(jsonMap.get("Dog").getJSONObject("definitions").getJSONObject("Dog")
+                .getString("displayName").equals("This is a dog"));
+
         Assert.assertNotEmpty(jsonMap.values());
     }
 
