@@ -111,4 +111,9 @@ public class ManagedResourceHandlerTest {
         assertEquals(fourth.get("document").get("name").textValue(), "fourth");
         assertFalse(it.hasNext());
     }
+
+    @Test
+    public void thatTimelineReturns404ForNonExistentResource() {
+        client.get("/data/provisionagreement/non-existent-resource?timeline").expect404NotFound();
+    }
 }

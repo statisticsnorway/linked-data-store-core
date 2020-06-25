@@ -113,6 +113,10 @@ public class ManagedResourceHandler implements HttpHandler {
                         timeVersionedInstance.put("version", jsonDocument.key().timestamp().toString());
                         timeVersionedInstance.set("document", jsonDocument.jackson());
                     }
+                    if (output.size() == 0) {
+                        exchange.setStatusCode(StatusCodes.NOT_FOUND).endExchange();
+                        return;
+                    }
                     exchange.getResponseSender().send(JsonTools.toJson(output), StandardCharsets.UTF_8);
                 } else {
                     JsonDocument jsonDocument = persistence.readDocument(tx, resourceContext.getTimestamp(), resourceContext.getNamespace(), topLevelElement.name(), topLevelElement.id()).blockingGet();
