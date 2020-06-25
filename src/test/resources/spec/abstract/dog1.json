@@ -1,3 +1,4 @@
 {
-  "name": "dog1"
+  "name": "dog1",
+  "friendly": true
 }

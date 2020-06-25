@@ -1,4 +1,5 @@
 {
   "name": "dog2",
-  "age": 100
+  "age": 100,
+  "friendly": false
 }
