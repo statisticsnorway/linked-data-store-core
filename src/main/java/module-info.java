@@ -29,6 +29,7 @@ module no.ssb.lds.core {
     requires org.apache.tika.core;
 
     requires graphql.java;
+    requires neo4j.graphql.java;
     requires io.reactivex.rxjava2;
     requires org.reactivestreams;
     requires com.github.akarnokd.rxjava2jdk9interop;

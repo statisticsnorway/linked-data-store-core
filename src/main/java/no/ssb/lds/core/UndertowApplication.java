@@ -33,8 +33,13 @@ import no.ssb.lds.core.specification.SpecificationJsonSchemaBuilder;
 import no.ssb.lds.core.txlog.TxlogRawdataPool;
 import no.ssb.lds.core.utils.LDSProviderConfigurator;
 import no.ssb.lds.graphql.GraphqlHttpHandler;
+import no.ssb.lds.graphql.directives.DomainDirective;
+import no.ssb.lds.graphql.directives.LinkDirective;
+import no.ssb.lds.graphql.directives.ReverseLinkDirective;
 import no.ssb.lds.graphql.jsonSchema.GraphQLToJsonConverter;
 import no.ssb.lds.graphql.schemas.GraphQLSchemaBuilder;
+import no.ssb.lds.graphqlneo4j.GraphQLNeo4jHttpHandler;
+import no.ssb.lds.graphqlneo4j.GraphQLNeo4jTBVSchemas;
 import no.ssb.rawdata.api.RawdataClient;
 import no.ssb.rawdata.api.RawdataClientInitializer;
 import no.ssb.sagalog.SagaLogInitializer;
@@ -121,20 +126,35 @@ public class UndertowApplication {
             LOG.info("Initializing GraphQL Web API ...");
 
             GraphQLSchemaBuilder schemaBuilder = new GraphQLSchemaBuilder(namespace, persistence, searchIndex);
-            TypeDefinitionRegistry definitionRegistry;
             File graphQLFile = new File(graphQLSchemaPath.get());
-            definitionRegistry = parseSchemaFile(graphQLFile);
 
-            GraphQLSchema schema = schemaBuilder.getGraphQL(GraphQLSchemaBuilder.parseSchema(definitionRegistry));
+            TypeDefinitionRegistry definitionRegistry = parseSchemaFile(graphQLFile);
 
-            GraphQL graphQL = GraphQL.newGraphQL(schema).build();
+            final String providerId = configuration.evaluateToString("persistence.provider");
+
+            HttpHandler graphQLHttpHandler;
+
+            if ("neo4j".equals(providerId)) {
+
+                LOG.info("Initializing GraphQL Neo4j integration ...");
+
+                GraphQLSchema schema = GraphQLNeo4jTBVSchemas.schemaOf(GraphQLNeo4jTBVSchemas.transformRegistry(definitionRegistry));
+                GraphQL graphQL = GraphQL.newGraphQL(schema).build();
+                graphQLHttpHandler = new GraphQLNeo4jHttpHandler(graphQL);
+            } else {
+
+                LOG.info("Initializing GraphQL integration ...");
+
+                GraphQLSchema schema = schemaBuilder.getGraphQL(GraphQLSchemaBuilder.parseSchema(definitionRegistry));
+                GraphQL graphQL = GraphQL.newGraphQL(schema).build();
+                graphQLHttpHandler = new GraphqlHttpHandler(graphQL);
+            }
+
+            pathHandler.addExactPath("/graphql", graphQLHttpHandler);
 
             pathHandler.addExactPath("/graphiql", Handlers.resource(new ClassPathResourceManager(
                     Thread.currentThread().getContextClassLoader(), "no/ssb/lds/graphql/graphiql"
             )).setDirectoryListingEnabled(false).addWelcomeFiles("graphiql.html"));
-
-            GraphqlHttpHandler graphqlHttpHandler = new GraphqlHttpHandler(graphQL);
-            pathHandler.addExactPath("/graphql", graphqlHttpHandler);
         }
 
         LOG.info("Initializing health handlers ...");
@@ -216,20 +236,41 @@ public class UndertowApplication {
         if (graphQLSchemaPath.isPresent()) {
             File graphQLFile = new File(graphQLSchemaPath.get());
 
+            LOG.info("Using GraphQL file: {}", graphQLFile.toString());
+
             TypeDefinitionRegistry definitionRegistry = parseSchemaFile(graphQLFile);
 
-            GraphQLSchema schema = GraphQLSchemaBuilder.parseSchema(definitionRegistry);
+            GraphQLSchema schema;
+            final String providerId = configuration.evaluateToString("persistence.provider");
+
+            if ("neo4j".equals(providerId)) {
+
+                LOG.info("Transforming GraphQL schema to conform with GRANDstack compatible Neo4j modelling for Specification purposes");
+                schema = GraphQLNeo4jTBVSchemas.schemaOf(GraphQLNeo4jTBVSchemas.transformRegistry(definitionRegistry)).transform(builder -> {
+                    // TODO figure out what is missing that GraphQLSchemaBuilder.parseSchema(definitionRegistry); does
+                    builder.additionalDirectives(Set.of(
+                            DomainDirective.INSTANCE,
+                            LinkDirective.INSTANCE,
+                            ReverseLinkDirective.INSTANCE
+                    ));
+                });
+
+            } else {
+
+                LOG.info("Using GraphQL schema as defined directly in SDL file for Specification purposes");
+                schema = GraphQLSchemaBuilder.parseSchema(definitionRegistry);
+            }
+
             GraphQLToJsonConverter graphQLToJsonConverter = new GraphQLToJsonConverter(schema);
             LinkedHashMap<String, JSONObject> jsonMap = graphQLToJsonConverter.createSpecification(schema);
 
-            LOG.info("Creating specification using GraphQL schema: {}", graphQLSchemaPath.get());
-            specification = createJsonSpecification(jsonMap);
+            specification = createJsonSpecification(definitionRegistry, jsonMap);
 
         } else {
             String schemaConfigStr = configuration.evaluateToString("specification.schema");
             String[] specificationSchema = ("".equals(schemaConfigStr) ? new String[0] : schemaConfigStr.split(","));
             LOG.info("Creating specification using json-schema: {}", schemaConfigStr);
-            specification = JsonSchemaBasedSpecification.create(specificationSchema);
+            specification = JsonSchemaBasedSpecification.create(null, specificationSchema);
         }
 
         LOG.info("Initializing primary persistence ...");
@@ -336,7 +377,7 @@ public class UndertowApplication {
                 searchIndex, configuration, txlogRawdataPool);
     }
 
-    private static JsonSchemaBasedSpecification createJsonSpecification(LinkedHashMap<String, JSONObject> jsonMap) {
+    private static JsonSchemaBasedSpecification createJsonSpecification(TypeDefinitionRegistry typeDefinitionRegistry, LinkedHashMap<String, JSONObject> jsonMap) {
         JsonSchemaBasedSpecification jsonSchemaBasedSpecification = null;
         Set<Map.Entry<String, JSONObject>> entries = jsonMap.entrySet();
         Iterator<Map.Entry<String, JSONObject>> iterator = entries.iterator();
@@ -345,7 +386,7 @@ public class UndertowApplication {
         while (iterator.hasNext()) {
             Map.Entry item = iterator.next();
             jsonSchema = new JsonSchema04Builder(jsonSchema, item.getKey().toString(), item.getValue().toString()).build();
-            jsonSchemaBasedSpecification = SpecificationJsonSchemaBuilder.createBuilder(jsonSchema).build();
+            jsonSchemaBasedSpecification = SpecificationJsonSchemaBuilder.createBuilder(typeDefinitionRegistry, jsonSchema).build();
         }
 
         return jsonSchemaBasedSpecification;

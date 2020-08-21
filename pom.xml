@@ -128,6 +128,12 @@
             <artifactId>linked-data-store-persistence-provider-memory</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>no.ssb.lds</groupId>
+            <artifactId>linked-data-store-persistence-provider-neo4j</artifactId>
+            <version>0.10-SNAPSHOT</version>
+            <scope>test</scope>
+        </dependency>
 
         <dependency>
             <groupId>no.ssb.rawdata</groupId>
@@ -185,6 +191,12 @@
                     <groupId>com.squareup.okhttp3</groupId>
                 </exclusion>
             </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-graphql-java</artifactId>
+            <version>1.0.0</version>
         </dependency>
 
         <dependency>
