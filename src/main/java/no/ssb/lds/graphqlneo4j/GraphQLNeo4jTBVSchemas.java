@@ -19,11 +19,8 @@ import graphql.language.UnionTypeDefinition;
 import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLDirective;
 import graphql.schema.GraphQLFieldDefinition;
-import graphql.schema.GraphQLInterfaceType;
-import graphql.schema.GraphQLList;
-import graphql.schema.GraphQLNonNull;
+import graphql.schema.GraphQLModifiedType;
 import graphql.schema.GraphQLObjectType;
-import graphql.schema.GraphQLOutputType;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeCollectingVisitor;
@@ -92,7 +89,7 @@ public class GraphQLNeo4jTBVSchemas {
                 }
                 FieldDefinition field = (FieldDefinition) child;
                 Type fieldType = field.getType();
-                String typeName = unwrapTypeName(fieldType);
+                String typeName = unwrapTypeAndGetName(fieldType);
                 if (Set.of("Date", "Time", "DateTime").contains(typeName)) {
                     String transformedTypeName = "_Neo4j" + typeName;
                     transformedFields.put(field.getName(), field.transform(builder -> {
@@ -118,7 +115,7 @@ public class GraphQLNeo4jTBVSchemas {
         if (type instanceof TypeName) {
             return TypeName.newTypeName(requestedNewInnerTypeName).build();
         }
-        throw new IllegalArgumentException("transfomration of type not supported: " + type.getClass().getName());
+        throw new IllegalArgumentException("transformation of type not supported: " + type.getClass().getName());
     }
 
     private static void addRelationDirectives(TypeDefinitionRegistry typeDefinitionRegistry) {
@@ -230,17 +227,14 @@ public class GraphQLNeo4jTBVSchemas {
         }
     }
 
-    private static String unwrapTypeName(Type type) {
+    private static String unwrapTypeAndGetName(Type type) {
         if (type instanceof NonNullType) {
-            return unwrapTypeName((Type) type.getChildren().get(0));
+            return unwrapTypeAndGetName(((NonNullType) type).getType());
         }
         if (type instanceof ListType) {
-            return unwrapTypeName((Type) type.getChildren().get(0));
+            return unwrapTypeAndGetName(((ListType) type).getType());
         }
-        if (type instanceof TypeName) {
-            return ((TypeName) type).getName();
-        }
-        throw new IllegalArgumentException("Unsupported concrete GraphQLOutputType class: " + type.getClass().getName());
+        return ((TypeName) type).getName(); // instance must be an instanceof TypeName
     }
 
     /**
@@ -271,7 +265,7 @@ public class GraphQLNeo4jTBVSchemas {
                     String name = dataFetchingEnvironment.getField().getName();
                     Cypher cypher = dataFetcher.get(dataFetchingEnvironment);
                     if (queryTypes.contains(name)) {
-                        String type = unwrapTypeName(dataFetchingEnvironment.getFieldDefinition().getType());
+                        String type = unwrapGraphQLTypeAndGetName(dataFetchingEnvironment.getFieldDefinition().getType());
                         String query = replaceGroup(String.format("MATCH \\(%s:%s\\) WHERE( )", name, type), cypher.component1(), 1, " (_v.from <= $_version AND coalesce($_version < _v.to, true)) AND ");
                         query = replaceGroup(String.format("MATCH (\\(%s:%s\\)) WHERE", name, type), query, 1, String.format("(_r:%s:RESOURCE)<-[_v:VERSION_OF]-(%s:%s:INSTANCE)", type + "_R", name, type));
                         return new Cypher(query, cypher.component2(), cypher.component3());
@@ -338,7 +332,7 @@ public class GraphQLNeo4jTBVSchemas {
             graphQLObjectTypeBuilder.clearFields();
             for (String originalQuery : originalQueries) {
                 GraphQLFieldDefinition originalFieldDefinition = queryType.getFieldDefinition(originalQuery);
-                String typeName = unwrapTypeName(originalFieldDefinition.getType());
+                String typeName = unwrapGraphQLTypeAndGetName(originalFieldDefinition.getType());
                 TypeDefinition typeDefinition = typeDefinitionRegistry.getType(typeName).get();
                 if (typeDefinition.getDirective("domain") != null) {
                     graphQLObjectTypeBuilder.field(originalFieldDefinition.transform(fieldDefinitionBuilder -> {
@@ -349,20 +343,11 @@ public class GraphQLNeo4jTBVSchemas {
         return transformedQueryObject;
     }
 
-    private static String unwrapTypeName(GraphQLOutputType type) {
-        if (type instanceof GraphQLNonNull) {
-            return unwrapTypeName((GraphQLOutputType) type.getChildren().get(0));
+    private static String unwrapGraphQLTypeAndGetName(GraphQLType type) {
+        if (type instanceof GraphQLModifiedType) {
+            return unwrapGraphQLTypeAndGetName(((GraphQLModifiedType) type).getWrappedType());
         }
-        if (type instanceof GraphQLList) {
-            return unwrapTypeName((GraphQLOutputType) type.getChildren().get(0));
-        }
-        if (type instanceof GraphQLObjectType) {
-            return type.getName();
-        }
-        if (type instanceof GraphQLInterfaceType) {
-            return type.getName();
-        }
-        throw new IllegalArgumentException("Unsupported concrete GraphQLOutputType class: " + type.getClass().getName());
+        return type.getName();
     }
 
     public static String replaceGroup(String regex, String source, int groupToReplace, String replacement) {
