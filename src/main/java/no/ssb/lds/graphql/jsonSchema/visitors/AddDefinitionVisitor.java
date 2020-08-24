@@ -1,6 +1,20 @@
 package no.ssb.lds.graphql.jsonSchema.visitors;
 
-import graphql.schema.*;
+import graphql.schema.GraphQLDirective;
+import graphql.schema.GraphQLDirectiveContainer;
+import graphql.schema.GraphQLEnumType;
+import graphql.schema.GraphQLFieldDefinition;
+import graphql.schema.GraphQLList;
+import graphql.schema.GraphQLNonNull;
+import graphql.schema.GraphQLObjectType;
+import graphql.schema.GraphQLOutputType;
+import graphql.schema.GraphQLScalarType;
+import graphql.schema.GraphQLType;
+import graphql.schema.GraphQLTypeUtil;
+import graphql.schema.GraphQLTypeVisitorStub;
+import graphql.schema.GraphQLUnionType;
+import graphql.schema.GraphQLUnmodifiedType;
+import graphql.schema.TypeTraverser;
 import graphql.util.TraversalControl;
 import graphql.util.TraverserContext;
 import no.ssb.lds.graphql.directives.LinkDirective;
@@ -348,7 +362,7 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
                         linkedProperties.put("type", "object");
                         propertiesValues = new JSONObject();
                         linkedObjects.put("type", "null");
-                        propertiesValues.put(((GraphQLList) fieldDef.getType()).getWrappedType().getName(), linkedObjects);
+                        propertiesValues.put(GraphQLTypeUtil.unwrapAll(fieldDef.getType()).getName(), linkedObjects);
                         linkedProperties.put("properties", propertiesValues);
 
                         embeddedProperties.put("_link_property_" + fieldDef.getName(), linkedProperties);
