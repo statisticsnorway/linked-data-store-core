@@ -345,7 +345,6 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
             GraphQLType graphQLType = GraphQLTypeUtil.unwrapOne(node);
             if (graphQLType instanceof GraphQLObjectType) {
                 ((GraphQLObjectType) graphQLType).getFieldDefinitions().forEach(fieldDef -> {
-                    System.out.println(fieldDef);
                     if (GraphQLTypeUtil.isList(fieldDef.getType())) {
                         JSONObject propertiesValues = new JSONObject();
                         JSONObject itemList = new JSONObject();
@@ -372,7 +371,6 @@ public class AddDefinitionVisitor extends GraphQLTypeVisitorStub {
 
         }
         definitionProperties.put("properties", embeddedProperties);
-        System.out.println(definitionProperties);
 
         return TraversalControl.ABORT;
     }
