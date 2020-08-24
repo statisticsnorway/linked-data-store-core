@@ -1,6 +1,10 @@
 package no.ssb.lds.graphql.schemas.visitors;
 
+import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLFieldDefinition;
+import graphql.schema.GraphQLInputObjectField;
+import graphql.schema.GraphQLInputObjectType;
+import graphql.schema.GraphQLInputType;
 import graphql.schema.GraphQLInterfaceType;
 import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLNonNull;
@@ -21,6 +25,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Stack;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Given a typeMap this visitor will replace all types with type references.
@@ -36,78 +41,96 @@ public class TypeReferencerVisitor extends GraphQLTypeVisitorStub {
 
     @Override
     public TraversalControl visitGraphQLInterfaceType(GraphQLInterfaceType node, TraverserContext<GraphQLType> context) {
-        GraphQLInterfaceType.Builder newInterface = GraphQLInterfaceType.newInterface(
+        GraphQLInterfaceType.Builder newInterfaceBuilder = GraphQLInterfaceType.newInterface(
                 (GraphQLInterfaceType) typeMap.get(node.getName()));
         for (GraphQLFieldDefinition fieldDefinition : node.getFieldDefinitions()) {
+            AtomicBoolean changes = new AtomicBoolean(false);
+            GraphQLFieldDefinition.Builder fieldBuilder = GraphQLFieldDefinition.newFieldDefinition(fieldDefinition);
             convertToReference(fieldDefinition.getType()).ifPresent(reference -> {
-                newInterface.field(GraphQLFieldDefinition.newFieldDefinition(fieldDefinition).type(reference).build());
+                fieldBuilder.type((GraphQLOutputType) reference);
+                changes.set(true);
             });
+            for (GraphQLArgument argument : fieldDefinition.getArguments()) {
+                convertToReference(argument).ifPresent(reference -> {
+                    fieldBuilder.argument((GraphQLArgument) reference);
+                    changes.set(true);
+                });
+            }
+            if (changes.get()) {
+                newInterfaceBuilder.field(fieldBuilder.build());
+            }
         }
 
-        // TODO: Figure out why this fails. We should have tree with same instance of all types
-        //if (!typeMap.replace(existing.getName(), existing, newObject)) {
-        //    throw new IllegalArgumentException(String.format(
-        //            "Could not replace %s, the schema probably contains references", existing.getName()
-        //    ));
-        //}
-        GraphQLType oldObject = typeMap.put(node.getName(), newInterface.build());
-        if (oldObject != null && Objects.equals(oldObject, node)) {
-            log.debug("Existing object {} is not equal to visited object {}", node, oldObject);
-        }
+        GraphQLInterfaceType newInterface = newInterfaceBuilder.build();
+        GraphQLType oldObject = typeMap.put(node.getName(), newInterface);
         return TraversalControl.CONTINUE;
     }
 
     @Override
     public TraversalControl visitGraphQLUnionType(GraphQLUnionType node, TraverserContext<GraphQLType> context) {
-        GraphQLUnionType.Builder newUnionType = GraphQLUnionType.newUnionType(
+        GraphQLUnionType.Builder newUnionTypeBuilder = GraphQLUnionType.newUnionType(
                 (GraphQLUnionType) typeMap.get(node.getName()));
         for (GraphQLOutputType type : node.getTypes()) {
             if (!(type instanceof GraphQLTypeReference)) {
-                newUnionType.possibleType(GraphQLTypeReference.typeRef(type.getName()));
+                newUnionTypeBuilder.possibleType(GraphQLTypeReference.typeRef(type.getName()));
             }
         }
-        // TODO: Figure out why this fails. We should have tree with same instance of all types
-        //if (!typeMap.replace(existing.getName(), existing, newObject)) {
-        //    throw new IllegalArgumentException(String.format(
-        //            "Could not replace %s, the schema probably contains references", existing.getName()
-        //    ));
-        //}
-        GraphQLType oldObject = typeMap.put(node.getName(), newUnionType.build());
-        if (oldObject != null && Objects.equals(oldObject, node)) {
-            log.debug("Existing object {} is not equal to visited object {}", node, oldObject);
-        }
+        GraphQLUnionType newUnionType = newUnionTypeBuilder.build();
+        GraphQLType oldObject = typeMap.put(node.getName(), newUnionType);
         return TraversalControl.CONTINUE;
     }
 
     @Override
     public TraversalControl visitGraphQLObjectType(GraphQLObjectType node, TraverserContext<GraphQLType> context) {
-        GraphQLObjectType.Builder newObject = GraphQLObjectType.newObject(
+        GraphQLObjectType.Builder newObjectBuilder = GraphQLObjectType.newObject(
                 (GraphQLObjectType) typeMap.get(node.getName()));
         for (GraphQLFieldDefinition fieldDefinition : node.getFieldDefinitions()) {
+            AtomicBoolean changes = new AtomicBoolean(false);
+            GraphQLFieldDefinition.Builder fieldBuilder = GraphQLFieldDefinition.newFieldDefinition(fieldDefinition);
             convertToReference(fieldDefinition.getType()).ifPresent(reference -> {
-                newObject.field(GraphQLFieldDefinition.newFieldDefinition(fieldDefinition).type(reference).build());
+                fieldBuilder.type((GraphQLOutputType) reference);
+                changes.set(true);
             });
+            for (GraphQLArgument argument : fieldDefinition.getArguments()) {
+                convertToReference(argument).ifPresent(reference -> {
+                    fieldBuilder.argument((GraphQLArgument) reference);
+                    changes.set(true);
+                });
+            }
+            if (changes.get()) {
+                newObjectBuilder.field(fieldBuilder.build());
+            }
         }
         for (GraphQLOutputType anInterface : node.getInterfaces()) {
             convertToReference(anInterface).ifPresent(reference -> {
-                newObject.withInterfaces(GraphQLTypeReference.typeRef(reference.getName()));
+                newObjectBuilder.withInterfaces(GraphQLTypeReference.typeRef(reference.getName()));
             });
         }
-        // TODO: Figure out why this fails. We should have tree with same instance of all types
-        //if (!typeMap.replace(existing.getName(), existing, newObject)) {
-        //    throw new IllegalArgumentException(String.format(
-        //            "Could not replace %s, the schema probably contains references", existing.getName()
-        //    ));
-        //}
-        GraphQLType oldObject = typeMap.put(node.getName(), newObject.build());
-        if (oldObject != null && Objects.equals(oldObject, node)) {
-            log.debug("Existing object {} is not equal to visited object {}", node, oldObject);
-        }
-        typeMap.put(node.getName(), newObject.build());
+        GraphQLObjectType newObject = newObjectBuilder.build();
+        GraphQLType oldObject = typeMap.put(node.getName(), newObject);
         return TraversalControl.CONTINUE;
     }
 
-    private Optional<GraphQLOutputType> convertToReference(GraphQLType type) {
+    @Override
+    public TraversalControl visitGraphQLInputObjectType(GraphQLInputObjectType node, TraverserContext<GraphQLType> context) {
+        GraphQLInputObjectType.Builder newInputObjectBuilder = GraphQLInputObjectType.newInputObject(
+                (GraphQLInputObjectType) typeMap.get(node.getName()));
+        for (GraphQLInputObjectField fieldDefinition : node.getFieldDefinitions()) {
+            convertToReference(fieldDefinition.getType()).ifPresent(reference -> {
+                newInputObjectBuilder.field(GraphQLInputObjectField.newInputObjectField(fieldDefinition).type((GraphQLInputType) reference).build());
+            });
+        }
+        GraphQLInputObjectType newObject = newInputObjectBuilder.build();
+        GraphQLType oldObject = typeMap.put(node.getName(), newObject);
+        return TraversalControl.CONTINUE;
+    }
+
+    private Optional<GraphQLType> convertToReference(GraphQLType type) {
+        GraphQLArgument graphQLArgument = null;
+        if (type instanceof GraphQLArgument) {
+            graphQLArgument = (GraphQLArgument) type;
+            type = graphQLArgument.getType();
+        }
         Stack<GraphQLType> types = GraphQLTypeUtil.unwrapType(type);
         GraphQLType current = types.pop();
         if (current instanceof GraphQLTypeReference || current instanceof GraphQLScalarType) {
@@ -116,7 +139,7 @@ public class TypeReferencerVisitor extends GraphQLTypeVisitorStub {
         if (!typeMap.containsKey(current.getName())) {
             throw new AssertionError("type was not in type map");
         }
-        GraphQLOutputType newType = GraphQLTypeReference.typeRef(current.getName());
+        GraphQLType newType = GraphQLTypeReference.typeRef(current.getName());
         while (!types.empty()) {
             current = types.pop();
             if (GraphQLTypeUtil.isList(current)) {
@@ -126,6 +149,9 @@ public class TypeReferencerVisitor extends GraphQLTypeVisitorStub {
             } else {
                 throw new AssertionError("non wrapped type up the stack");
             }
+        }
+        if (graphQLArgument != null) {
+            return Optional.of(GraphQLArgument.newArgument(graphQLArgument).type((GraphQLInputType) newType).build());
         }
         return Optional.of(newType);
     }
