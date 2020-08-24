@@ -24,9 +24,11 @@ import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeCollectingVisitor;
+import graphql.schema.GraphQLTypeResolvingVisitor;
 import graphql.schema.TypeTraverser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import no.ssb.lds.graphql.directives.DomainDirective;
+import no.ssb.lds.graphql.schemas.visitors.TypeReferencerVisitor;
 import org.neo4j.graphql.Cypher;
 import org.neo4j.graphql.SchemaBuilder;
 import org.neo4j.graphql.SchemaConfig;
@@ -75,7 +77,6 @@ public class GraphQLNeo4jTBVSchemas {
 
     private static void replaceDateTimeWithNeo4Types(TypeDefinitionRegistry typeDefinitionRegistry) {
         typeDefinitionRegistry.types().entrySet().forEach(entry -> {
-            String nameOfType = entry.getKey();
             TypeDefinition type = entry.getValue();
             if (!(type instanceof ObjectTypeDefinition
                     || type instanceof InterfaceTypeDefinition)) {
@@ -273,23 +274,23 @@ public class GraphQLNeo4jTBVSchemas {
                     return cypher;
                 });
 
-        GraphQLObjectType transformedQueryObject = graphQLSchema.getQueryType(); // transformQueryObject(typeDefinitionRegistry, graphQLSchema);
-
         final TypeTraverser TRAVERSER = new TypeTraverser();
 
         Map<String, GraphQLType> graphQLTypes = new TreeMap<>(graphQLSchema.getTypeMap());
-        graphQLTypes.remove("Query");
         graphQLTypes.keySet().removeIf(key -> key.startsWith("__"));
 
         GraphQLTypeCollectingVisitor graphQLTypeCollectingVisitor = new GraphQLTypeCollectingVisitor();
         TRAVERSER.depthFirst(graphQLTypeCollectingVisitor, graphQLTypes.values());
         Map<String, GraphQLType> typeMap = graphQLTypeCollectingVisitor.getResult();
 
-        // TRAVERSER.depthFirst(new TypeReferencerVisitor(typeMap), typeMap.values()); // replace all types with references
+        TRAVERSER.depthFirst(new TypeReferencerVisitor(typeMap), typeMap.values()); // replace all types with references
 
-        addDomainDirective(typeDefinitionRegistry, graphQLSchema, typeMap); // TODO this will only replace object types, not references to this object. This causes validation error when building new schema
+        addDomainDirective(typeDefinitionRegistry, typeMap);
 
-        // TRAVERSER.depthFirst(new GraphQLTypeResolvingVisitor(typeMap), typeMap.values()); // resolve all references
+        GraphQLObjectType transformedQueryObject = transformQueryObject(typeDefinitionRegistry, (GraphQLObjectType) typeMap.get("Query"));
+        typeMap.remove("Query");
+
+        TRAVERSER.depthFirst(new GraphQLTypeResolvingVisitor(typeMap), typeMap.values()); // resolve all references
 
         LinkedHashSet<GraphQLDirective> directives = new LinkedHashSet<>(graphQLSchema.getDirectives());
         GraphQLCodeRegistry codeRegistry = graphQLSchema.getCodeRegistry();
@@ -306,9 +307,9 @@ public class GraphQLNeo4jTBVSchemas {
         return transformedGraphQLSchema;
     }
 
-    private static void addDomainDirective(TypeDefinitionRegistry typeDefinitionRegistry, GraphQLSchema graphQLSchema, Map<String, GraphQLType> typeMap) {
+    private static void addDomainDirective(TypeDefinitionRegistry typeDefinitionRegistry, Map<String, GraphQLType> typeMap) {
         // add domain directive
-        for (Map.Entry<String, GraphQLType> entry : graphQLSchema.getTypeMap().entrySet()) {
+        for (Map.Entry<String, GraphQLType> entry : typeMap.entrySet()) {
             String typeName = entry.getKey();
             GraphQLType graphQLType = entry.getValue();
             if (graphQLType instanceof GraphQLObjectType) {
@@ -325,10 +326,9 @@ public class GraphQLNeo4jTBVSchemas {
         }
     }
 
-    private static GraphQLObjectType transformQueryObject(TypeDefinitionRegistry typeDefinitionRegistry, GraphQLSchema graphQLSchema) {
-        GraphQLObjectType queryType = graphQLSchema.getQueryType();
+    private static GraphQLObjectType transformQueryObject(TypeDefinitionRegistry typeDefinitionRegistry, GraphQLObjectType queryType) {
         Set<? extends String> originalQueries = queryType.getChildren().stream().map(GraphQLType::getName).collect(Collectors.toSet());
-        GraphQLObjectType transformedQueryObject = graphQLSchema.getQueryType().transform(graphQLObjectTypeBuilder -> {
+        GraphQLObjectType transformedQueryObject = queryType.transform(graphQLObjectTypeBuilder -> {
             graphQLObjectTypeBuilder.clearFields();
             for (String originalQuery : originalQueries) {
                 GraphQLFieldDefinition originalFieldDefinition = queryType.getFieldDefinition(originalQuery);
