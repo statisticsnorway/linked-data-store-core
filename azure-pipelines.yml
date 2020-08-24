@@ -1,5 +1,9 @@
 name: $(Build.SourceBranch)-$(date:yyyyMMdd)$(rev:.r)
 
+parameters:
+  - name: 'mavenContainer'
+    default: 'maven:3-jdk-11'
+
 # Pipeline triggers on any branch and tag
 trigger:
   branches:
@@ -42,7 +46,7 @@ variables:
 jobs:
   - job: buildTest
     displayName:  'compile deploy app'
-    container:    'maven:3-jdk-11'
+    container: ${{ parameters.mavenContainer }}
 
     # Job condition: Run these jobs on any branch, but not on tags
     condition:  not(startsWith(variables['Build.SourceBranch'], 'refs/tags'))
