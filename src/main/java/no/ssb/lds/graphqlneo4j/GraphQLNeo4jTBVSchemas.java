@@ -50,7 +50,7 @@ import java.util.stream.Collectors;
 public class GraphQLNeo4jTBVSchemas {
 
     /**
-     * Returns a transformed copy of the source-registry. The transformations occur on types that have link directrive
+     * Returns a transformed copy of the source-registry. The transformations occur on types that have link directive
      * set, and will replace this the link directive with a cypher directive capable of resolving time-base-versioning
      * at query time.
      *
@@ -133,7 +133,8 @@ public class GraphQLNeo4jTBVSchemas {
                     return;
                 }
                 FieldDefinition field = (FieldDefinition) child;
-                if (field.getDirective("link") != null) {
+                boolean isLink = field.getDirective("link") != null;
+                if (isLink) {
 
                     String targetType = null;
                     if (field.getType() instanceof ListType) {
@@ -152,20 +153,18 @@ public class GraphQLNeo4jTBVSchemas {
                     String tbvResolutionCypher = String.format("MATCH (this)-[:%s]->(:%s_R)<-[v:VERSION_OF]-(n:%s) WHERE v.from <= ver AND coalesce(ver < v.to, true) RETURN n", relationName, targetType, targetType);
 
                     FieldDefinition transformedField = field.transform(builder -> builder
-                            .directives(field.getDirectives()
-                                    .stream()
-                                    .map(directive -> directive.getName().equals("link") ?
-                                            Directive.newDirective()
-                                                    .name("cypher")
-                                                    .arguments(List.of(Argument.newArgument()
-                                                            .name("statement")
-                                                            .value(StringValue.newStringValue()
-                                                                    .value(tbvResolutionCypher)
-                                                                    .build())
-                                                            .build()))
-                                                    .build() :
-                                            directive)
-                                    .collect(Collectors.toList()))
+                            .directives(List.of(
+                                    field.getDirective("link"),
+                                    Directive.newDirective()
+                                            .name("cypher")
+                                            .arguments(List.of(Argument.newArgument()
+                                                    .name("statement")
+                                                    .value(StringValue.newStringValue()
+                                                            .value(tbvResolutionCypher)
+                                                            .build())
+                                                    .build()))
+                                            .build()
+                            ))
                             .inputValueDefinitions(List.of(InputValueDefinition.newInputValueDefinition()
                                     .name("ver")
                                     .type(new TypeName("_Neo4jDateTimeInput"))
