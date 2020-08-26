@@ -249,7 +249,7 @@ type provisionagreement @domain{
     name: String
     address: address
     friend: contact @link
-    support: [support]
+    support: support
 
 }
 
