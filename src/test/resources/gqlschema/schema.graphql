@@ -241,7 +241,8 @@ type contact @domain{
 
 type address{
     street: String!
-    city: String!
+    city: String
+    country: String
 }
 type provisionagreement @domain{
     contacts: [contact] @link
