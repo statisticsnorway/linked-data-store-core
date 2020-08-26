@@ -264,6 +264,10 @@ public class UndertowApplication {
             GraphQLToJsonConverter graphQLToJsonConverter = new GraphQLToJsonConverter(schema);
             LinkedHashMap<String, JSONObject> jsonMap = graphQLToJsonConverter.createSpecification(schema);
 
+            if (LOG.isDebugEnabled()) {
+                jsonMap.entrySet().forEach(entry -> LOG.debug("JSON SCHEMA for type '{}': {}", entry.getKey(), entry.getValue().toString()));
+            }
+
             specification = createJsonSpecification(definitionRegistry, jsonMap);
 
         } else {
