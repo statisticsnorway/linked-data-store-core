@@ -11,11 +11,15 @@ import no.ssb.lds.test.ConfigurationOverride;
 import no.ssb.lds.test.client.TestClient;
 import no.ssb.lds.test.server.TestServer;
 import no.ssb.lds.test.server.TestServerListener;
+import org.json.JSONObject;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 
@@ -45,10 +49,20 @@ public class GsimGraphQLSchemaTest {
     @ConfigurationOverride({
             "graphql.schema", "src/test/resources/gsim/schema.graphql"
     })
-    public void thatPUTIntegrationWorks() {
-        String body = FileAndClasspathReaderUtils.readFileOrClasspathResource("gsim/examples/Agent_Department200.json");
-        client.put("/data/Agent/316ce68d-9154-43d3-ae4f-90b4668d2fd7?sync=true", body).expectAnyOf(200, 201);
-        String actual = client.get("/data/Agent/316ce68d-9154-43d3-ae4f-90b4668d2fd7").expect200Ok().body();
-        JSONAssert.assertEquals(body, actual, false);
+    public void thatPUTIntegrationWorks() throws IOException {
+        Files.list(Path.of("src/test/resources/gsim/examples")).forEach(path -> {
+            try {
+                String body = FileAndClasspathReaderUtils.readFileAsUtf8(path.toString());
+                String domain = path.getFileName().toString().substring(0, path.getFileName().toString().indexOf("_"));
+                JSONObject document = new JSONObject(body);
+                String id = document.getString("id");
+                client.put(String.format("/data/%s/%s?sync=true", domain, id), body).expectAnyOf(200, 201);
+                String actual = client.get(String.format("/data/%s/%s", domain, id)).expect200Ok().body();
+                JSONAssert.assertEquals(body, actual, false);
+            } catch (Throwable e) {
+                System.out.printf("ERROR while processing path: %s%n", path.toString());
+                throw e;
+            }
+        });
     }
 }
