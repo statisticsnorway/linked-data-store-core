@@ -1,5 +1,6 @@
 package no.ssb.lds.graphqlneo4j;
 
+import graphql.GraphQLError;
 import graphql.language.Argument;
 import graphql.language.Directive;
 import graphql.language.EnumTypeDefinition;
@@ -71,6 +72,8 @@ public class GraphQLNeo4jTBVSchemas {
         replaceDateTimeWithNeo4Types(typeDefinitionRegistry);
 
         addRelationDirectives(typeDefinitionRegistry);
+
+        replaceUnionsWithInterfaces(typeDefinitionRegistry);
 
         return typeDefinitionRegistry;
     }
@@ -201,6 +204,34 @@ public class GraphQLNeo4jTBVSchemas {
 
             replaceTransformedFieldsInType(typeDefinitionRegistry, type, transformedFields);
         });
+    }
+
+    private static void replaceUnionsWithInterfaces(TypeDefinitionRegistry typeDefinitionRegistry) {
+        for (Map.Entry<String, UnionTypeDefinition> entry : typeDefinitionRegistry.getTypesMap(UnionTypeDefinition.class).entrySet()) {
+            String unionName = entry.getKey();
+            UnionTypeDefinition typeDefinition = entry.getValue();
+            InterfaceTypeDefinition interfaceTypeDefinition = InterfaceTypeDefinition
+                    .newInterfaceTypeDefinition()
+                    .name(unionName)
+                    .build();
+            typeDefinitionRegistry.remove(typeDefinition);
+            Optional<GraphQLError> optionalError = typeDefinitionRegistry.add(interfaceTypeDefinition);
+            if (optionalError.isPresent()) {
+                throw new RuntimeException(optionalError.get().getMessage());
+            }
+            for (Type typeReference : typeDefinition.getMemberTypes()) {
+                String typeName = unwrapTypeAndGetName(typeReference);
+                TypeDefinition resolvedType = typeDefinitionRegistry.getType(typeName).orElseThrow();
+                if (!(resolvedType instanceof ObjectTypeDefinition)) {
+                    throw new IllegalArgumentException("Union '" + unionName + "' points to non-object type '" + resolvedType.getName() + "'");
+                }
+                ObjectTypeDefinition transformedOjectType = ((ObjectTypeDefinition) resolvedType).transform(builder -> builder
+                        .implementz(TypeName.newTypeName(unionName).build())
+                );
+                typeDefinitionRegistry.remove(resolvedType);
+                typeDefinitionRegistry.add(transformedOjectType);
+            }
+        }
     }
 
     private static void replaceTransformedFieldsInType(TypeDefinitionRegistry typeDefinitionRegistry, TypeDefinition type, Map<String, FieldDefinition> transformedFields) {

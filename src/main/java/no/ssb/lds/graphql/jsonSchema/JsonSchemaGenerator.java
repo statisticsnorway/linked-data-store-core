@@ -7,6 +7,7 @@ import graphql.schema.GraphQLEnumType;
 import graphql.schema.GraphQLEnumValueDefinition;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLInputObjectType;
+import graphql.schema.GraphQLInterfaceType;
 import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLScalarType;
@@ -121,6 +122,11 @@ public class JsonSchemaGenerator extends GraphQLTypeVisitorStub {
         types.put(node.getName(), definition);
 
         return TraversalControl.CONTINUE;
+    }
+
+    @Override
+    public TraversalControl visitGraphQLInterfaceType(GraphQLInterfaceType node, TraverserContext<GraphQLType> context) {
+        return TraversalControl.ABORT; // interfaces not needed, fields are repeated in implementing objects.
     }
 
     @Override
