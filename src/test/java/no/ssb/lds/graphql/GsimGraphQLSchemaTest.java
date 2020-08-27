@@ -49,7 +49,7 @@ public class GsimGraphQLSchemaTest {
     @ConfigurationOverride({
             "graphql.schema", "src/test/resources/gsim/schema.graphql"
     })
-    public void thatPUTIntegrationWorks() throws IOException {
+    public void thatAllGsimExamplesAreStoredAndRetainedIntact() throws IOException {
         Files.list(Path.of("src/test/resources/gsim/examples")).forEach(path -> {
             try {
                 String body = FileAndClasspathReaderUtils.readFileAsUtf8(path.toString());
