@@ -71,9 +71,9 @@ public class GraphQLNeo4jTBVSchemas {
 
         replaceDateTimeWithNeo4Types(typeDefinitionRegistry);
 
-        addRelationDirectives(typeDefinitionRegistry);
-
         replaceUnionsWithInterfaces(typeDefinitionRegistry);
+
+        addLinkCypherAndEmbeddedRelationDirectives(typeDefinitionRegistry);
 
         return typeDefinitionRegistry;
     }
@@ -122,7 +122,7 @@ public class GraphQLNeo4jTBVSchemas {
         throw new IllegalArgumentException("transformation of type not supported: " + type.getClass().getName());
     }
 
-    private static void addRelationDirectives(TypeDefinitionRegistry typeDefinitionRegistry) {
+    private static void addLinkCypherAndEmbeddedRelationDirectives(TypeDefinitionRegistry typeDefinitionRegistry) {
         typeDefinitionRegistry.types().entrySet().forEach(entry -> {
             String nameOfType = entry.getKey();
             TypeDefinition type = entry.getValue();
@@ -138,22 +138,15 @@ public class GraphQLNeo4jTBVSchemas {
                 FieldDefinition field = (FieldDefinition) child;
                 boolean isLink = field.getDirective("link") != null;
                 if (isLink) {
-
-                    String targetType = null;
-                    if (field.getType() instanceof ListType) {
-                        Type nestedType = ((ListType) field.getType()).getType();
-                        if (nestedType instanceof TypeName) {
-                            targetType = ((TypeName) nestedType).getName();
-                        } else {
-                            throw new IllegalArgumentException("Error in " + nameOfType + "." + field.getName() + " : nested list-target type is not a TypeName");
-                        }
-                    } else if (field.getType() instanceof TypeName) {
-                        targetType = ((TypeName) field.getType()).getName();
-                    }
-
+                    String targetType = unwrapTypeAndGetName(field.getType());
                     String relationName = field.getName();
-
-                    String tbvResolutionCypher = String.format("MATCH (this)-[:%s]->(:%s_R)<-[v:VERSION_OF]-(n:%s) WHERE v.from <= ver AND coalesce(ver < v.to, true) RETURN n", relationName, targetType, targetType);
+                    List<String> concreteTargetResourceLabels = resolveAbstractTypeToConcreteTypes(typeDefinitionRegistry, targetType).stream()
+                            .map(name -> name + "_R")
+                            .collect(Collectors.toList());
+                    if (relationName.equals("owner")) {
+                        relationName.toLowerCase();
+                    }
+                    String tbvResolutionCypher = String.format("MATCH (this)-[:%s]->(:%s)<-[v:VERSION_OF]-(n) WHERE v.from <= ver AND coalesce(ver < v.to, true) RETURN n", relationName, String.join("|", concreteTargetResourceLabels));
 
                     FieldDefinition transformedField = field.transform(builder -> builder
                             .directives(List.of(
@@ -204,6 +197,28 @@ public class GraphQLNeo4jTBVSchemas {
 
             replaceTransformedFieldsInType(typeDefinitionRegistry, type, transformedFields);
         });
+    }
+
+    public static List<String> resolveAbstractTypeToConcreteTypes(TypeDefinitionRegistry typeDefinitionRegistry, String abstractTypeName) {
+        TypeDefinition abstractType = typeDefinitionRegistry.getType(abstractTypeName).orElseThrow();
+        if (abstractType instanceof ObjectTypeDefinition) {
+            return List.of(abstractType.getName());
+        } else if (abstractType instanceof UnionTypeDefinition) {
+            return ((UnionTypeDefinition) abstractType).getMemberTypes().stream()
+                    .map(mt -> (TypeName) mt)
+                    .map(TypeName::getName)
+                    .flatMap(name -> resolveAbstractTypeToConcreteTypes(typeDefinitionRegistry, name).stream())
+                    .collect(Collectors.toList());
+        } else if (abstractType instanceof InterfaceTypeDefinition) {
+            return typeDefinitionRegistry.getTypes(ObjectTypeDefinition.class).stream()
+                    .filter(otd -> otd.getImplements().stream()
+                            .map(ii -> (TypeName) ii)
+                            .map(TypeName::getName)
+                            .anyMatch(name -> name.equals(abstractTypeName)))
+                    .map(ObjectTypeDefinition::getName)
+                    .collect(Collectors.toList());
+        }
+        throw new IllegalArgumentException("Unsupported abstract type: " + abstractType.getClass().getName());
     }
 
     private static void replaceUnionsWithInterfaces(TypeDefinitionRegistry typeDefinitionRegistry) {

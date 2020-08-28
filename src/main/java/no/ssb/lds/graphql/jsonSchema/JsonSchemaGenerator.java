@@ -14,9 +14,11 @@ import graphql.schema.GraphQLScalarType;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeUtil;
 import graphql.schema.GraphQLTypeVisitorStub;
+import graphql.schema.idl.TypeDefinitionRegistry;
 import graphql.util.TraversalControl;
 import graphql.util.TraverserContext;
 import no.ssb.lds.graphql.directives.LinkDirective;
+import no.ssb.lds.graphqlneo4j.GraphQLNeo4jTBVSchemas;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -43,12 +45,14 @@ public class JsonSchemaGenerator extends GraphQLTypeVisitorStub {
 
     private static final Logger LOG = LoggerFactory.getLogger(JsonSchemaGenerator.class);
 
+    private final TypeDefinitionRegistry typeDefinitionRegistry;
     private final Map<String, JSONObject> jsonMap;
     private final Set<String> domains = new LinkedHashSet<>();
     private final Map<String, JSONObject> types = new LinkedHashMap<>();
     private final Map<String, Set<String>> references = new LinkedHashMap<>();
 
-    public JsonSchemaGenerator(Map<String, JSONObject> jsonMap) {
+    public JsonSchemaGenerator(TypeDefinitionRegistry typeDefinitionRegistry, Map<String, JSONObject> jsonMap) {
+        this.typeDefinitionRegistry = typeDefinitionRegistry;
         this.jsonMap = jsonMap;
     }
 
@@ -175,11 +179,15 @@ public class JsonSchemaGenerator extends GraphQLTypeVisitorStub {
 
             // link metadata field
             JSONObject fieldObjects = new JSONObject();
-            fieldObjects.put("properties", new JSONObject()
-                    .put(type.getName(), new JSONObject()
-                            .put("type", "null")));
+            JSONObject properties = new JSONObject();
+            fieldObjects.put("properties", properties);
             fieldObjects.put("type", "object");
             definitionProperties.put("_link_property_" + node.getName(), fieldObjects);
+            List<String> concreteTypes = GraphQLNeo4jTBVSchemas.resolveAbstractTypeToConcreteTypes(typeDefinitionRegistry, type.getName());
+            for (String concreteType : concreteTypes) {
+                properties.put(concreteType, new JSONObject()
+                        .put("type", "null"));
+            }
 
             return TraversalControl.ABORT;
         }
