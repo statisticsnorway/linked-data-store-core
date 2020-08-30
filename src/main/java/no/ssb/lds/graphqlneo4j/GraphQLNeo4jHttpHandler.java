@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
+import graphql.schema.GraphQLSchema;
 import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.predicate.Predicate;
 import io.undertow.predicate.Predicates;
@@ -14,13 +15,30 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
 import no.ssb.lds.api.persistence.json.JsonTools;
+import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
+import no.ssb.lds.graphql.GraphQLUndertowContext;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.Record;
+import org.neo4j.driver.Result;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.TransactionConfig;
+import org.neo4j.driver.summary.ResultSummary;
+import org.neo4j.graphql.Cypher;
+import org.neo4j.graphql.OptimizedQueryException;
+import org.neo4j.graphql.Translator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.time.Duration;
+import java.time.ZonedDateTime;
 import java.util.Deque;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -43,6 +61,8 @@ import static no.ssb.lds.api.persistence.json.JsonTools.mapper;
  */
 public class GraphQLNeo4jHttpHandler implements HttpHandler {
 
+    private static final Logger LOG = LoggerFactory.getLogger(GraphQLNeo4jHttpHandler.class);
+
     private static final Predicate IS_JSON = Predicates.regex(
             ExchangeAttributes.requestHeader(Headers.CONTENT_TYPE),
             "application/(.*\\+)?json"
@@ -53,16 +73,21 @@ public class GraphQLNeo4jHttpHandler implements HttpHandler {
             "application/(.*\\+)?graphql"
     );
 
-    private final GraphQL graphQl;
+    private final GraphQLSchema graphQlSchema;
+    private final Translator translator;
+    private final RxJsonPersistence persistence;
 
     /**
      * Constructs a handler with the specified GraphQL instance.
      *
-     * @param graphQl the instance that will execute the queries.
+     * @param graphQlSchema the graphQl schema.
+     * @param persistence
      * @throws NullPointerException if the graphQl was null.
      */
-    public GraphQLNeo4jHttpHandler(GraphQL graphQl) {
-        this.graphQl = Objects.requireNonNull(graphQl);
+    public GraphQLNeo4jHttpHandler(GraphQLSchema graphQlSchema, RxJsonPersistence persistence) {
+        this.graphQlSchema = Objects.requireNonNull(graphQlSchema);
+        this.translator = new Translator(graphQlSchema);
+        this.persistence = persistence;
     }
 
     private static Optional<String> extractParam(Map<String, Deque<String>> parameters, String name) {
@@ -110,18 +135,18 @@ public class GraphQLNeo4jHttpHandler implements HttpHandler {
         }
 
         exchange.startBlocking();
-        ExecutionInput.Builder executionInput = ExecutionInput.newExecutionInput();
+        ExecutionInput.Builder executionInputBuilder = ExecutionInput.newExecutionInput();
         if (method.equals(POST)) {
             if (IS_GRAPHQL.resolve(exchange)) {
-                executionInput.query(toString(exchange));
+                executionInputBuilder.query(toString(exchange));
             } else if (IS_JSON.resolve(exchange)) {
                 JsonNode json = toJson(exchange);
-                executionInput.query(json.get("query").textValue());
+                executionInputBuilder.query(json.get("query").textValue());
                 if (json.has("variables") && !json.get("variables").isNull()) {
-                    executionInput.variables(JsonTools.toMap(json.get("variables")));
+                    executionInputBuilder.variables(JsonTools.toMap(json.get("variables")));
                 }
                 if (json.has("operationName")) {
-                    executionInput.operationName(json.get("operationName").textValue());
+                    executionInputBuilder.operationName(json.get("operationName").textValue());
                 }
             } else {
                 exchange.setStatusCode(StatusCodes.UNSUPPORTED_MEDIA_TYPE);
@@ -132,32 +157,78 @@ public class GraphQLNeo4jHttpHandler implements HttpHandler {
             Map<String, Deque<String>> parameters = exchange.getQueryParameters();
 
             Optional<String> query = extractParam(parameters, "query");
-            query.ifPresent(executionInput::query);
+            query.ifPresent(executionInputBuilder::query);
 
             Optional<String> operationName = extractParam(parameters, "operationName");
-            operationName.ifPresent(executionInput::operationName);
+            operationName.ifPresent(executionInputBuilder::operationName);
 
             Optional<String> variables = extractParam(parameters, "variables");
-            variables.map(JsonTools::toJsonNode).map(JsonTools::toMap).ifPresent(executionInput::variables);
+            variables.map(JsonTools::toJsonNode).map(JsonTools::toMap).ifPresent(executionInputBuilder::variables);
 
         } else {
             exchange.setStatusCode(StatusCodes.METHOD_NOT_ALLOWED);
             return;
         }
 
+        ExecutionInput executionInput = executionInputBuilder.build();
+
         // Add context.
-        executionInput.context(new GraphQLNeo4jUndertowContext(exchange, executionInput.build()));
+        executionInputBuilder.context(new GraphQLUndertowContext(exchange, executionInput));
 
         // Execute
-        ExecutionResult result = graphQl.execute(executionInput);
 
-        // Serialize
-        Map<String, Object> resultMap = result.toSpecification();
-        String jsonResult = JsonTools.toJson(JsonTools.toJsonNode(resultMap));
+        // Introspection Queries are passed to graphql-java normal execution
+        if (executionInput.getQuery().contains("query IntrospectionQuery")) {
+            GraphQL graphQL = GraphQL.newGraphQL(graphQlSchema).build();
 
-        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-        exchange.setStatusCode(StatusCodes.OK);
-        exchange.getResponseSender().send(jsonResult);
+            // Execute
+            ExecutionResult result = graphQL.execute(executionInput);
 
+            // Serialize
+            Map<String, Object> resultMap = result.toSpecification();
+            String jsonResult = JsonTools.toJson(JsonTools.toJsonNode(resultMap));
+
+            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
+            exchange.setStatusCode(StatusCodes.OK);
+            exchange.getResponseSender().send(jsonResult);
+            return;
+        }
+
+        // translate query to Cypher and execute against neo4j
+        try {
+            ZonedDateTime snapshot = ZonedDateTime.now();
+            List<Cypher> cyphers = translator.translate(executionInput.getQuery(), getParamsWithVersionIfMissing(snapshot, executionInput.getVariables()));
+            if (cyphers.size() != 1) {
+                throw new IllegalStateException("Got something else than one single cypher from translator");
+            }
+            Cypher cypher = cyphers.get(0);
+            Driver driver = persistence.getInstance(Driver.class);
+            LOG.info("{}", cypher.toString());
+            LinkedHashMap<String, Object> params = new LinkedHashMap<>(cypher.component2());
+            params.putIfAbsent("_version", snapshot);
+            List<Map<String, Object>> resultAsMap;
+            try (Session session = driver.session()) {
+                Result result = session.run(cypher.component1(), params, TransactionConfig.builder()
+                        .withTimeout(Duration.ofSeconds(10)).build());
+                resultAsMap = result.list(Record::asMap);
+                ResultSummary resultSummary = result.consume();
+            }
+
+            // Serialize
+            String jsonResult = JsonTools.toJson(JsonTools.toJsonNode(resultAsMap));
+
+            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
+            exchange.setStatusCode(StatusCodes.OK);
+            exchange.getResponseSender().send(jsonResult);
+        } catch (OptimizedQueryException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    private LinkedHashMap<String, Object> getParamsWithVersionIfMissing(ZonedDateTime timeBasedVersion, Map<String, Object> theParams) {
+        LinkedHashMap<String, Object> params = new LinkedHashMap<>(theParams);
+        params.putIfAbsent("_version", timeBasedVersion);
+        return params;
     }
 }

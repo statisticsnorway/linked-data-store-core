@@ -28,6 +28,7 @@ module no.ssb.lds.core {
     requires jackson.dataformat.msgpack;
     requires org.apache.tika.core;
 
+    requires org.neo4j.driver;
     requires graphql.java;
     requires neo4j.graphql.java;
     requires io.reactivex.rxjava2;

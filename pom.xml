@@ -198,6 +198,11 @@
             <artifactId>neo4j-graphql-java</artifactId>
             <version>1.0.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.neo4j.driver</groupId>
+            <artifactId>neo4j-java-driver</artifactId>
+            <version>4.1.1</version>
+        </dependency>
 
         <dependency>
             <groupId>org.json</groupId>
