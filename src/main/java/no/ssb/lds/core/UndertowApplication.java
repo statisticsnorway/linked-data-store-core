@@ -39,6 +39,7 @@ import no.ssb.lds.graphql.directives.ReverseLinkDirective;
 import no.ssb.lds.graphql.jsonSchema.GraphQLToJsonConverter;
 import no.ssb.lds.graphql.schemas.GraphQLSchemaBuilder;
 import no.ssb.lds.graphqlneo4j.GraphQLNeo4jHttpHandler;
+import no.ssb.lds.graphqlneo4j.GraphQLNeo4jTBVLanguage;
 import no.ssb.lds.graphqlneo4j.GraphQLNeo4jTBVSchemas;
 import no.ssb.rawdata.api.RawdataClient;
 import no.ssb.rawdata.api.RawdataClientInitializer;
@@ -138,7 +139,7 @@ public class UndertowApplication {
 
                 LOG.info("Initializing GraphQL Neo4j integration ...");
 
-                GraphQLSchema schema = GraphQLNeo4jTBVSchemas.schemaOf(GraphQLNeo4jTBVSchemas.transformRegistry(definitionRegistry));
+                GraphQLSchema schema = GraphQLNeo4jTBVSchemas.schemaOf(GraphQLNeo4jTBVLanguage.transformRegistry(definitionRegistry));
                 graphQLHttpHandler = new GraphQLNeo4jHttpHandler(schema, persistence);
             } else {
 
@@ -245,7 +246,7 @@ public class UndertowApplication {
             if ("neo4j".equals(providerId)) {
 
                 LOG.info("Transforming GraphQL schema to conform with GRANDstack compatible Neo4j modelling for Specification purposes");
-                schema = GraphQLNeo4jTBVSchemas.schemaOf(GraphQLNeo4jTBVSchemas.transformRegistry(definitionRegistry)).transform(builder -> {
+                schema = GraphQLNeo4jTBVSchemas.schemaOf(GraphQLNeo4jTBVLanguage.transformRegistry(definitionRegistry)).transform(builder -> {
                     // TODO figure out what is missing that GraphQLSchemaBuilder.parseSchema(definitionRegistry); does
                     builder.additionalDirectives(Set.of(
                             DomainDirective.INSTANCE,

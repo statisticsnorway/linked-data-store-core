@@ -18,7 +18,7 @@ import graphql.schema.idl.TypeDefinitionRegistry;
 import graphql.util.TraversalControl;
 import graphql.util.TraverserContext;
 import no.ssb.lds.graphql.directives.LinkDirective;
-import no.ssb.lds.graphqlneo4j.GraphQLNeo4jTBVSchemas;
+import no.ssb.lds.graphqlneo4j.GraphQLNeo4jTBVLanguage;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -183,7 +183,7 @@ public class JsonSchemaGenerator extends GraphQLTypeVisitorStub {
             fieldObjects.put("properties", properties);
             fieldObjects.put("type", "object");
             definitionProperties.put("_link_property_" + node.getName(), fieldObjects);
-            List<String> concreteTypes = GraphQLNeo4jTBVSchemas.resolveAbstractTypeToConcreteTypes(typeDefinitionRegistry, type.getName());
+            List<String> concreteTypes = GraphQLNeo4jTBVLanguage.resolveAbstractTypeToConcreteTypes(typeDefinitionRegistry, type.getName());
             for (String concreteType : concreteTypes) {
                 properties.put(concreteType, new JSONObject()
                         .put("type", "null"));
