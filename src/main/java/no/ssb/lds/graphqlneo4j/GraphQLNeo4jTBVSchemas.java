@@ -62,9 +62,8 @@ public class GraphQLNeo4jTBVSchemas {
     public static TypeDefinitionRegistry transformRegistry(TypeDefinitionRegistry sourceRegistry) {
         final TypeDefinitionRegistry typeDefinitionRegistry = new TypeDefinitionRegistry().merge(sourceRegistry);
 
-        typeDefinitionRegistry.scalars().entrySet().forEach(entry -> {
-            ScalarTypeDefinition type = entry.getValue();
-            if (Set.of("Date", "Time", "DateTime").contains(entry.getKey())) {
+        typeDefinitionRegistry.scalars().forEach((key, type) -> {
+            if (Set.of("Date", "Time", "DateTime").contains(key)) {
                 typeDefinitionRegistry.remove(type);
             }
         });
@@ -79,8 +78,7 @@ public class GraphQLNeo4jTBVSchemas {
     }
 
     private static void replaceDateTimeWithNeo4Types(TypeDefinitionRegistry typeDefinitionRegistry) {
-        typeDefinitionRegistry.types().entrySet().forEach(entry -> {
-            TypeDefinition type = entry.getValue();
+        typeDefinitionRegistry.types().forEach((key, type) -> {
             if (!(type instanceof ObjectTypeDefinition
                     || type instanceof InterfaceTypeDefinition)) {
                 return;
@@ -123,9 +121,7 @@ public class GraphQLNeo4jTBVSchemas {
     }
 
     private static void addLinkCypherAndEmbeddedRelationDirectives(TypeDefinitionRegistry typeDefinitionRegistry) {
-        typeDefinitionRegistry.types().entrySet().forEach(entry -> {
-            String nameOfType = entry.getKey();
-            TypeDefinition type = entry.getValue();
+        typeDefinitionRegistry.types().forEach((nameOfType, type) -> {
             if (!(type instanceof ObjectTypeDefinition
                     || type instanceof InterfaceTypeDefinition)) {
                 return;
