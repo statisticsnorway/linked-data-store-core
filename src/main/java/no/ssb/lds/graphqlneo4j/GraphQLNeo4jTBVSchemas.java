@@ -138,15 +138,8 @@ public class GraphQLNeo4jTBVSchemas {
                 FieldDefinition field = (FieldDefinition) child;
                 boolean isLink = field.getDirective("link") != null;
                 if (isLink) {
-                    String targetType = unwrapTypeAndGetName(field.getType());
                     String relationName = field.getName();
-                    List<String> concreteTargetResourceLabels = resolveAbstractTypeToConcreteTypes(typeDefinitionRegistry, targetType).stream()
-                            .map(name -> name + "_R")
-                            .collect(Collectors.toList());
-                    if (relationName.equals("owner")) {
-                        relationName.toLowerCase();
-                    }
-                    String tbvResolutionCypher = String.format("MATCH (this)-[:%s]->(:%s)<-[v:VERSION_OF]-(n) WHERE v.from <= ver AND coalesce(ver < v.to, true) RETURN n", relationName, String.join("|", concreteTargetResourceLabels));
+                    String tbvResolutionCypher = String.format("MATCH (this)-[:%s]->(:RESOURCE)<-[v:VERSION_OF]-(n) WHERE v.from <= ver AND coalesce(ver < v.to, true) RETURN n", relationName);
 
                     FieldDefinition transformedField = field.transform(builder -> builder
                             .directives(List.of(
