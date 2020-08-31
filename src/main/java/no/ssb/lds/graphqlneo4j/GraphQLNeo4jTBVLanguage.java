@@ -4,6 +4,7 @@ import graphql.GraphQLError;
 import graphql.language.Argument;
 import graphql.language.Directive;
 import graphql.language.EnumTypeDefinition;
+import graphql.language.EnumValue;
 import graphql.language.FieldDefinition;
 import graphql.language.InputObjectTypeDefinition;
 import graphql.language.InputValueDefinition;
@@ -127,6 +128,23 @@ public class GraphQLNeo4jTBVLanguage {
                     FieldDefinition transformedField = field.transform(builder -> builder
                             .directives(List.of(
                                     field.getDirective("link"),
+                                    Directive.newDirective()
+                                            .name("relation")
+                                            .arguments(List.of(
+                                                    Argument.newArgument()
+                                                            .name("name")
+                                                            .value(StringValue.newStringValue()
+                                                                    .value(field.getName())
+                                                                    .build())
+                                                            .build(),
+                                                    Argument.newArgument()
+                                                            .name("direction")
+                                                            .value(EnumValue.newEnumValue()
+                                                                    .name("OUT")
+                                                                    .build())
+                                                            .build()
+                                            ))
+                                            .build(),
                                     Directive.newDirective()
                                             .name("cypher")
                                             .arguments(List.of(Argument.newArgument()
@@ -293,6 +311,23 @@ public class GraphQLNeo4jTBVLanguage {
                                 builder.fieldDefinition(FieldDefinition.newFieldDefinition()
                                         .name(nameOfPath)
                                         .type(ListType.newListType(TypeName.newTypeName(nameOfType).build()).build())
+                                        .directive(Directive.newDirective()
+                                                .name("relation")
+                                                .arguments(List.of(
+                                                        Argument.newArgument()
+                                                                .name("name")
+                                                                .value(StringValue.newStringValue()
+                                                                        .value(nameOfPath)
+                                                                        .build())
+                                                                .build(),
+                                                        Argument.newArgument()
+                                                                .name("direction")
+                                                                .value(EnumValue.newEnumValue()
+                                                                        .name("IN")
+                                                                        .build())
+                                                                .build()
+                                                ))
+                                                .build())
                                         .directive(Directive.newDirective()
                                                 .name("cypher")
                                                 .arguments(List.of(Argument.newArgument()
