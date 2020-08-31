@@ -2,16 +2,22 @@ directive @domain on OBJECT
 
 directive @link on FIELD_DEFINITION
 
-interface animals {}
+#Automatically generated because of anonymous type in RAML
+#Please consider defining your own union types or use an interface type.
+#The list of types are [Cat, Dog].
+union animals = Cat | Dog
 
-interface favorite {}
+#Automatically generated because of anonymous type in RAML
+#Please consider defining your own union types or use an interface type.
+#The list of types are [Cat, Dog].
+union favorite = Cat | Dog
 
 """This is a cat
 
 And this is a long description of what a cat is. It contains
 new lines.
 """
-type Cat implements animals, favorite @domain {
+type Cat @domain {
   age: Float
   name: String!
   alive: Boolean
@@ -19,7 +25,7 @@ type Cat implements animals, favorite @domain {
 
 # This is a dog
 # Kinda like a cat.
-type Dog implements animals, favorite @domain {
+type Dog @domain {
   age: Float
   name: String!
   friendly: Boolean!
