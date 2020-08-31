@@ -19,9 +19,12 @@ import graphql.language.TypeName;
 import graphql.language.UnionTypeDefinition;
 import graphql.schema.idl.TypeDefinitionRegistry;
 
+import java.util.Deque;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -39,7 +42,7 @@ public class GraphQLNeo4jTBVLanguage {
      *                       unchanged, the returned registry is a transformed copy of the source.
      * @return a new type-registry with relevant types transformed to support time-based-versioning
      */
-    public static TypeDefinitionRegistry transformRegistry(TypeDefinitionRegistry sourceRegistry) {
+    public static TypeDefinitionRegistry transformRegistry(TypeDefinitionRegistry sourceRegistry, boolean computeReverseLinks) {
         final TypeDefinitionRegistry typeDefinitionRegistry = new TypeDefinitionRegistry().merge(sourceRegistry);
 
         typeDefinitionRegistry.scalars().forEach((key, type) -> {
@@ -53,6 +56,10 @@ public class GraphQLNeo4jTBVLanguage {
         replaceUnionsWithInterfaces(typeDefinitionRegistry);
 
         addLinkCypherAndEmbeddedRelationDirectives(typeDefinitionRegistry);
+
+        if (computeReverseLinks) {
+            addReverseLinkCypher(typeDefinitionRegistry);
+        }
 
         return typeDefinitionRegistry;
     }
@@ -166,6 +173,161 @@ public class GraphQLNeo4jTBVLanguage {
 
             replaceTransformedFieldsInType(typeDefinitionRegistry, type, transformedFields);
         });
+    }
+
+    private static class ObjectAndField {
+        final String objectName;
+        final TypeDefinition typeDefinition;
+        final String fieldName;
+        final FieldDefinition fieldDefinition;
+
+        private ObjectAndField(String objectName, TypeDefinition typeDefinition, String fieldName, FieldDefinition fieldDefinition) {
+            this.objectName = objectName;
+            this.typeDefinition = typeDefinition;
+            this.fieldName = fieldName;
+            this.fieldDefinition = fieldDefinition;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            ObjectAndField that = (ObjectAndField) o;
+            return objectName.equals(that.objectName) &&
+                    fieldName.equals(that.fieldName);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(objectName, fieldName);
+        }
+    }
+
+    private static void addReverseLinkCypher(TypeDefinitionRegistry typeDefinitionRegistry) {
+        // compute back-reference type map needed to compute reverse paths
+        Map<String, List<ObjectAndField>> referencesByTargetType = new LinkedHashMap<>();
+        typeDefinitionRegistry.types().forEach((nameOfType, type) -> {
+            if (!(type instanceof ObjectTypeDefinition)) {
+                return;
+            }
+            if ("Query".equalsIgnoreCase(nameOfType)) {
+                return;
+            }
+            type.getChildren().forEach(child -> {
+                if (!(child instanceof FieldDefinition)) {
+                    return;
+                }
+                FieldDefinition field = (FieldDefinition) child;
+                String fieldTypeName = unwrapTypeAndGetName(field.getType());
+                typeDefinitionRegistry.getType(fieldTypeName).ifPresent(fieldTypeDefinition -> {
+                    if (!(fieldTypeDefinition instanceof ObjectTypeDefinition)) {
+                        return;
+                    }
+                    referencesByTargetType.computeIfAbsent(fieldTypeDefinition.getName(), name -> new LinkedList<>())
+                            .add(new ObjectAndField(nameOfType, type, field.getName(), field));
+                });
+            });
+        });
+
+        typeDefinitionRegistry.types().forEach((nameOfType, type) -> {
+            if (!(type instanceof ObjectTypeDefinition)) {
+                return;
+            }
+            type.getChildren().forEach(child -> {
+                if (!(child instanceof FieldDefinition)) {
+                    return;
+                }
+                FieldDefinition field = (FieldDefinition) child;
+                boolean isLink = field.getDirective("link") != null;
+                if (isLink) {
+                    String targetTypeName = unwrapTypeAndGetName(field.getType());
+                    List<ObjectTypeDefinition> linkTargetObjectTypes = resolveAbstractTypeToConcreteTypes(typeDefinitionRegistry, targetTypeName).stream()
+                            .map(name -> (ObjectTypeDefinition) typeDefinitionRegistry.getType(name).orElseThrow())
+                            .collect(Collectors.toList());
+
+                    List<Deque<ObjectAndField>> concretePaths = new LinkedList<>();
+                    {
+                        Deque<Deque<ObjectAndField>> deque = new LinkedList<>();
+                        {
+                            Deque<ObjectAndField> initialPath = new LinkedList<>();
+                            initialPath.push(new ObjectAndField(nameOfType, type, field.getName(), field));
+                            deque.add(initialPath);
+                        }
+                        while (!deque.isEmpty()) {
+                            Deque<ObjectAndField> path = deque.pop();
+                            ObjectAndField objectAndField = path.peek();
+                            if (objectAndField.typeDefinition.getDirective("domain") != null) {
+                                concretePaths.add(path);
+                                continue;
+                            }
+                            List<ObjectAndField> references = referencesByTargetType.get(objectAndField.objectName);
+                            if (references != null) {
+                                for (ObjectAndField reference : references) {
+                                    Deque newPath = new LinkedList<>(path);
+                                    newPath.push(reference);
+                                    deque.push(newPath);
+                                }
+                            } else {
+                                // no references, so must be root
+                                concretePaths.add(path);
+                            }
+                        }
+                    }
+
+                    for (ObjectTypeDefinition linkTargetObjectType : linkTargetObjectTypes) {
+                        ObjectTypeDefinition targetObjectType = (ObjectTypeDefinition) typeDefinitionRegistry.getType(linkTargetObjectType.getName()).orElseThrow();
+                        ObjectTypeDefinition transformedTargetObjectType = targetObjectType.transform(builder -> {
+                            for (Deque<ObjectAndField> concretePath : concretePaths) {
+                                String nameOfPath = resolveReverseLinkFieldName(concretePath);
+                                StringBuilder sb = new StringBuilder("MATCH (this)-[:VERSION_OF]->(:RESOURCE)");
+                                Deque<ObjectAndField> workPath = new LinkedList<>(concretePath);
+                                while (workPath.size() > 1) {
+                                    ObjectAndField last = workPath.removeLast();
+                                    sb.append("<-[:").append(last.fieldName).append("]-(:").append(last.objectName).append(")");
+                                }
+                                ObjectAndField last = workPath.removeLast();
+                                sb.append("<-[:").append(last.fieldName).append("]-(n:").append(last.objectName).append(")");
+                                sb.append("-[v:VERSION_OF]->(:RESOURCE) WHERE v.from <= ver AND coalesce(ver < v.to, true) RETURN n");
+                                String tbvReverseResolutionCypher = sb.toString();
+                                System.out.printf("REVERSE LINK CYPHER to Object %s: %s%n", targetObjectType.getName(), tbvReverseResolutionCypher);
+                                builder.fieldDefinition(FieldDefinition.newFieldDefinition()
+                                        .name(nameOfPath)
+                                        .type(ListType.newListType(TypeName.newTypeName(nameOfType).build()).build())
+                                        .directive(Directive.newDirective()
+                                                .name("cypher")
+                                                .arguments(List.of(Argument.newArgument()
+                                                        .name("statement")
+                                                        .value(StringValue.newStringValue()
+                                                                .value(tbvReverseResolutionCypher)
+                                                                .build())
+                                                        .build()))
+                                                .build())
+                                        .inputValueDefinitions(List.of(InputValueDefinition.newInputValueDefinition()
+                                                .name("ver")
+                                                .type(new TypeName("_Neo4jDateTimeInput"))
+                                                .build()))
+                                        .build()
+                                ).build();
+                            }
+                        });
+                        typeDefinitionRegistry.remove(targetObjectType);
+                        typeDefinitionRegistry.add(transformedTargetObjectType);
+                    }
+                }
+            });
+        });
+    }
+
+    private static String resolveReverseLinkFieldName(Deque<ObjectAndField> concretePath) {
+        LinkedList<ObjectAndField> deque = new LinkedList<>(concretePath);
+        StringBuilder sb = new StringBuilder("reverse");
+        ObjectAndField first = deque.pop();
+        sb.append(first.objectName).append(Character.toUpperCase(first.fieldName.charAt(0))).append(first.fieldName.substring(1));
+        while (!deque.isEmpty()) {
+            ObjectAndField objectAndField = deque.pop();
+            sb.append(Character.toUpperCase(objectAndField.fieldName.charAt(0))).append(objectAndField.fieldName.substring(1));
+        }
+        return sb.toString();
     }
 
     private static void replaceUnionsWithInterfaces(TypeDefinitionRegistry typeDefinitionRegistry) {

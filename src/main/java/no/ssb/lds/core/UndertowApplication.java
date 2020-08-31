@@ -139,7 +139,7 @@ public class UndertowApplication {
 
                 LOG.info("Initializing GraphQL Neo4j integration ...");
 
-                GraphQLSchema schema = GraphQLNeo4jTBVSchemas.schemaOf(GraphQLNeo4jTBVLanguage.transformRegistry(definitionRegistry));
+                GraphQLSchema schema = GraphQLNeo4jTBVSchemas.schemaOf(GraphQLNeo4jTBVLanguage.transformRegistry(definitionRegistry, true));
                 graphQLHttpHandler = new GraphQLNeo4jHttpHandler(schema, persistence);
             } else {
 
@@ -246,8 +246,7 @@ public class UndertowApplication {
             if ("neo4j".equals(providerId)) {
 
                 LOG.info("Transforming GraphQL schema to conform with GRANDstack compatible Neo4j modelling for Specification purposes");
-                schema = GraphQLNeo4jTBVSchemas.schemaOf(GraphQLNeo4jTBVLanguage.transformRegistry(definitionRegistry)).transform(builder -> {
-                    // TODO figure out what is missing that GraphQLSchemaBuilder.parseSchema(definitionRegistry); does
+                schema = GraphQLNeo4jTBVSchemas.schemaOf(GraphQLNeo4jTBVLanguage.transformRegistry(definitionRegistry, false)).transform(builder -> {
                     builder.additionalDirectives(Set.of(
                             DomainDirective.INSTANCE,
                             LinkDirective.INSTANCE,
@@ -264,8 +263,8 @@ public class UndertowApplication {
             GraphQLToJsonConverter graphQLToJsonConverter = new GraphQLToJsonConverter(definitionRegistry, schema);
             LinkedHashMap<String, JSONObject> jsonMap = graphQLToJsonConverter.createSpecification(schema);
 
-            if (LOG.isDebugEnabled()) {
-                jsonMap.entrySet().forEach(entry -> LOG.debug("JSON SCHEMA for type '{}': {}", entry.getKey(), entry.getValue().toString()));
+            if (LOG.isTraceEnabled()) {
+                jsonMap.entrySet().forEach(entry -> LOG.trace("JSON SCHEMA for type '{}': {}", entry.getKey(), entry.getValue().toString()));
             }
 
             specification = createJsonSpecification(definitionRegistry, jsonMap);
