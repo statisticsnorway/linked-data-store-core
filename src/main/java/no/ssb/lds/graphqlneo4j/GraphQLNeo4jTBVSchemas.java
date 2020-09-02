@@ -32,6 +32,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static java.util.Optional.ofNullable;
+
 public class GraphQLNeo4jTBVSchemas {
 
     /**
@@ -63,8 +65,16 @@ public class GraphQLNeo4jTBVSchemas {
                     Cypher cypher = dataFetcher.get(dataFetchingEnvironment);
                     if (queryTypes.contains(name)) {
                         String type = unwrapGraphQLTypeAndGetName(dataFetchingEnvironment.getFieldDefinition().getType());
-                        String query = replaceGroup(String.format("MATCH \\(%s:%s\\) WHERE( )", name, type), cypher.component1(), 1, " (_v.from <= $_version AND coalesce($_version < _v.to, true)) AND ");
-                        query = replaceGroup(String.format("MATCH (\\(%s:%s\\)) WHERE", name, type), query, 1, String.format("(_r:%s:RESOURCE)<-[_v:VERSION_OF]-(%s:%s:INSTANCE)", type + "_R", name, type));
+                        String regex = String.format("MATCH\\s*\\(%s:%s\\)(\\s*WHERE)?(\\s*)(?:(?!RETURN).)*\\s*RETURN", name, type);
+                        Matcher m = Pattern.compile(regex).matcher(cypher.component1());
+                        if (!m.find()) {
+                            throw new IllegalArgumentException("Generated Cypher does not match regex");
+                        }
+                        boolean where = ofNullable(m.group(1)).map(g -> true).orElse(false);
+                        String query = replaceGroup(regex, cypher.component1(), 2, where
+                                ? " (_v.from <= $_version AND coalesce($_version < _v.to, true)) AND "
+                                : " WHERE (_v.from <= $_version AND coalesce($_version < _v.to, true)) ");
+                        query = replaceGroup(String.format("MATCH\\s*(\\(%s:%s\\))\\s*WHERE", name, type), query, 1, String.format("(_r:%s:RESOURCE)<-[_v:VERSION_OF]-(%s:%s:INSTANCE)", type + "_R", name, type));
                         return new Cypher(query, cypher.component2(), cypher.component3());
                     }
                     return cypher;
