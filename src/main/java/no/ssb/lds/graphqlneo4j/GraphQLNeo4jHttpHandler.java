@@ -1,6 +1,8 @@
 package no.ssb.lds.graphqlneo4j;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
@@ -24,7 +26,6 @@ import org.neo4j.driver.Session;
 import org.neo4j.driver.TransactionConfig;
 import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.graphql.Cypher;
-import org.neo4j.graphql.OptimizedQueryException;
 import org.neo4j.graphql.Translator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -194,14 +195,13 @@ public class GraphQLNeo4jHttpHandler implements HttpHandler {
             return;
         }
 
+        ObjectNode jsonBody = new ObjectNode(mapper.getNodeFactory());
+        ArrayNode data = jsonBody.putArray("data");
+
         // translate query to Cypher and execute against neo4j
-        try {
-            ZonedDateTime snapshot = ZonedDateTime.now();
-            List<Cypher> cyphers = translator.translate(executionInput.getQuery(), getParamsWithVersionIfMissing(snapshot, executionInput.getVariables()));
-            if (cyphers.size() != 1) {
-                throw new IllegalStateException("Got something else than one single cypher from translator");
-            }
-            Cypher cypher = cyphers.get(0);
+        ZonedDateTime snapshot = ZonedDateTime.now();
+        List<Cypher> cyphers = translator.translate(executionInput.getQuery(), getParamsWithVersionIfMissing(snapshot, executionInput.getVariables()));
+        for (Cypher cypher : cyphers) {
             Driver driver = persistence.getInstance(Driver.class);
             LOG.info("{}", cypher.toString());
             LinkedHashMap<String, Object> params = new LinkedHashMap<>(cypher.component2());
@@ -213,17 +213,20 @@ public class GraphQLNeo4jHttpHandler implements HttpHandler {
                 resultAsMap = result.list(Record::asMap);
                 ResultSummary resultSummary = result.consume();
             }
-
-            // Serialize
-            String jsonResult = JsonTools.toJson(JsonTools.toJsonNode(resultAsMap));
-
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-            exchange.setStatusCode(StatusCodes.OK);
-            exchange.getResponseSender().send(jsonResult);
-        } catch (OptimizedQueryException e) {
-            throw new RuntimeException(e);
+            JsonNode jsonNode = JsonTools.toJsonNode(resultAsMap);
+            if (jsonNode.isArray()) {
+                data.addAll((ArrayNode) jsonNode);
+            } else {
+                data.add(jsonNode);
+            }
         }
 
+        // Serialize
+        String jsonResult = JsonTools.toJson(jsonBody);
+
+        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
+        exchange.setStatusCode(StatusCodes.OK);
+        exchange.getResponseSender().send(jsonResult);
     }
 
     private LinkedHashMap<String, Object> getParamsWithVersionIfMissing(ZonedDateTime timeBasedVersion, Map<String, Object> theParams) {
