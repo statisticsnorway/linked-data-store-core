@@ -6,6 +6,7 @@ import no.ssb.lds.api.persistence.json.JsonTools;
 import no.ssb.lds.test.ConfigurationOverride;
 import no.ssb.lds.test.client.TestClient;
 import no.ssb.lds.test.server.TestServerListener;
+import org.skyscreamer.jsonassert.JSONAssert;
 import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -14,7 +15,6 @@ import javax.inject.Inject;
 import java.io.IOException;
 
 import static no.ssb.lds.core.utils.FileAndClasspathReaderUtils.readFileOrClasspathResource;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.testng.Assert.assertEquals;
 
 
@@ -45,9 +45,7 @@ public class GraphQLIntegrationTest {
 
         JsonNode expectedResult = MAPPER.readTree(readFileOrClasspathResource("spec/abstract/query-response.json"));
 
-        assertThat(result)
-                .isEqualTo(expectedResult);
-
+        JSONAssert.assertEquals(JsonTools.toJson(expectedResult), JsonTools.toJson(result), false);
     }
 
     @Test
