@@ -1,112 +1,78 @@
 {
-  "data": {
-    "Owner": {
-      "edges": [
-        {
-          "node": {
-            "animals": {
-              "edges": [
-                {
-                  "node": {
-                    "__typename": "Cat",
-                    "name": "cat1"
-                  }
-                },
-                {
-                  "node": {
-                    "__typename": "Cat",
-                    "name": "cat2"
-                  }
-                },
-                {
-                  "node": {
-                    "__typename": "Dog",
-                    "name": "dog1"
-                  }
-                },
-                {
-                  "node": {
-                    "__typename": "Dog",
-                    "name": "dog2"
-                  }
-                }
-              ]
-            },
-            "favorite": {
-              "__typename": "Dog",
-              "name": "dog1"
-            }
+  "data": [
+    {
+      "owner": {
+        "name": "First Owner",
+        "animals": [
+          {
+            "name": "Cat One",
+            "__typename": "Cat"
+          },
+          {
+            "name": "Dog One",
+            "__typename": "Dog"
+          },
+          {
+            "name": "Dog Two",
+            "__typename": "Dog"
+          },
+          {
+            "name": "Cat Two",
+            "__typename": "Cat"
           }
-        },
-        {
-          "node": {
-            "animals": {
-              "edges": [
-                {
-                  "node": {
-                    "__typename": "Cat",
-                    "name": "cat1"
-                  }
-                },
-                {
-                  "node": {
-                    "__typename": "Cat",
-                    "name": "cat2"
-                  }
-                },
-                {
-                  "node": {
-                    "__typename": "Dog",
-                    "name": "dog1"
-                  }
-                },
-                {
-                  "node": {
-                    "__typename": "Dog",
-                    "name": "dog2"
-                  }
-                }
-              ]
-            },
-            "favorite": {
-              "__typename": "Cat",
-              "name": "cat1"
-            }
-          }
+        ],
+        "favorite": {
+          "name": "Dog One",
+          "__typename": "Dog"
         }
-      ]
+      }
     },
-    "Cat": {
-      "edges": [
-        {
-          "cursor": "cat1",
-          "node": {
-            "name": "cat1"
+    {
+      "owner": {
+        "name": "Second Owner",
+        "animals": [
+          {
+            "name": "Dog Two",
+            "__typename": "Dog"
+          },
+          {
+            "name": "Cat One",
+            "__typename": "Cat"
+          },
+          {
+            "name": "Cat Two",
+            "__typename": "Cat"
+          },
+          {
+            "name": "Dog One",
+            "__typename": "Dog"
           }
-        },
-        {
-          "cursor": "cat2",
-          "node": {
-            "name": "cat2"
-          }
+        ],
+        "favorite": {
+          "name": "Cat One",
+          "__typename": "Cat"
         }
-      ]
+      }
     },
-    "Dog": {
-      "edges": [
-        {
-          "cursor": "dog1",
-          "node": {
-            "name": "dog1"
-          }
-        },
-        {
-          "cursor": "dog2",
-          "node": {
-            "name": "dog2"
-          }
-        }
-      ]
+    {
+      "cat": {
+        "name": "Cat One"
+      }
+    },
+    {
+      "cat": {
+        "name": "Cat Two"
+      }
+    },
+    {
+      "dog": {
+        "name": "Dog One"
+      }
+    },
+    {
+      "dog": {
+        "name": "Dog Two"
+      }
     }
-  }
+  ]
 }

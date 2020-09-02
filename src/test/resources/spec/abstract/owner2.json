@@ -1,7 +1,7 @@
 {
-  "name": "dog2",
+  "name": "Second Owner",
   "age": 10,
-  "email" : "foo@bar.com",
+  "email" : "owner2@bar.com",
   "favorite" : "/Cat/cat1",
   "animals" : ["/Dog/dog1", "/Dog/dog2", "/Cat/cat1", "/Cat/cat2"]
 }
