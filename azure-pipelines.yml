@@ -1,19 +1,56 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
+name: $(Build.SourceBranch)-$(date:yyyyMMdd)$(rev:.r)
 
+parameters:
+  - name: 'mavenContainer'
+    default: 'maven:3-jdk-11'
+
+# Pipeline triggers on any branch and tag
 trigger:
-- master
+  branches:
+    include:
+      - '*'
+  tags:
+    include:
+      - '*'
 
+resources:
+  containers:
+    - container:  'ubuntu_container_for_build_to_nexus'
+      image:      'ubuntu:latest'
+  repositories:
+    - repository: templates
+      type:       github
+      name:       statisticsnorway/azure-pipelines-templates
+      ref:        refs/tags/0.1.2
+      endpoint:   statisticsnorway (6)
+
+# Pipeline will be run on this base image
 pool:
   vmImage: 'ubuntu-latest'
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+# Variables global to this pipeline
+# https://docs.microsoft.com/en-us/azure/devops/pipelines/process/variables
+variables:
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+  # Variables defined in Pipelines->Library->Variable Groups in your project in
+  # Azure Pipelines
+  - group:  Hemmeligheter
+
+  # Variables defined here
+  - name:   MAVEN_CACHE_FOLDER
+    value:  $(Pipeline.Workspace)/.m2/repository
+  - name:   MAVEN_OPTS
+    value:  '-Dmaven.repo.local=$(MAVEN_CACHE_FOLDER)'
+
+# Job which will run mvn build, mvn install and Sonar Analysis (if branch is master)
+jobs:
+  - job: buildTest
+    displayName:  'compile deploy app'
+    container: ${{ parameters.mavenContainer }}
+
+    # Job condition: Run these jobs on any branch, but not on tags
+    condition:  not(startsWith(variables['Build.SourceBranch'], 'refs/tags'))
+
+    # Steps in this Job
+    steps:
+      - template: maven/task-maven-complete.yml@templates
