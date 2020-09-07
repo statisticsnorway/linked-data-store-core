@@ -125,6 +125,8 @@ public class GraphQLNeo4jHttpHandler implements HttpHandler {
             return;
         }
 
+        long startMs = System.currentTimeMillis();
+
         HttpString method = exchange.getRequestMethod();
         if (method.equals(OPTIONS)) {
             HeaderMap headers = exchange.getResponseHeaders();
@@ -197,15 +199,21 @@ public class GraphQLNeo4jHttpHandler implements HttpHandler {
 
         ObjectNode jsonBody = new ObjectNode(mapper.getNodeFactory());
         ArrayNode data = jsonBody.putArray("data");
+        ObjectNode metadata = jsonBody.putObject("metadata");
+
+        long beforeTranslation = System.currentTimeMillis();
 
         // translate query to Cypher and execute against neo4j
         ZonedDateTime snapshot = ZonedDateTime.now();
         LOG.debug("GraphQL BEFORE transformation:\n{}\n", executionInput.getQuery());
         String query = GraphQLQueryTransformer.addTimeBasedVersioningArgumentValues(graphQlSchema, executionInput);
         LOG.debug("GraphQL AFTER transformation:\n{}\n", query);
+        long afterTransformation = System.currentTimeMillis();
         List<Cypher> cyphers = translator.translate(query, getParamsWithVersionIfMissing(snapshot, executionInput.getVariables()));
+
+        long beforeNeo4j = System.currentTimeMillis();
+        Driver driver = persistence.getInstance(Driver.class);
         for (Cypher cypher : cyphers) {
-            Driver driver = persistence.getInstance(Driver.class);
             LOG.debug("{}", cypher.toString());
             LinkedHashMap<String, Object> params = new LinkedHashMap<>(cypher.component2());
             params.putIfAbsent("_version", snapshot);
@@ -223,6 +231,14 @@ public class GraphQLNeo4jHttpHandler implements HttpHandler {
                 data.add(jsonNode);
             }
         }
+        long afterNeo4j = System.currentTimeMillis();
+
+        ObjectNode duration = metadata.putObject("latency");
+        duration.put("preparation", (afterNeo4j - startMs) - ((afterNeo4j - beforeNeo4j) + (beforeNeo4j - beforeTranslation)));
+        duration.put("graphql-transformation", afterTransformation - beforeTranslation);
+        duration.put("graphql-to-cypher", beforeNeo4j - afterTransformation);
+        duration.put("neo4j", afterNeo4j - beforeNeo4j);
+        duration.put("total", afterNeo4j - startMs);
 
         // Serialize
         String jsonResult = JsonTools.toJson(jsonBody);
