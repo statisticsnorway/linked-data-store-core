@@ -63,7 +63,6 @@ public class GraphQLQueryTransformer {
                 sb.append(indent).append(field.getName());
                 List<GraphQLArgument> schemaDefinedArguments = env.getFieldDefinition().getArguments();
                 if (!schemaDefinedArguments.isEmpty()) {
-                    sb.append("(");
                     int i = 0;
                     List<Argument> arguments = new ArrayList<>(field.getArguments());
                     env.getFieldDefinition().getArguments().stream()
@@ -79,12 +78,16 @@ public class GraphQLQueryTransformer {
                     for (Argument argument : arguments) {
                         if (i++ > 0) {
                             sb.append(", ");
+                        } else {
+                            sb.append("(");
                         }
                         sb.append(argument.getName()).append(": ");
                         Value value = argument.getValue();
                         serializeValue(sb, value);
                     }
-                    sb.append(")");
+                    if (i > 0) {
+                        sb.append(")");
+                    }
                 }
                 if (fieldType instanceof GraphQLScalarType ||
                         fieldType instanceof GraphQLEnumType) {
