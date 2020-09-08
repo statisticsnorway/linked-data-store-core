@@ -6,9 +6,11 @@ import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLFieldsContainer;
 import graphql.schema.GraphQLInterfaceType;
 import graphql.schema.GraphQLList;
+import graphql.schema.GraphQLNamedType;
 import graphql.schema.GraphQLNonNull;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLOutputType;
+import graphql.schema.GraphQLSchemaElement;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeVisitorStub;
 import graphql.util.TraversalControl;
@@ -35,9 +37,9 @@ import static graphql.schema.GraphQLTypeUtil.unwrapType;
 public class AddConnectionVisitor extends GraphQLTypeVisitorStub {
 
     private static final Logger log = LoggerFactory.getLogger(AddConnectionVisitor.class);
-    private final Map<String, GraphQLType> typeMap;
+    private final Map<String, GraphQLNamedType> typeMap;
 
-    public AddConnectionVisitor(Map<String, GraphQLType> typeMap) {
+    public AddConnectionVisitor(Map<String, GraphQLNamedType> typeMap) {
         this.typeMap = Objects.requireNonNull(typeMap);
     }
 
@@ -63,7 +65,7 @@ public class AddConnectionVisitor extends GraphQLTypeVisitorStub {
     }
 
     @Override
-    public TraversalControl visitGraphQLInterfaceType(GraphQLInterfaceType node, TraverserContext<GraphQLType> context) {
+    public TraversalControl visitGraphQLInterfaceType(GraphQLInterfaceType node, TraverserContext<GraphQLSchemaElement> context) {
         List<GraphQLFieldDefinition> fieldsWithPagination = findFieldsWithPagination(node);
         if (fieldsWithPagination.isEmpty()) {
             log.trace("No fields marked with pagination in {}", node);
@@ -95,7 +97,7 @@ public class AddConnectionVisitor extends GraphQLTypeVisitorStub {
     }
 
     @Override
-    public TraversalControl visitGraphQLObjectType(GraphQLObjectType node, TraverserContext<GraphQLType> context) {
+    public TraversalControl visitGraphQLObjectType(GraphQLObjectType node, TraverserContext<GraphQLSchemaElement> context) {
         List<GraphQLFieldDefinition> fieldsWithPagination = findFieldsWithPagination(node);
         if (fieldsWithPagination.isEmpty()) {
             log.trace("No fields marked with pagination in {}", node);
@@ -124,8 +126,8 @@ public class AddConnectionVisitor extends GraphQLTypeVisitorStub {
         return TraversalControl.CONTINUE;
     }
 
-    private GraphQLFieldDefinition createConnectionField(GraphQLType from, GraphQLFieldDefinition field) {
-        GraphQLType to = unwrapType(field.getType()).pop();
+    private GraphQLFieldDefinition createConnectionField(GraphQLNamedType from, GraphQLFieldDefinition field) {
+        GraphQLNamedType to = (GraphQLNamedType) unwrapType(field.getType()).pop();
         GraphQLFieldDefinition.Builder newFieldDefinition = GraphQLFieldDefinition.newFieldDefinition(field);
         return newFieldDefinition
                 .argument(GraphQLArgument.newArgument().name("first").type(GraphQLInt).build())
@@ -136,7 +138,7 @@ public class AddConnectionVisitor extends GraphQLTypeVisitorStub {
                 .build();
     }
 
-    private GraphQLType createConnectionType(GraphQLType from, GraphQLType to) {
+    private GraphQLType createConnectionType(GraphQLNamedType from, GraphQLNamedType to) {
         // We do not use Relay Connection name convertion to reduce the amount of
         // types.
         // String connectionTypeName = from.getName() + to.getName() + "Connection";
@@ -163,7 +165,7 @@ public class AddConnectionVisitor extends GraphQLTypeVisitorStub {
         return typeMap.get(connectionTypeName);
     }
 
-    private GraphQLType createEdgeType(GraphQLType from, GraphQLType to) {
+    private GraphQLType createEdgeType(GraphQLNamedType from, GraphQLNamedType to) {
         // We do not use Relay Connection name conversion to reduce the amount of
         // types.
         // String edgeTypeName = from.getName() + to.getName() + "Connection";

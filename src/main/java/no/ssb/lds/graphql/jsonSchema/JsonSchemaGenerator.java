@@ -9,8 +9,10 @@ import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLInputObjectType;
 import graphql.schema.GraphQLInterfaceType;
 import graphql.schema.GraphQLList;
+import graphql.schema.GraphQLNamedSchemaElement;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLScalarType;
+import graphql.schema.GraphQLSchemaElement;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeUtil;
 import graphql.schema.GraphQLTypeVisitorStub;
@@ -74,7 +76,7 @@ public class JsonSchemaGenerator extends GraphQLTypeVisitorStub {
     }
 
     @Override
-    public TraversalControl visitGraphQLObjectType(GraphQLObjectType node, TraverserContext<GraphQLType> context) {
+    public TraversalControl visitGraphQLObjectType(GraphQLObjectType node, TraverserContext<GraphQLSchemaElement> context) {
 
         if (node.getName().startsWith("_")) {
             // builtin types
@@ -129,12 +131,12 @@ public class JsonSchemaGenerator extends GraphQLTypeVisitorStub {
     }
 
     @Override
-    public TraversalControl visitGraphQLInterfaceType(GraphQLInterfaceType node, TraverserContext<GraphQLType> context) {
+    public TraversalControl visitGraphQLInterfaceType(GraphQLInterfaceType node, TraverserContext<GraphQLSchemaElement> context) {
         return TraversalControl.ABORT; // interfaces not needed, fields are repeated in implementing objects.
     }
 
     @Override
-    public TraversalControl visitGraphQLFieldDefinition(GraphQLFieldDefinition node, TraverserContext<GraphQLType> context) {
+    public TraversalControl visitGraphQLFieldDefinition(GraphQLFieldDefinition node, TraverserContext<GraphQLSchemaElement> context) {
 
         ObjectContext objectContext = context.getVarFromParents(ObjectContext.class);
         if (objectContext == null) {
@@ -183,7 +185,7 @@ public class JsonSchemaGenerator extends GraphQLTypeVisitorStub {
             fieldObjects.put("properties", properties);
             fieldObjects.put("type", "object");
             definitionProperties.put("_link_property_" + node.getName(), fieldObjects);
-            List<String> concreteTypes = GraphQLNeo4jTBVLanguage.resolveAbstractTypeToConcreteTypes(typeDefinitionRegistry, type.getName());
+            List<String> concreteTypes = GraphQLNeo4jTBVLanguage.resolveAbstractTypeToConcreteTypes(typeDefinitionRegistry, ((GraphQLNamedSchemaElement) type).getName());
             for (String concreteType : concreteTypes) {
                 properties.put(concreteType, new JSONObject()
                         .put("type", "null"));
@@ -194,7 +196,7 @@ public class JsonSchemaGenerator extends GraphQLTypeVisitorStub {
 
         // scalar
         if (type instanceof GraphQLScalarType) {
-            switch (type.getName()) {
+            switch (((GraphQLNamedSchemaElement) type).getName()) {
                 case "Int":
                     propertyElements.put("type", "integer");
                     break;
@@ -221,7 +223,7 @@ public class JsonSchemaGenerator extends GraphQLTypeVisitorStub {
                     propertyElements.put("format", "time");
                     break;
                 default:
-                    LOG.error("MISSING SCALAR CASE: {}", type.getName());
+                    LOG.error("MISSING SCALAR CASE: {}", ((GraphQLNamedSchemaElement) type).getName());
             }
 
             return TraversalControl.ABORT;
@@ -229,47 +231,47 @@ public class JsonSchemaGenerator extends GraphQLTypeVisitorStub {
 
         // embedded object fields
         if (type instanceof GraphQLObjectType) {
-            if (Set.of("_Neo4jDateTime", "_Neo4jLocalDateTime").contains(type.getName())) {
+            if (Set.of("_Neo4jDateTime", "_Neo4jLocalDateTime").contains(((GraphQLNamedSchemaElement) type).getName())) {
                 propertyElements.put("type", "string");
                 propertyElements.put("format", "date-time");
                 return TraversalControl.ABORT;
             }
-            if (Set.of("_Neo4jTime", "_Neo4jLocalTime").contains(type.getName())) {
+            if (Set.of("_Neo4jTime", "_Neo4jLocalTime").contains(((GraphQLNamedSchemaElement) type).getName())) {
                 propertyElements.put("type", "string");
                 propertyElements.put("format", "time");
                 return TraversalControl.ABORT;
             }
-            if (Set.of("_Neo4jDate").contains(type.getName())) {
+            if (Set.of("_Neo4jDate").contains(((GraphQLNamedSchemaElement) type).getName())) {
                 propertyElements.put("type", "string");
                 propertyElements.put("format", "date");
                 return TraversalControl.ABORT;
             }
 
-            propertyElements.put("$ref", "#/definitions/" + type.getName());
+            propertyElements.put("$ref", "#/definitions/" + ((GraphQLNamedSchemaElement) type).getName());
             references.computeIfAbsent(objectContext.name, rs -> new LinkedHashSet<>())
-                    .add(type.getName());
+                    .add(((GraphQLNamedSchemaElement) type).getName());
             return TraversalControl.ABORT;
         }
 
         // enum fields
         if (type instanceof GraphQLEnumType) {
-            propertyElements.put("$ref", "#/definitions/" + type.getName());
+            propertyElements.put("$ref", "#/definitions/" + ((GraphQLNamedSchemaElement) type).getName());
             references.computeIfAbsent(objectContext.name, rs -> new LinkedHashSet<>())
-                    .add(type.getName());
+                    .add(((GraphQLNamedSchemaElement) type).getName());
 
             return TraversalControl.ABORT;
         }
 
-        throw new IllegalArgumentException("Unsupported field type: " + type.getName());
+        throw new IllegalArgumentException("Unsupported field type: " + ((GraphQLNamedSchemaElement) type).getName());
     }
 
     @Override
-    public TraversalControl visitGraphQLDirective(GraphQLDirective node, TraverserContext<GraphQLType> context) {
+    public TraversalControl visitGraphQLDirective(GraphQLDirective node, TraverserContext<GraphQLSchemaElement> context) {
         return TraversalControl.ABORT;
     }
 
     @Override
-    public TraversalControl visitGraphQLEnumType(GraphQLEnumType node, TraverserContext<GraphQLType> context) {
+    public TraversalControl visitGraphQLEnumType(GraphQLEnumType node, TraverserContext<GraphQLSchemaElement> context) {
         JSONObject type = new JSONObject();
         JSONArray enumValues = new JSONArray();
         for (GraphQLEnumValueDefinition value : node.getValues()) {
@@ -282,17 +284,17 @@ public class JsonSchemaGenerator extends GraphQLTypeVisitorStub {
     }
 
     @Override
-    public TraversalControl visitGraphQLInputObjectType(GraphQLInputObjectType node, TraverserContext<GraphQLType> context) {
+    public TraversalControl visitGraphQLInputObjectType(GraphQLInputObjectType node, TraverserContext<GraphQLSchemaElement> context) {
         return TraversalControl.ABORT;
     }
 
     @Override
-    public TraversalControl visitGraphQLArgument(GraphQLArgument node, TraverserContext<GraphQLType> context) {
+    public TraversalControl visitGraphQLArgument(GraphQLArgument node, TraverserContext<GraphQLSchemaElement> context) {
         return TraversalControl.ABORT;
     }
 
     @Override
-    public TraversalControl visitGraphQLList(GraphQLList node, TraverserContext<GraphQLType> context) {
+    public TraversalControl visitGraphQLList(GraphQLList node, TraverserContext<GraphQLSchemaElement> context) {
         return TraversalControl.ABORT;
     }
 }

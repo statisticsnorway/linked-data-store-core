@@ -47,6 +47,27 @@ public class GsimGraphQLSchemaTest {
 
     @Test
     @ConfigurationOverride({
+            "graphql.schema", "src/test/resources/gsim-lite/schema.graphql"
+    })
+    public void thatAllGsimLiteExamplesAreStoredAndRetainedIntact() throws IOException {
+        Files.list(Path.of("src/test/resources/gsim-lite/examples")).forEach(path -> {
+            try {
+                String body = FileAndClasspathReaderUtils.readFileAsUtf8(path.toString());
+                String filename = path.getFileName().toString();
+                String domain = filename.substring(0, filename.indexOf("_"));
+                String id = filename.substring(filename.indexOf("_") + 1, filename.length() - ".json".length());
+                client.put(String.format("/data/%s/%s?sync=true", domain, id), body).expectAnyOf(200, 201);
+                String actual = client.get(String.format("/data/%s/%s", domain, id)).expect200Ok().body();
+                JSONAssert.assertEquals(body, actual, false);
+            } catch (Throwable e) {
+                System.out.printf("ERROR while processing path: %s%n", path.toString());
+                throw e;
+            }
+        });
+    }
+
+    @Test
+    @ConfigurationOverride({
             "graphql.schema", "src/test/resources/gsim/schema.graphql"
     })
     public void thatSingleGsimExamplesAreStoredAndRetainedIntact() throws IOException {

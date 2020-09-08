@@ -7,10 +7,13 @@ import graphql.schema.GraphQLInputObjectType;
 import graphql.schema.GraphQLInputType;
 import graphql.schema.GraphQLInterfaceType;
 import graphql.schema.GraphQLList;
+import graphql.schema.GraphQLNamedSchemaElement;
+import graphql.schema.GraphQLNamedType;
 import graphql.schema.GraphQLNonNull;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLOutputType;
 import graphql.schema.GraphQLScalarType;
+import graphql.schema.GraphQLSchemaElement;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeReference;
 import graphql.schema.GraphQLTypeUtil;
@@ -33,14 +36,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class TypeReferencerVisitor extends GraphQLTypeVisitorStub {
 
     private static final Logger log = LoggerFactory.getLogger(TypeReferencerVisitor.class);
-    private final Map<String, GraphQLType> typeMap;
+    private final Map<String, GraphQLNamedType> typeMap;
 
-    public TypeReferencerVisitor(Map<String, GraphQLType> typeMap) {
+    public TypeReferencerVisitor(Map<String, GraphQLNamedType> typeMap) {
         this.typeMap = Objects.requireNonNull(typeMap);
     }
 
     @Override
-    public TraversalControl visitGraphQLInterfaceType(GraphQLInterfaceType node, TraverserContext<GraphQLType> context) {
+    public TraversalControl visitGraphQLInterfaceType(GraphQLInterfaceType node, TraverserContext<GraphQLSchemaElement> context) {
         GraphQLInterfaceType.Builder newInterfaceBuilder = GraphQLInterfaceType.newInterface(
                 (GraphQLInterfaceType) typeMap.get(node.getName()));
         for (GraphQLFieldDefinition fieldDefinition : node.getFieldDefinitions()) {
@@ -67,12 +70,12 @@ public class TypeReferencerVisitor extends GraphQLTypeVisitorStub {
     }
 
     @Override
-    public TraversalControl visitGraphQLUnionType(GraphQLUnionType node, TraverserContext<GraphQLType> context) {
+    public TraversalControl visitGraphQLUnionType(GraphQLUnionType node, TraverserContext<GraphQLSchemaElement> context) {
         GraphQLUnionType.Builder newUnionTypeBuilder = GraphQLUnionType.newUnionType(
                 (GraphQLUnionType) typeMap.get(node.getName()));
         for (GraphQLOutputType type : node.getTypes()) {
             if (!(type instanceof GraphQLTypeReference)) {
-                newUnionTypeBuilder.possibleType(GraphQLTypeReference.typeRef(type.getName()));
+                newUnionTypeBuilder.possibleType(GraphQLTypeReference.typeRef(((GraphQLNamedSchemaElement) type).getName()));
             }
         }
         GraphQLUnionType newUnionType = newUnionTypeBuilder.build();
@@ -81,7 +84,7 @@ public class TypeReferencerVisitor extends GraphQLTypeVisitorStub {
     }
 
     @Override
-    public TraversalControl visitGraphQLObjectType(GraphQLObjectType node, TraverserContext<GraphQLType> context) {
+    public TraversalControl visitGraphQLObjectType(GraphQLObjectType node, TraverserContext<GraphQLSchemaElement> context) {
         GraphQLObjectType.Builder newObjectBuilder = GraphQLObjectType.newObject(
                 (GraphQLObjectType) typeMap.get(node.getName()));
         for (GraphQLFieldDefinition fieldDefinition : node.getFieldDefinitions()) {
@@ -103,7 +106,7 @@ public class TypeReferencerVisitor extends GraphQLTypeVisitorStub {
         }
         for (GraphQLOutputType anInterface : node.getInterfaces()) {
             convertToReference(anInterface).ifPresent(reference -> {
-                newObjectBuilder.withInterfaces(GraphQLTypeReference.typeRef(reference.getName()));
+                newObjectBuilder.withInterfaces(GraphQLTypeReference.typeRef(((GraphQLNamedSchemaElement) reference).getName()));
             });
         }
         GraphQLObjectType newObject = newObjectBuilder.build();
@@ -112,7 +115,7 @@ public class TypeReferencerVisitor extends GraphQLTypeVisitorStub {
     }
 
     @Override
-    public TraversalControl visitGraphQLInputObjectType(GraphQLInputObjectType node, TraverserContext<GraphQLType> context) {
+    public TraversalControl visitGraphQLInputObjectType(GraphQLInputObjectType node, TraverserContext<GraphQLSchemaElement> context) {
         GraphQLInputObjectType.Builder newInputObjectBuilder = GraphQLInputObjectType.newInputObject(
                 (GraphQLInputObjectType) typeMap.get(node.getName()));
         for (GraphQLInputObjectField fieldDefinition : node.getFieldDefinitions()) {
@@ -125,21 +128,26 @@ public class TypeReferencerVisitor extends GraphQLTypeVisitorStub {
         return TraversalControl.CONTINUE;
     }
 
-    private Optional<GraphQLType> convertToReference(GraphQLType type) {
+    private Optional<GraphQLSchemaElement> convertToReference(GraphQLSchemaElement arg) {
         GraphQLArgument graphQLArgument = null;
-        if (type instanceof GraphQLArgument) {
-            graphQLArgument = (GraphQLArgument) type;
+        GraphQLType type;
+        if (arg instanceof GraphQLArgument) {
+            graphQLArgument = (GraphQLArgument) arg;
             type = graphQLArgument.getType();
+        } else if (arg instanceof GraphQLType) {
+            type = (GraphQLType) arg;
+        } else {
+            throw new IllegalArgumentException("arg must be of either GraphQLArgument or GraphQLType");
         }
         Stack<GraphQLType> types = GraphQLTypeUtil.unwrapType(type);
         GraphQLType current = types.pop();
         if (current instanceof GraphQLTypeReference || current instanceof GraphQLScalarType) {
             return Optional.empty();
         }
-        if (!typeMap.containsKey(current.getName())) {
+        if (!typeMap.containsKey(((GraphQLNamedSchemaElement) current).getName())) {
             throw new AssertionError("type was not in type map");
         }
-        GraphQLType newType = GraphQLTypeReference.typeRef(current.getName());
+        GraphQLType newType = GraphQLTypeReference.typeRef(((GraphQLNamedSchemaElement) current).getName());
         while (!types.empty()) {
             current = types.pop();
             if (GraphQLTypeUtil.isList(current)) {

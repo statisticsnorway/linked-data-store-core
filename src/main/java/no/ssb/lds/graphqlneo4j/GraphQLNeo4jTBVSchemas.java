@@ -7,12 +7,14 @@ import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLDirective;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLModifiedType;
+import graphql.schema.GraphQLNamedSchemaElement;
+import graphql.schema.GraphQLNamedType;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeCollectingVisitor;
 import graphql.schema.GraphQLTypeResolvingVisitor;
-import graphql.schema.TypeTraverser;
+import graphql.schema.SchemaTraverser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import no.ssb.lds.graphql.directives.DomainDirective;
 import no.ssb.lds.graphql.schemas.visitors.TypeReferencerVisitor;
@@ -80,14 +82,14 @@ public class GraphQLNeo4jTBVSchemas {
                     return cypher;
                 });
 
-        final TypeTraverser TRAVERSER = new TypeTraverser();
+        final SchemaTraverser TRAVERSER = new SchemaTraverser();
 
-        Map<String, GraphQLType> graphQLTypes = new TreeMap<>(graphQLSchema.getTypeMap());
+        Map<String, GraphQLNamedType> graphQLTypes = new TreeMap<>(graphQLSchema.getTypeMap());
         graphQLTypes.keySet().removeIf(key -> key.startsWith("__"));
 
         GraphQLTypeCollectingVisitor graphQLTypeCollectingVisitor = new GraphQLTypeCollectingVisitor();
         TRAVERSER.depthFirst(graphQLTypeCollectingVisitor, graphQLTypes.values());
-        Map<String, GraphQLType> typeMap = graphQLTypeCollectingVisitor.getResult();
+        Map<String, GraphQLNamedType> typeMap = graphQLTypeCollectingVisitor.getResult();
 
         TRAVERSER.depthFirst(new TypeReferencerVisitor(typeMap), typeMap.values()); // replace all types with references
 
@@ -108,14 +110,18 @@ public class GraphQLNeo4jTBVSchemas {
                 .build();
 
         // set of all query types
-        queryTypes.addAll(transformedGraphQLSchema.getQueryType().getChildren().stream().map(GraphQLType::getName).collect(Collectors.toSet()));
+        queryTypes.addAll(transformedGraphQLSchema.getQueryType().getChildren().stream()
+                .filter(se -> se instanceof GraphQLNamedSchemaElement)
+                .map(se -> (GraphQLNamedSchemaElement) se)
+                .map(GraphQLNamedSchemaElement::getName)
+                .collect(Collectors.toSet()));
 
         return transformedGraphQLSchema;
     }
 
-    private static void addDomainDirective(TypeDefinitionRegistry typeDefinitionRegistry, Map<String, GraphQLType> typeMap) {
+    private static void addDomainDirective(TypeDefinitionRegistry typeDefinitionRegistry, Map<String, GraphQLNamedType> typeMap) {
         // add domain directive
-        for (Map.Entry<String, GraphQLType> entry : typeMap.entrySet()) {
+        for (Map.Entry<String, GraphQLNamedType> entry : typeMap.entrySet()) {
             String typeName = entry.getKey();
             GraphQLType graphQLType = entry.getValue();
             if (graphQLType instanceof GraphQLObjectType) {
@@ -133,7 +139,11 @@ public class GraphQLNeo4jTBVSchemas {
     }
 
     private static GraphQLObjectType transformQueryObject(TypeDefinitionRegistry typeDefinitionRegistry, GraphQLObjectType queryType) {
-        Set<? extends String> originalQueries = queryType.getChildren().stream().map(GraphQLType::getName).collect(Collectors.toSet());
+        Set<? extends String> originalQueries = queryType.getChildren().stream()
+                .filter(se -> se instanceof GraphQLNamedSchemaElement)
+                .map(se -> (GraphQLNamedSchemaElement) se)
+                .map(GraphQLNamedSchemaElement::getName)
+                .collect(Collectors.toSet());
         GraphQLObjectType transformedQueryObject = queryType.transform(graphQLObjectTypeBuilder -> {
             graphQLObjectTypeBuilder.clearFields();
             for (String originalQuery : originalQueries) {
@@ -153,7 +163,10 @@ public class GraphQLNeo4jTBVSchemas {
         if (type instanceof GraphQLModifiedType) {
             return unwrapGraphQLTypeAndGetName(((GraphQLModifiedType) type).getWrappedType());
         }
-        return type.getName();
+        if (type instanceof GraphQLNamedType) {
+            return ((GraphQLNamedType) type).getName();
+        }
+        throw new UnsupportedOperationException("Not a named or modified type: " + type.getClass().getName());
     }
 
     public static String replaceGroup(String regex, String source, int groupToReplace, String replacement) {

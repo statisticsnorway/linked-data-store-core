@@ -31,12 +31,11 @@ public class LinkDirective extends GraphQLDirective {
             NAME,
             DESCRIPTION,
             EnumSet.of(DirectiveLocation.FIELD_DEFINITION),
-            List.of(PAGINATION_ARGUMENT, REVERSE_NAME_ARGUMENT),
-            false, false, false
+            List.of(PAGINATION_ARGUMENT, REVERSE_NAME_ARGUMENT)
     );
 
-    private LinkDirective(String name, String description, EnumSet<DirectiveLocation> locations, List<GraphQLArgument> arguments, boolean onOperation, boolean onFragment, boolean onField) {
-        super(name, description, locations, arguments, onOperation, onFragment, onField);
+    private LinkDirective(String name, String description, EnumSet<DirectiveLocation> locations, List<GraphQLArgument> arguments) {
+        super(name, description, locations, arguments);
     }
 
     public static LinkDirective newLinkDirective() {
@@ -50,7 +49,7 @@ public class LinkDirective extends GraphQLDirective {
                 EnumSet.of(DirectiveLocation.FIELD_DEFINITION),
                 List.of(
                         PAGINATION_ARGUMENT.transform(builder -> builder.value(pagination))
-                ), false, false, false
+                )
         );
     }
 
@@ -74,7 +73,7 @@ public class LinkDirective extends GraphQLDirective {
                 List.of(
                         PAGINATION_ARGUMENT.transform(builder -> builder.value(pagination)),
                         REVERSE_NAME_ARGUMENT.transform(builder -> builder.value(reverseName))
-                ), false, false, false
+                )
         );
     }
 

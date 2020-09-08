@@ -1,8 +1,8 @@
 package no.ssb.lds.graphql.schemas.visitors;
 
+import graphql.schema.GraphQLNamedType;
 import graphql.schema.GraphQLSchema;
-import graphql.schema.GraphQLType;
-import graphql.schema.TypeTraverser;
+import graphql.schema.SchemaTraverser;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.SchemaParser;
@@ -36,8 +36,8 @@ public class AddConnectionVisitorTest {
         RuntimeWiring runtimeWiring = RuntimeWiring.newRuntimeWiring().build();
         GraphQLSchema schema = new SchemaGenerator().makeExecutableSchema(definitionRegistry, runtimeWiring);
 
-        Map<String, GraphQLType> typeMap = new HashMap<>(schema.getTypeMap());
-        new TypeTraverser().depthFirst(
+        Map<String, GraphQLNamedType> typeMap = new HashMap<>(schema.getTypeMap());
+        new SchemaTraverser().depthFirst(
                 new AddConnectionVisitor(typeMap),
                 typeMap.values()
         );
@@ -47,7 +47,7 @@ public class AddConnectionVisitorTest {
         assertSourceEdge(typeMap);
     }
 
-    void assertSourceConnection(Map<String, GraphQLType> typeMap) {
+    void assertSourceConnection(Map<String, GraphQLNamedType> typeMap) {
         assertTypeDefinition(typeMap, "TargetConnection", "" +
                 "type TargetConnection {" +
                 "   edges: [TargetEdge!]!" +
@@ -77,8 +77,8 @@ public class AddConnectionVisitorTest {
         RuntimeWiring runtimeWiring = RuntimeWiring.newRuntimeWiring().build();
         GraphQLSchema schema = new SchemaGenerator().makeExecutableSchema(definitionRegistry, runtimeWiring);
 
-        Map<String, GraphQLType> typeMap = new HashMap<>(schema.getTypeMap());
-        new TypeTraverser().depthFirst(
+        Map<String, GraphQLNamedType> typeMap = new HashMap<>(schema.getTypeMap());
+        new SchemaTraverser().depthFirst(
                 new AddConnectionVisitor(typeMap),
                 typeMap.values()
         );
@@ -135,8 +135,8 @@ public class AddConnectionVisitorTest {
         RuntimeWiring runtimeWiring = RuntimeWiring.newRuntimeWiring().build();
         GraphQLSchema schema = new SchemaGenerator().makeExecutableSchema(definitionRegistry, runtimeWiring);
 
-        Map<String, GraphQLType> typeMap = new HashMap<>(schema.getTypeMap());
-        new TypeTraverser().depthFirst(
+        Map<String, GraphQLNamedType> typeMap = new HashMap<>(schema.getTypeMap());
+        new SchemaTraverser().depthFirst(
                 new AddConnectionVisitor(typeMap),
                 typeMap.values()
         );
@@ -157,7 +157,7 @@ public class AddConnectionVisitorTest {
 
     }
 
-    void assertSourceEdge(Map<String, GraphQLType> typeMap) {
+    void assertSourceEdge(Map<String, GraphQLNamedType> typeMap) {
         assertTypeDefinition(typeMap, "TargetEdge", "" +
                 "type TargetEdge {" +
                 "  cursor: String!" +
@@ -165,7 +165,7 @@ public class AddConnectionVisitorTest {
                 "}");
     }
 
-    void assertSource(Map<String, GraphQLType> typeMap) {
+    void assertSource(Map<String, GraphQLNamedType> typeMap) {
         assertTypeDefinition(typeMap, "Source", "" +
                 "type Source {" +
                 "  foo: String" +
@@ -176,7 +176,7 @@ public class AddConnectionVisitorTest {
                 "}");
     }
 
-    void assertTypeDefinition(Map<String, GraphQLType> typeMap, String typeName, String expectedDefinition) {
+    void assertTypeDefinition(Map<String, GraphQLNamedType> typeMap, String typeName, String expectedDefinition) {
         String target = new SchemaPrinter().print(typeMap.get(typeName));
         Assertions.assertThat(target).isEqualToIgnoringWhitespace(expectedDefinition);
     }

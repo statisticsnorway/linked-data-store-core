@@ -1,8 +1,8 @@
 package no.ssb.lds.graphql.jsonSchema;
 
+import graphql.schema.GraphQLNamedType;
 import graphql.schema.GraphQLSchema;
-import graphql.schema.GraphQLType;
-import graphql.schema.TypeTraverser;
+import graphql.schema.SchemaTraverser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -13,7 +13,7 @@ import java.util.Map;
 
 public class GraphQLToJsonConverter {
     private static final Logger LOG = LoggerFactory.getLogger(GraphQLToJsonConverter.class);
-    private static final TypeTraverser TRAVERSER = new TypeTraverser();
+    private static final SchemaTraverser TRAVERSER = new SchemaTraverser();
     private final TypeDefinitionRegistry typeDefinitionRegistry;
     private final GraphQLSchema graphQLSchema;
 
@@ -23,7 +23,7 @@ public class GraphQLToJsonConverter {
     }
 
     public LinkedHashMap<String, JSONObject> createSpecification(GraphQLSchema graphQLSchema) {
-        Map<String, GraphQLType> typeMap = graphQLSchema.getTypeMap();
+        Map<String, GraphQLNamedType> typeMap = graphQLSchema.getTypeMap();
         LinkedHashMap<String, JSONObject> jsonMap = new LinkedHashMap<>();
         StringBuilder sb = new StringBuilder();
 

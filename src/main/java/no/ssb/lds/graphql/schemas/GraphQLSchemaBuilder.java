@@ -2,12 +2,13 @@ package no.ssb.lds.graphql.schemas;
 
 import graphql.scalars.ExtendedScalars;
 import graphql.schema.GraphQLDirective;
+import graphql.schema.GraphQLNamedType;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeCollectingVisitor;
 import graphql.schema.GraphQLTypeResolvingVisitor;
-import graphql.schema.TypeTraverser;
+import graphql.schema.SchemaTraverser;
 import graphql.schema.idl.EchoingWiringFactory;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaGenerator;
@@ -37,7 +38,7 @@ import java.util.TreeMap;
 public class GraphQLSchemaBuilder {
 
     private static final Logger log = LoggerFactory.getLogger(GraphQLSchemaBuilder.class);
-    private static final TypeTraverser TRAVERSER = new TypeTraverser();
+    private static final SchemaTraverser TRAVERSER = new SchemaTraverser();
     private static final SchemaPrinter PRINTER = new SchemaPrinter();
     private static final String QUERY_NAME = "Query";
     private final RxJsonPersistence persistence;
@@ -52,13 +53,13 @@ public class GraphQLSchemaBuilder {
         this.namespace = namespace;
     }
 
-    private static String printSchema(GraphQLType type) {
+    private static String printSchema(GraphQLNamedType type) {
         return PRINTER.print(type);
     }
 
-    private static String printSchema(Collection<GraphQLType> types) {
+    private static String printSchema(Collection<GraphQLNamedType> types) {
         StringBuilder builder = new StringBuilder();
-        for (GraphQLType type : types) {
+        for (GraphQLNamedType type : types) {
             builder.append(printSchema(type));
         }
         return builder.toString();
@@ -74,7 +75,7 @@ public class GraphQLSchemaBuilder {
         runtime.wiringFactory(new EchoingWiringFactory());
 
         return new SchemaGenerator().makeExecutableSchema(
-                SchemaGenerator.Options.defaultOptions().enforceSchemaDirectives(true),
+                SchemaGenerator.Options.defaultOptions(),
                 registry,
                 runtime.build()
         );
@@ -90,7 +91,7 @@ public class GraphQLSchemaBuilder {
         log.info("Collecting types into type map");
         GraphQLTypeCollectingVisitor graphQLTypeCollectingVisitor = new GraphQLTypeCollectingVisitor();
         TRAVERSER.depthFirst(graphQLTypeCollectingVisitor, graphQLTypes.values());
-        Map<String, GraphQLType> typeMap = graphQLTypeCollectingVisitor.getResult();
+        Map<String, GraphQLNamedType> typeMap = graphQLTypeCollectingVisitor.getResult();
 
         // Reference and Resolve
         TRAVERSER.depthFirst(new TypeReferencerVisitor(typeMap), typeMap.values());
@@ -120,7 +121,7 @@ public class GraphQLSchemaBuilder {
             log.info("Creating root \"Query\" search field and search types");
             AddSearchTypesVisitor addSearchTypesVisitor = new AddSearchTypesVisitor(typeMap, query);
             TRAVERSER.depthFirst(addSearchTypesVisitor, typeMap.values());
-            GraphQLType queryWithSearch = addSearchTypesVisitor.getQuery();
+            GraphQLNamedType queryWithSearch = addSearchTypesVisitor.getQuery();
             if (log.isTraceEnabled()) {
                 log.trace("Query:\n{}", printSchema(queryWithSearch));
             }

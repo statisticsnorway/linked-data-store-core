@@ -1,7 +1,7 @@
 package no.ssb.lds.graphqlneo4j;
 
 import graphql.ExecutionInput;
-import graphql.analysis.QueryTraversal;
+import graphql.analysis.QueryTraverser;
 import graphql.analysis.QueryVisitorFieldEnvironment;
 import graphql.analysis.QueryVisitorStub;
 import graphql.language.Argument;
@@ -12,7 +12,6 @@ import graphql.language.Field;
 import graphql.language.FloatValue;
 import graphql.language.IntValue;
 import graphql.language.Node;
-import graphql.language.NodeTraverser;
 import graphql.language.ObjectField;
 import graphql.language.ObjectValue;
 import graphql.language.StringValue;
@@ -21,6 +20,7 @@ import graphql.language.VariableReference;
 import graphql.parser.Parser;
 import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLEnumType;
+import graphql.schema.GraphQLNamedType;
 import graphql.schema.GraphQLScalarType;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLTypeUtil;
@@ -30,13 +30,13 @@ import graphql.util.TraverserContext;
 import java.util.ArrayList;
 import java.util.List;
 
-import static graphql.language.NodeTraverser.LeaveOrEnter.LEAVE;
+import static graphql.util.TraverserContext.Phase.LEAVE;
 
 public class GraphQLQueryTransformer {
 
     static String addTimeBasedVersioningArgumentValues(GraphQLSchema graphQlSchema, ExecutionInput executionInput) {
         Document document = new Parser().parseDocument(executionInput.getQuery());
-        QueryTraversal queryTraversal = QueryTraversal.newQueryTraversal()
+        QueryTraverser queryTraversal = QueryTraverser.newQueryTraverser()
                 .schema(graphQlSchema)
                 .operationName(executionInput.getOperationName())
                 .variables(executionInput.getVariables())
@@ -49,9 +49,9 @@ public class GraphQLQueryTransformer {
                 TraverserContext<Node> context = env.getTraverserContext();
                 int depth = context.getParentNodes().size();
                 String indent = " ".repeat(depth);
-                NodeTraverser.LeaveOrEnter leaveOrEnter = context.getVar(NodeTraverser.LeaveOrEnter.class);
+                TraverserContext.Phase phase = context.getPhase();
                 GraphQLUnmodifiedType fieldType = GraphQLTypeUtil.unwrapAll(env.getFieldDefinition().getType());
-                if (leaveOrEnter == LEAVE) {
+                if (phase == LEAVE) {
                     if (fieldType instanceof GraphQLScalarType ||
                             fieldType instanceof GraphQLEnumType) {
                     } else {
@@ -66,7 +66,9 @@ public class GraphQLQueryTransformer {
                     int i = 0;
                     List<Argument> arguments = new ArrayList<>(field.getArguments());
                     env.getFieldDefinition().getArguments().stream()
-                            .filter(a -> "ver".equals(a.getName()) && "_Neo4jDateTimeInput".equals(a.getType().getName()))
+                            .filter(a -> "ver".equals(a.getName()))
+                            .filter(a -> a.getType() instanceof GraphQLNamedType)
+                            .filter(a -> "_Neo4jDateTimeInput".equals(((GraphQLNamedType) a.getType()).getName()))
                             .findFirst()
                             .map(a -> Argument.newArgument()
                                     .name(a.getName())

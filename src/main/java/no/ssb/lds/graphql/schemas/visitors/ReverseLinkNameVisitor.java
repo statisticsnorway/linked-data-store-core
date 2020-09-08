@@ -2,8 +2,10 @@ package no.ssb.lds.graphql.schemas.visitors;
 
 import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLFieldDefinition;
+import graphql.schema.GraphQLNamedType;
 import graphql.schema.GraphQLNonNull;
 import graphql.schema.GraphQLObjectType;
+import graphql.schema.GraphQLSchemaElement;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeVisitorStub;
 import graphql.util.TraversalControl;
@@ -15,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -37,14 +40,14 @@ public class ReverseLinkNameVisitor extends GraphQLTypeVisitorStub {
 
     private static final Logger log = LoggerFactory.getLogger(ReverseLinkNameVisitor.class);
     private static final String REVERSE_PREFIX = "reverse";
-    private final Map<String, GraphQLType> typeMap;
+    private final Map<String, GraphQLNamedType> typeMap;
 
-    public ReverseLinkNameVisitor(Map<String, GraphQLType> typeMap) {
+    public ReverseLinkNameVisitor(Map<String, GraphQLNamedType> typeMap) {
         this.typeMap = Objects.requireNonNull(typeMap);
     }
 
     @Override
-    public TraversalControl visitGraphQLFieldDefinition(GraphQLFieldDefinition node, TraverserContext<GraphQLType> context) {
+    public TraversalControl visitGraphQLFieldDefinition(GraphQLFieldDefinition node, TraverserContext<GraphQLSchemaElement> context) {
         // Check that a link exists.
         Optional<LinkDirective> linkDirective = getLinkDirective(node);
         if (linkDirective.isPresent()) {
@@ -53,8 +56,8 @@ public class ReverseLinkNameVisitor extends GraphQLTypeVisitorStub {
         return TraversalControl.CONTINUE;
     }
 
-    private Optional<GraphQLObjectType> firstObject(TraverserContext<GraphQLType> context) {
-        for (GraphQLType parentNode : context.getParentNodes()) {
+    private Optional<GraphQLObjectType> firstObject(TraverserContext<GraphQLSchemaElement> context) {
+        for (GraphQLSchemaElement parentNode : context.getParentNodes()) {
             if (parentNode instanceof GraphQLObjectType) {
                 return Optional.of((GraphQLObjectType) parentNode);
             }
@@ -62,21 +65,22 @@ public class ReverseLinkNameVisitor extends GraphQLTypeVisitorStub {
         return Optional.empty();
     }
 
-    private String computeName(GraphQLFieldDefinition node, TraverserContext<GraphQLType> context) {
-        ArrayList<GraphQLType> types = new ArrayList<>();
+    private String computeName(GraphQLFieldDefinition node, TraverserContext<GraphQLSchemaElement> context) {
+        List<GraphQLSchemaElement> types = new ArrayList<>();
         types.add(node);
-        types.addAll(context.getParentNodes());
+        List<GraphQLSchemaElement> parentNodes = context.getParentNodes();
+        types.addAll(parentNodes);
         Deque<String> parts = new ArrayDeque<>();
-        for (GraphQLType type : types) {
+        for (GraphQLSchemaElement type : types) {
             if (type instanceof GraphQLNonNull) {
                 type = ((GraphQLNonNull) type).getWrappedType();
             }
             if (type instanceof GraphQLFieldDefinition) {
-                parts.addFirst(type.getName());
+                parts.addFirst(((GraphQLFieldDefinition) type).getName());
             }
             if (type instanceof GraphQLObjectType) {
                 if (hasDomainDirective((GraphQLObjectType) type)) {
-                    parts.addFirst(type.getName());
+                    parts.addFirst(((GraphQLObjectType) type).getName());
                     break;
                 }
             }
@@ -90,7 +94,7 @@ public class ReverseLinkNameVisitor extends GraphQLTypeVisitorStub {
         }).collect(Collectors.joining());
     }
 
-    private TraversalControl visitField(LinkDirective linkDirective, GraphQLFieldDefinition node, TraverserContext<GraphQLType> context) {
+    private TraversalControl visitField(LinkDirective linkDirective, GraphQLFieldDefinition node, TraverserContext<GraphQLSchemaElement> context) {
         Optional<String> reverseName = linkDirective.getReverseName();
         if (reverseName.isPresent()) {
             return TraversalControl.CONTINUE;
