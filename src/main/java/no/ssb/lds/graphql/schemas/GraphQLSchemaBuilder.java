@@ -101,7 +101,7 @@ public class GraphQLSchemaBuilder {
         TRAVERSER.depthFirst(new ReverseLinkNameVisitor(typeMap), typeMap.values());
 
         // Add the reverse links.
-        TRAVERSER.depthFirst(new ReverseLinkBuildingVisitor(typeMap), typeMap.values());
+        TRAVERSER.depthFirst(new ReverseLinkBuildingVisitor(typeMap, schema), typeMap.values());
         if (log.isTraceEnabled()) {
             log.trace("Computing reverse links:\n{}", printSchema(typeMap.values()));
         } else {

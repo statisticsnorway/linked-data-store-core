@@ -2,6 +2,7 @@ package no.ssb.lds.graphql.schemas.visitors;
 
 import graphql.schema.GraphQLDirective;
 import graphql.schema.GraphQLFieldDefinition;
+import graphql.schema.GraphQLInterfaceType;
 import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLNamedOutputType;
 import graphql.schema.GraphQLNamedSchemaElement;
@@ -9,13 +10,13 @@ import graphql.schema.GraphQLNamedType;
 import graphql.schema.GraphQLNonNull;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLOutputType;
+import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLSchemaElement;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeReference;
 import graphql.schema.GraphQLTypeUtil;
 import graphql.schema.GraphQLTypeVisitorStub;
 import graphql.schema.GraphQLUnionType;
-import graphql.schema.GraphQLUnmodifiedType;
 import graphql.util.TraversalControl;
 import graphql.util.TraverserContext;
 import no.ssb.lds.api.json.JsonNavigationPath;
@@ -46,9 +47,11 @@ public class ReverseLinkBuildingVisitor extends GraphQLTypeVisitorStub {
 
     private static final Logger log = LoggerFactory.getLogger(ReverseLinkBuildingVisitor.class);
     private final Map<String, GraphQLNamedType> typeMap;
+    private final GraphQLSchema schema;
 
-    public ReverseLinkBuildingVisitor(Map<String, GraphQLNamedType> typeMap) {
+    public ReverseLinkBuildingVisitor(Map<String, GraphQLNamedType> typeMap, GraphQLSchema schema) {
         this.typeMap = Objects.requireNonNull(typeMap);
+        this.schema = schema;
     }
 
     @Override
@@ -127,7 +130,7 @@ public class ReverseLinkBuildingVisitor extends GraphQLTypeVisitorStub {
 
         GraphQLSchemaElement parentNode = context.getParentNode();
         String sourceName = GraphQLTypeUtil.unwrapAll((GraphQLType) parentNode).getName();
-        String targetName = ((GraphQLUnmodifiedType) GraphQLTypeUtil.unwrapType(node.getType()).peek()).getName();
+        String targetName = ((GraphQLNamedType) GraphQLTypeUtil.unwrapType(node.getType()).peek()).getName();
 
         GraphQLNamedOutputType source = getObjectType(sourceName);
         GraphQLNamedOutputType target = getObjectType(targetName);
@@ -136,6 +139,12 @@ public class ReverseLinkBuildingVisitor extends GraphQLTypeVisitorStub {
             boolean replaced = false;
             for (GraphQLNamedOutputType concreteType : ((GraphQLUnionType) target).getTypes()) {
                 replaced = addReverseField(node, context, reverseName, source, getObjectType(concreteType.getName()));
+            }
+            return replaced;
+        } else if (target instanceof GraphQLInterfaceType) {
+            boolean replaced = false;
+            for (GraphQLObjectType objectType : schema.getImplementations((GraphQLInterfaceType) target)) {
+                replaced = addReverseField(node, context, reverseName, source, objectType);
             }
             return replaced;
         } else {
