@@ -9,32 +9,32 @@
                 {
                   "node": {
                     "__typename": "Cat",
-                    "name": "cat1"
+                    "name": "Cat One"
                   }
                 },
                 {
                   "node": {
                     "__typename": "Cat",
-                    "name": "cat2"
+                    "name": "Cat Two"
                   }
                 },
                 {
                   "node": {
                     "__typename": "Dog",
-                    "name": "dog1"
+                    "name": "Dog One"
                   }
                 },
                 {
                   "node": {
                     "__typename": "Dog",
-                    "name": "dog2"
+                    "name": "Dog Two"
                   }
                 }
               ]
             },
             "favorite": {
               "__typename": "Dog",
-              "name": "dog1"
+              "name": "Dog One"
             }
           }
         },
@@ -45,32 +45,32 @@
                 {
                   "node": {
                     "__typename": "Cat",
-                    "name": "cat1"
+                    "name": "Cat One"
                   }
                 },
                 {
                   "node": {
                     "__typename": "Cat",
-                    "name": "cat2"
+                    "name": "Cat Two"
                   }
                 },
                 {
                   "node": {
                     "__typename": "Dog",
-                    "name": "dog1"
+                    "name": "Dog One"
                   }
                 },
                 {
                   "node": {
                     "__typename": "Dog",
-                    "name": "dog2"
+                    "name": "Dog Two"
                   }
                 }
               ]
             },
             "favorite": {
               "__typename": "Cat",
-              "name": "cat1"
+              "name": "Cat One"
             }
           }
         }
@@ -81,13 +81,13 @@
         {
           "cursor": "cat1",
           "node": {
-            "name": "cat1"
+            "name": "Cat One"
           }
         },
         {
           "cursor": "cat2",
           "node": {
-            "name": "cat2"
+            "name": "Cat Two"
           }
         }
       ]
@@ -97,13 +97,13 @@
         {
           "cursor": "dog1",
           "node": {
-            "name": "dog1"
+            "name": "Dog One"
           }
         },
         {
           "cursor": "dog2",
           "node": {
-            "name": "dog2"
+            "name": "Dog Two"
           }
         }
       ]

@@ -38,7 +38,7 @@ public class ReverseLinkBuildingVisitorTest {
 
         Map<String, GraphQLNamedType> typeMap = new LinkedHashMap<>(schema.getTypeMap());
         new SchemaTraverser().depthFirst(
-                new ReverseLinkBuildingVisitor(typeMap),
+                new ReverseLinkBuildingVisitor(typeMap, schema),
                 typeMap.values()
         );
 
