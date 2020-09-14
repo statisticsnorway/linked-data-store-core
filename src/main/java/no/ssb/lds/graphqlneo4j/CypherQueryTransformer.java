@@ -95,7 +95,7 @@ public class CypherQueryTransformer {
             if (whereContext != null) {
                 result += whereContext.WHERE();
                 result += whereContext.SP();
-                result += "(_v.from <= $_version AND coalesce($_version < _v.to, true))\n  AND (";
+                result += "(_v.from <= $_version AND coalesce($_version < _v.to, true)) AND (";
                 setContextFunc(CypherParser.FilterExpressionContext.class, this::modifyFilterExpression);
                 result += whereContext.expression().accept(this);
                 result += ") ";
