@@ -140,7 +140,7 @@ public class UndertowApplication {
                 LOG.info("Initializing GraphQL Neo4j integration ...");
 
                 GraphQLSchema schema = GraphQLNeo4jTBVSchemas.schemaOf(GraphQLNeo4jTBVLanguage.transformRegistry(definitionRegistry, true));
-                graphQLHttpHandler = new GraphQLNeo4jHttpHandler(schema, persistence);
+                graphQLHttpHandler = new GraphQLNeo4jHttpHandler(schema, GraphQLNeo4jTBVSchemas.domains(definitionRegistry), persistence);
             } else {
 
                 LOG.info("Initializing GraphQL integration ...");

@@ -44,6 +44,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Scanner;
+import java.util.Set;
 
 import static io.undertow.util.Headers.ALLOW;
 import static io.undertow.util.Methods.GET;
@@ -76,6 +77,7 @@ public class GraphQLNeo4jHttpHandler implements HttpHandler {
 
     private final GraphQLSchema graphQlSchema;
     private final Translator translator;
+    private final Set<String> domains;
     private final RxJsonPersistence persistence;
 
     /**
@@ -85,9 +87,10 @@ public class GraphQLNeo4jHttpHandler implements HttpHandler {
      * @param persistence
      * @throws NullPointerException if the graphQl was null.
      */
-    public GraphQLNeo4jHttpHandler(GraphQLSchema graphQlSchema, RxJsonPersistence persistence) {
+    public GraphQLNeo4jHttpHandler(GraphQLSchema graphQlSchema, Set<String> domains, RxJsonPersistence persistence) {
         this.graphQlSchema = Objects.requireNonNull(graphQlSchema);
         this.translator = new Translator(graphQlSchema);
+        this.domains = domains;
         this.persistence = persistence;
     }
 
@@ -219,10 +222,26 @@ public class GraphQLNeo4jHttpHandler implements HttpHandler {
             params.putIfAbsent("_version", snapshot);
             List<Map<String, Object>> resultAsMap;
             try (Session session = driver.session()) {
-                Result result = session.run(cypher.component1(), params, TransactionConfig.builder()
+                // TODO: When https://github.com/neo4j/neo4j/issues/12583 is resolved, run query without splitting
+
+                // split query
+                CypherQueryProjectionSplitter splitter = new CypherQueryProjectionSplitter(domains);
+                splitter.transform(cypher.component1());
+
+                // run selection query
+                String selection = splitter.getSelection();
+                Result selectionResult = session.run(selection, params, TransactionConfig.builder()
                         .withTimeout(Duration.ofSeconds(10)).build());
-                resultAsMap = result.list(Record::asMap);
-                ResultSummary resultSummary = result.consume();
+                List<Long> idsFromSelection = selectionResult.list(r -> r.get("id").asLong());
+                ResultSummary selectionResultSummary = selectionResult.consume();
+
+                // run projection query
+                params.put("ids", idsFromSelection);
+                String projection = splitter.getProjection();
+                Result projectionResult = session.run(projection, params, TransactionConfig.builder()
+                        .withTimeout(Duration.ofSeconds(10)).build());
+                resultAsMap = projectionResult.list(Record::asMap);
+                ResultSummary projectionResultSummary = projectionResult.consume();
             }
             JsonNode jsonNode = JsonTools.toJsonNode(resultAsMap);
             if (jsonNode.isArray()) {

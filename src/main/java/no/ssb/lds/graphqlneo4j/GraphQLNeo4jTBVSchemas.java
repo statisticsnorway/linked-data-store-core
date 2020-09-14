@@ -38,6 +38,20 @@ public class GraphQLNeo4jTBVSchemas {
 
     private static final Logger LOG = LoggerFactory.getLogger(GraphQLNeo4jTBVSchemas.class);
 
+    public static Set<String> domains(TypeDefinitionRegistry typeDefinitionRegistry) {
+        Set<String> domains = new LinkedHashSet<>();
+        for (Map.Entry<String, TypeDefinition> typeByName : typeDefinitionRegistry.types().entrySet()) {
+            TypeDefinition typeDefinition = typeByName.getValue();
+            if (typeDefinition instanceof ObjectTypeDefinition) {
+                List<Directive> directives = typeDefinition.getDirectives();
+                if (directives.removeIf(d -> d.getName().equals("domain"))) {
+                    domains.add(typeDefinition.getName());
+                }
+            }
+        }
+        return domains;
+    }
+
     /**
      * Returns a GraphQL-schema that will produce cypher mutations and queries compatible with time-based-versioning.
      *
