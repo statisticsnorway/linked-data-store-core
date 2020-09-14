@@ -136,6 +136,31 @@ public class CypherQueryTransformer {
         private String modifyRelationshipsPattern(ParserRuleContext parserRuleContext) {
             CypherParser.RelationshipsPatternContext relationshipsPatternContext = (CypherParser.RelationshipsPatternContext) parserRuleContext;
             String relationshipsPatternText = relationshipsPatternContext.getText();
+            Matcher reverse = Pattern.compile("\\((?<targetNode>[^)]+)\\)<-\\[:(?<sourceRelation>[^]]+)\\]-\\((?<sourceNode>[^)]+)\\)").matcher(relationshipsPatternText);
+            if (reverse.matches()) {
+                String sourceNode = reverse.group("sourceNode");
+                String sourceRelation = reverse.group("sourceRelation");
+                String targetNode = reverse.group("targetNode");
+                String[] parts = sourceRelation.split("_");
+                String relationName = parts[1];
+                String sourceType = parts[2];
+                if (!domains.contains(sourceType) && parts.length < 5) {
+                    throw new IllegalStateException("insufficient encoding of relation directive name argument on reverse type target: " + targetNode);
+                }
+                StringBuilder sb = new StringBuilder();
+                sb.append("(").append(targetNode).append(")-[:VERSION_OF]->()");
+                sb.append("<-[:").append(relationName).append("]-");
+                sb.append("(").append(sourceNode).append(":").append(sourceType).append(")");
+                if (parts.length > 3) {
+                    for (int i = 3; i < parts.length; i += 2) {
+                        sb.append("<-[:").append(parts[i]).append("]-(:").append(parts[i + 1]).append(")");
+                    }
+                }
+                String versionRelationIdentifier = "_v" + vNum++;
+                sb.append("-[").append(versionRelationIdentifier).append(":VERSION_OF]->()");
+                sb.append(" WHERE (").append(versionRelationIdentifier).append(".from <= $_version AND coalesce($_version < ").append(versionRelationIdentifier).append(".to, true))");
+                return sb.toString();
+            }
             Matcher m = Pattern.compile("\\((?<sourceNode>[^)]+)\\)-\\[:(?<sourceRelation>[^]]+)\\]->\\((?<targetNode>[^)]+)\\)").matcher(relationshipsPatternText);
             if (!m.matches()) {
                 return relationshipsPatternText;

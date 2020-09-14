@@ -297,6 +297,7 @@ public class GraphQLNeo4jTBVLanguage {
                         ObjectTypeDefinition transformedTargetObjectType = targetObjectType.transform(builder -> {
                             for (Deque<ObjectAndField> concretePath : concretePaths) {
                                 String nameOfPath = resolveReverseLinkFieldName(concretePath);
+                                String codedNameOfRelationship = "reverse";
                                 StringBuilder sb = new StringBuilder("MATCH (this)-[:VERSION_OF]->(:RESOURCE)");
                                 Deque<ObjectAndField> workPath = new LinkedList<>(concretePath);
                                 boolean nNotBound = true;
@@ -308,6 +309,7 @@ public class GraphQLNeo4jTBVLanguage {
                                         nNotBound = false;
                                     }
                                     sb.append(":").append(last.objectName).append(")");
+                                    codedNameOfRelationship += "_" + last.fieldName + "_" + last.objectName;
                                 }
                                 ObjectAndField last = workPath.removeLast();
                                 sb.append("<-[:").append(last.fieldName).append("]-(");
@@ -318,6 +320,7 @@ public class GraphQLNeo4jTBVLanguage {
                                 sb.append("-[v:VERSION_OF]->(:RESOURCE) WHERE v.from <= ver AND coalesce(ver < v.to, true) RETURN n");
                                 String tbvReverseResolutionCypher = sb.toString();
                                 System.out.printf("REVERSE LINK CYPHER to Object %s: %s%n", targetObjectType.getName(), tbvReverseResolutionCypher);
+                                codedNameOfRelationship += "_" + last.fieldName + "_" + last.objectName;
                                 builder.fieldDefinition(FieldDefinition.newFieldDefinition()
                                         .name(nameOfPath)
                                         .type(ListType.newListType(TypeName.newTypeName(nameOfType).build()).build())
@@ -327,7 +330,7 @@ public class GraphQLNeo4jTBVLanguage {
                                                         Argument.newArgument()
                                                                 .name("name")
                                                                 .value(StringValue.newStringValue()
-                                                                        .value(nameOfPath)
+                                                                        .value(codedNameOfRelationship)
                                                                         .build())
                                                                 .build(),
                                                         Argument.newArgument()
