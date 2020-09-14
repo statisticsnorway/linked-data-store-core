@@ -299,12 +299,22 @@ public class GraphQLNeo4jTBVLanguage {
                                 String nameOfPath = resolveReverseLinkFieldName(concretePath);
                                 StringBuilder sb = new StringBuilder("MATCH (this)-[:VERSION_OF]->(:RESOURCE)");
                                 Deque<ObjectAndField> workPath = new LinkedList<>(concretePath);
+                                boolean nNotBound = true;
                                 while (workPath.size() > 1) {
                                     ObjectAndField last = workPath.removeLast();
-                                    sb.append("<-[:").append(last.fieldName).append("]-(:").append(last.objectName).append(")");
+                                    sb.append("<-[:").append(last.fieldName).append("]-(");
+                                    if (nNotBound) {
+                                        sb.append("n");
+                                        nNotBound = false;
+                                    }
+                                    sb.append(":").append(last.objectName).append(")");
                                 }
                                 ObjectAndField last = workPath.removeLast();
-                                sb.append("<-[:").append(last.fieldName).append("]-(n:").append(last.objectName).append(")");
+                                sb.append("<-[:").append(last.fieldName).append("]-(");
+                                if (nNotBound) {
+                                    sb.append("n");
+                                }
+                                sb.append(":").append(last.objectName).append(")");
                                 sb.append("-[v:VERSION_OF]->(:RESOURCE) WHERE v.from <= ver AND coalesce(ver < v.to, true) RETURN n");
                                 String tbvReverseResolutionCypher = sb.toString();
                                 System.out.printf("REVERSE LINK CYPHER to Object %s: %s%n", targetObjectType.getName(), tbvReverseResolutionCypher);
