@@ -21,6 +21,8 @@ import no.ssb.lds.graphql.schemas.visitors.TypeReferencerVisitor;
 import org.neo4j.graphql.Cypher;
 import org.neo4j.graphql.SchemaBuilder;
 import org.neo4j.graphql.SchemaConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -30,13 +32,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static java.util.Optional.ofNullable;
-
 public class GraphQLNeo4jTBVSchemas {
+
+    private static final Logger LOG = LoggerFactory.getLogger(GraphQLNeo4jTBVSchemas.class);
 
     /**
      * Returns a GraphQL-schema that will produce cypher mutations and queries compatible with time-based-versioning.
@@ -47,6 +47,7 @@ public class GraphQLNeo4jTBVSchemas {
     public static GraphQLSchema schemaOf(TypeDefinitionRegistry typeDefinitionRegistry) {
         final Set<String> queryTypes = new CopyOnWriteArraySet<>();
 
+        Set<String> domains = new LinkedHashSet<>();
         TypeDefinitionRegistry withoutDomainDirectives = new TypeDefinitionRegistry().merge(typeDefinitionRegistry);
         for (Map.Entry<String, TypeDefinition> typeByName : typeDefinitionRegistry.types().entrySet()) {
             TypeDefinition typeDefinition = typeByName.getValue();
@@ -56,6 +57,7 @@ public class GraphQLNeo4jTBVSchemas {
                     ObjectTypeDefinition transformedTypeDefinition = ((ObjectTypeDefinition) typeDefinition).transform(builder -> builder.directives(directives));
                     withoutDomainDirectives.remove(typeDefinition);
                     withoutDomainDirectives.add(transformedTypeDefinition);
+                    domains.add(typeDefinition.getName());
                 }
             }
         }
@@ -66,18 +68,10 @@ public class GraphQLNeo4jTBVSchemas {
                     String name = dataFetchingEnvironment.getField().getName();
                     Cypher cypher = dataFetcher.get(dataFetchingEnvironment);
                     if (queryTypes.contains(name)) {
-                        String type = unwrapGraphQLTypeAndGetName(dataFetchingEnvironment.getFieldDefinition().getType());
-                        String regex = String.format("MATCH\\s*\\(%s:%s\\)(\\s*WHERE)?(\\s*)(?:(?!RETURN).)*\\s*RETURN", name, type);
-                        Matcher m = Pattern.compile(regex).matcher(cypher.component1());
-                        if (!m.find()) {
-                            throw new IllegalArgumentException("Generated Cypher does not match regex");
-                        }
-                        boolean where = ofNullable(m.group(1)).map(g -> true).orElse(false);
-                        String query = replaceGroup(regex, cypher.component1(), 2, where
-                                ? " (_v.from <= $_version AND coalesce($_version < _v.to, true)) AND "
-                                : " WHERE (_v.from <= $_version AND coalesce($_version < _v.to, true)) ");
-                        query = replaceGroup(String.format("MATCH\\s*(\\(%s:%s\\))\\s*WHERE", name, type), query, 1, String.format("(_r:%s:RESOURCE)<-[_v:VERSION_OF]-(%s:%s:INSTANCE)", type + "_R", name, type));
-                        return new Cypher(query, cypher.component2(), cypher.component3());
+                        String transformedComponent1 = new CypherQueryTransformer(domains).transform(cypher.component1());
+                        LOG.trace("CYPHER BEFORE:%n{}%n", cypher.component1());
+                        LOG.trace("CYPHER AFTER:%n{}%n", transformedComponent1);
+                        return new Cypher(transformedComponent1, cypher.component2(), cypher.component3());
                     }
                     return cypher;
                 });
@@ -167,16 +161,5 @@ public class GraphQLNeo4jTBVSchemas {
             return ((GraphQLNamedType) type).getName();
         }
         throw new UnsupportedOperationException("Not a named or modified type: " + type.getClass().getName());
-    }
-
-    public static String replaceGroup(String regex, String source, int groupToReplace, String replacement) {
-        return replaceGroup(regex, source, groupToReplace, 1, replacement);
-    }
-
-    public static String replaceGroup(String regex, String source, int groupToReplace, int groupOccurrence, String replacement) {
-        Matcher m = Pattern.compile(regex).matcher(source);
-        for (int i = 0; i < groupOccurrence; i++)
-            if (!m.find()) return source; // pattern not met, may also throw an exception here
-        return new StringBuilder(source).replace(m.start(groupToReplace), m.end(groupToReplace), replacement).toString();
     }
 }

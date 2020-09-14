@@ -35,6 +35,8 @@ module no.ssb.lds.core {
     requires org.reactivestreams;
     requires com.github.akarnokd.rxjava2jdk9interop;
     requires graphql.java.extended.scalars;
+    requires no.ssb.lds.persistence.neo4j;
+    requires org.antlr.antlr4.runtime;
 
     opens no.ssb.lds.graphql.graphiql;
 
