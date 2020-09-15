@@ -3,6 +3,7 @@ package no.ssb.lds.graphqlneo4j;
 import graphql.ExecutionInput;
 import graphql.analysis.QueryTraverser;
 import graphql.analysis.QueryVisitorFieldEnvironment;
+import graphql.analysis.QueryVisitorInlineFragmentEnvironment;
 import graphql.analysis.QueryVisitorStub;
 import graphql.language.Argument;
 import graphql.language.ArrayValue;
@@ -45,6 +46,21 @@ public class GraphQLQueryTransformer {
         StringBuilder sb = new StringBuilder("{\n");
         queryTraversal.visitDepthFirst(new QueryVisitorStub() {
             @Override
+            public void visitInlineFragment(QueryVisitorInlineFragmentEnvironment env) {
+                TraverserContext<Node> context = env.getTraverserContext();
+                int depth = context.getParentNodes().size();
+                String indent = " ".repeat(depth);
+                TraverserContext.Phase phase = context.getPhase();
+                if (phase == LEAVE) {
+                    sb.append(indent).append("}\n");
+                    return;
+                }
+                // phase == ENTER
+                String typeConditionName = env.getInlineFragment().getTypeCondition().getName();
+                sb.append(indent).append("... on ").append(typeConditionName).append(" {\n");
+            }
+
+            @Override
             public void visitField(QueryVisitorFieldEnvironment env) {
                 TraverserContext<Node> context = env.getTraverserContext();
                 int depth = context.getParentNodes().size();
@@ -59,6 +75,7 @@ public class GraphQLQueryTransformer {
                     }
                     return;
                 }
+                // phase == ENTER
                 Field field = env.getField();
                 sb.append(indent).append(field.getName());
                 List<GraphQLArgument> schemaDefinedArguments = env.getFieldDefinition().getArguments();
