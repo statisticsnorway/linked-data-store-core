@@ -83,8 +83,8 @@ public class GraphQLNeo4jTBVSchemas {
                     Cypher cypher = dataFetcher.get(dataFetchingEnvironment);
                     if (queryTypes.contains(name)) {
                         String transformedComponent1 = new CypherQueryTransformer(domains).transform(cypher.component1());
-                        LOG.trace("CYPHER BEFORE:%n{}%n", cypher.component1());
-                        LOG.trace("CYPHER AFTER:%n{}%n", transformedComponent1);
+                        LOG.trace("CYPHER BEFORE: {}", cypher.component1());
+                        LOG.trace("CYPHER AFTER: {}", transformedComponent1);
                         return new Cypher(transformedComponent1, cypher.component2(), cypher.component3());
                     }
                     return cypher;
