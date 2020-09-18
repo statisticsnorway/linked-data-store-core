@@ -19,9 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SagaRepository {
 
     public static final String SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE = "Create or update managed resource";
-    public static final String SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE_NO_TX_LOG = "Create or update managed resource without writing to transaction log";
     public static final String SAGA_DELETE_MANAGED_RESOURCE = "Delete managed resource";
-    public static final String SAGA_DELETE_MANAGED_RESOURCE_NO_TX_LOG = "Delete managed resource without writing to transaction log";
 
     final Map<String, Saga> sagaByName = new ConcurrentHashMap<>();
 
@@ -39,9 +37,7 @@ public class SagaRepository {
         }
 
         register(buildCreateOrUpdateSaga(indexer));
-        register(buildCreateOrUpdateSagaWithoutTransactionLog(indexer));
         register(buildDeleteSaga(indexer));
-        register(buildDeleteSagaWithoutTransactionLog(indexer));
     }
 
     private Saga buildCreateOrUpdateSaga(SearchIndex indexer) {
@@ -57,20 +53,6 @@ public class SagaRepository {
         return createSagaBuilder.end();
     }
 
-    private Saga buildCreateOrUpdateSagaWithoutTransactionLog(SearchIndex indexer) {
-        Saga.SagaBuilder createSagaBuilder;
-        if (indexer != null) {
-            createSagaBuilder = Saga.start(SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE_NO_TX_LOG)
-                    .linkTo("persistence", "search-index-update");
-            createSagaBuilder.id("search-index-update").adapter(UpdateIndexSagaAdapter.NAME).linkToEnd();
-        } else {
-            createSagaBuilder = Saga.start(SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE_NO_TX_LOG)
-                    .linkTo("persistence");
-        }
-        createSagaBuilder.id("persistence").adapter(PersistenceCreateOrOverwriteSagaAdapter.NAME).linkToEnd();
-        return createSagaBuilder.end();
-    }
-
     private Saga buildDeleteSaga(SearchIndex indexer) {
         Saga.SagaBuilder deleteSagaBuilder = Saga.start(SAGA_DELETE_MANAGED_RESOURCE)
                 .linkTo("txlog");
@@ -79,20 +61,6 @@ public class SagaRepository {
             deleteSagaBuilder.id("search-index-delete").adapter(DeleteIndexSagaAdapter.NAME).linkToEnd();
         } else {
             deleteSagaBuilder.id("txlog").adapter(DeleteTxLogAdapter.NAME).linkTo("persistence");
-        }
-        deleteSagaBuilder.id("persistence").adapter(PersistenceDeleteSagaAdapter.NAME).linkToEnd();
-        return deleteSagaBuilder.end();
-    }
-
-    private Saga buildDeleteSagaWithoutTransactionLog(SearchIndex indexer) {
-        Saga.SagaBuilder deleteSagaBuilder;
-        if (indexer != null) {
-            deleteSagaBuilder = Saga.start(SAGA_DELETE_MANAGED_RESOURCE_NO_TX_LOG)
-                    .linkTo("persistence", "search-index-delete");
-            deleteSagaBuilder.id("search-index-delete").adapter(DeleteIndexSagaAdapter.NAME).linkToEnd();
-        } else {
-            deleteSagaBuilder = Saga.start(SAGA_DELETE_MANAGED_RESOURCE_NO_TX_LOG)
-                    .linkTo("persistence");
         }
         deleteSagaBuilder.id("persistence").adapter(PersistenceDeleteSagaAdapter.NAME).linkToEnd();
         return deleteSagaBuilder.end();
