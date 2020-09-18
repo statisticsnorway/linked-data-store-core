@@ -214,12 +214,12 @@ enum AgentType {
 }
 
 
-type Cat @domain{
+type Cat implements animals @domain{
     name: String!
     age: Int
 }
 
-type Dog @domain{
+type Dog implements animals @domain{
     name: String!
     age: Int
 }
@@ -232,7 +232,7 @@ type Owner @domain{
     animals: [animals] @link
 }
 
-union animals = Cat | Dog
+interface animals {}
 
 type contact @domain{
     name: String!
@@ -241,14 +241,15 @@ type contact @domain{
 
 type address{
     street: String!
-    city: String!
+    city: String
+    country: String
 }
 type provisionagreement @domain{
     contacts: [contact] @link
     name: String
     address: address
     friend: contact @link
-    support: [support]
+    support: support
 
 }
 

@@ -7,6 +7,7 @@ import graphql.relay.Edge;
 import graphql.relay.PageInfo;
 import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.GraphQLInterfaceType;
+import graphql.schema.GraphQLNamedOutputType;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLOutputType;
 import graphql.schema.GraphQLSchema;
@@ -63,21 +64,21 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
         return key.id();
     }
 
-    private List<GraphQLOutputType> getConcreteTypes(GraphQLSchema graphQLSchema, String typeName) {
+    private List<GraphQLNamedOutputType> getConcreteTypes(GraphQLSchema graphQLSchema, String typeName) {
         GraphQLType actualType = graphQLSchema.getType(typeName);
         if (actualType instanceof GraphQLUnionType) {
             return ((GraphQLUnionType) actualType).getTypes();
         } else if (actualType instanceof GraphQLInterfaceType) {
-            List<GraphQLOutputType> types = new ArrayList<>();
+            List<GraphQLNamedOutputType> types = new ArrayList<>();
             for (GraphQLType concreteType : graphQLSchema.getAllTypesAsList()) {
                 if (concreteType instanceof GraphQLOutputType &&
-                        graphQLSchema.isPossibleType(actualType, (GraphQLObjectType) concreteType)) {
+                        graphQLSchema.isPossibleType((GraphQLInterfaceType) actualType, (GraphQLObjectType) concreteType)) {
                     types.add((GraphQLObjectType) concreteType);
                 }
             }
             return types;
-        } else  if (actualType instanceof GraphQLOutputType){
-            return List.of((GraphQLOutputType) actualType);
+        } else if (actualType instanceof GraphQLNamedOutputType) {
+            return List.of((GraphQLNamedOutputType) actualType);
         } else {
             throw new ClassCastException(
                     String.format("the type type %sd (%s) should be a GraphQLOutputType", typeName, actualType)
@@ -92,9 +93,9 @@ public class PersistenceLinksConnectionFetcher extends ConnectionFetcher<Map<Str
             String sourceId = getIdFromSource(environment);
 
             // In cases of union type, we need to make several calls.
-            List<GraphQLOutputType> concreteTypes = getConcreteTypes(environment.getGraphQLSchema(), targetEntityName);
+            List<GraphQLNamedOutputType> concreteTypes = getConcreteTypes(environment.getGraphQLSchema(), targetEntityName);
             Flowable<JsonDocument> documents = Flowable.empty();
-            for (GraphQLOutputType concreteType : concreteTypes) {
+            for (GraphQLNamedOutputType concreteType : concreteTypes) {
                 Flowable<JsonDocument> concreteDocuments = persistence.readTargetDocuments(tx, parameters.getSnapshot(),
                         nameSpace, sourceEntityName, sourceId, relationPath, concreteType.getName(), parameters.getRange());
                 documents = Flowable.merge(documents, concreteDocuments);

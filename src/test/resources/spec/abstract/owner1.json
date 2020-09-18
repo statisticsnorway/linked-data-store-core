@@ -1,6 +1,6 @@
 {
-  "name": "dog2",
-  "email" : "foo@bar.com",
+  "name": "First Owner",
+  "email" : "owner1@bar.com",
   "favorite" : "/Dog/dog1",
   "animals" : ["/Dog/dog1", "/Dog/dog2", "/Cat/cat1", "/Cat/cat2"]
 }

@@ -1,5 +1,6 @@
 package no.ssb.lds.core.specification;
 
+import graphql.schema.idl.TypeDefinitionRegistry;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.api.specification.SpecificationElement;
 import no.ssb.lds.core.schema.JsonSchema;
@@ -24,6 +25,10 @@ public class JsonSchemaBasedSpecification implements Specification, SchemaReposi
     private static final Logger LOG = LoggerFactory.getLogger(JsonSchemaBasedSpecification.class);
 
     public static JsonSchemaBasedSpecification create(String... specificationSchema) {
+        return create(null, specificationSchema);
+    }
+
+    public static JsonSchemaBasedSpecification create(TypeDefinitionRegistry typeDefinitionRegistry, String... specificationSchema) {
         JsonSchema jsonSchema = null;
         StringBuilder sb = new StringBuilder();
         for (String schemaPathStr : specificationSchema) {
@@ -47,7 +52,7 @@ public class JsonSchemaBasedSpecification implements Specification, SchemaReposi
             }
         }
         LOG.info("{}", (sb.length() == 0 ? "No schemas configured!" : "Managed domains: " + sb.toString().substring(1)));
-        return SpecificationJsonSchemaBuilder.createBuilder(jsonSchema).build();
+        return SpecificationJsonSchemaBuilder.createBuilder(typeDefinitionRegistry, jsonSchema).build();
     }
 
     private static JsonSchema schemaFromFile(JsonSchema jsonSchema, StringBuilder sb, Path path) {
@@ -67,14 +72,23 @@ public class JsonSchemaBasedSpecification implements Specification, SchemaReposi
 
     private final SpecificationElement root;
 
+    private final TypeDefinitionRegistry typeDefinitionRegistry;
+
     public JsonSchemaBasedSpecification() {
         this.jsonSchema = null;
         this.root = null;
+        this.typeDefinitionRegistry = null;
     }
 
-    public JsonSchemaBasedSpecification(JsonSchema jsonSchema, SpecificationElement root) {
+    public JsonSchemaBasedSpecification(JsonSchema jsonSchema, SpecificationElement root, TypeDefinitionRegistry typeDefinitionRegistry) {
         this.jsonSchema = jsonSchema;
         this.root = root;
+        this.typeDefinitionRegistry = typeDefinitionRegistry;
+    }
+
+    @Override
+    public TypeDefinitionRegistry typeDefinitionRegistry() {
+        return typeDefinitionRegistry;
     }
 
     @Override

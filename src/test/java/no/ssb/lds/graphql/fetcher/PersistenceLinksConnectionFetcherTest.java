@@ -6,6 +6,7 @@ import graphql.cachecontrol.CacheControl;
 import graphql.execution.ExecutionId;
 import graphql.execution.ExecutionStepInfo;
 import graphql.execution.MergedField;
+import graphql.execution.directives.QueryDirectives;
 import graphql.language.Document;
 import graphql.language.Field;
 import graphql.language.FragmentDefinition;
@@ -28,6 +29,7 @@ import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.core.persistence.memory.MemoryInitializer;
 import no.ssb.lds.graphql.GraphQLContext;
 import org.dataloader.DataLoader;
+import org.dataloader.DataLoaderRegistry;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Ignore;
 import org.testng.annotations.Test;
@@ -36,10 +38,12 @@ import java.time.ZonedDateTime;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import static java.util.Optional.ofNullable;
 import static no.ssb.lds.api.persistence.json.JsonTools.mapper;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -190,6 +194,11 @@ public class PersistenceLinksConnectionFetcherTest {
         }
 
         @Override
+        public <T> T getArgumentOrDefault(String name, T defaultValue) {
+            return (T) ofNullable(arguments.get(name)).orElse(defaultValue);
+        }
+
+        @Override
         public <T> T getContext() {
             return (T) new GraphQLContext() {
 
@@ -293,6 +302,21 @@ public class PersistenceLinksConnectionFetcherTest {
         @Override
         public Map<String, Object> getVariables() {
             return null;
+        }
+
+        @Override
+        public QueryDirectives getQueryDirectives() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public DataLoaderRegistry getDataLoaderRegistry() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Locale getLocale() {
+            throw new UnsupportedOperationException();
         }
     }
 }

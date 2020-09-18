@@ -28,11 +28,15 @@ module no.ssb.lds.core {
     requires jackson.dataformat.msgpack;
     requires org.apache.tika.core;
 
+    requires org.neo4j.driver;
     requires graphql.java;
+    requires neo4j.graphql.java;
     requires io.reactivex.rxjava2;
     requires org.reactivestreams;
     requires com.github.akarnokd.rxjava2jdk9interop;
     requires graphql.java.extended.scalars;
+    requires no.ssb.lds.persistence.neo4j;
+    requires org.antlr.antlr4.runtime;
 
     opens no.ssb.lds.graphql.graphiql;
 

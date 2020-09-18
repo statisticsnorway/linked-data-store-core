@@ -1,5 +1,6 @@
 package no.ssb.lds.core.specification;
 
+import graphql.schema.idl.TypeDefinitionRegistry;
 import no.ssb.lds.api.specification.SpecificationElement;
 import no.ssb.lds.api.specification.SpecificationElementType;
 import no.ssb.lds.core.schema.JsonSchema;
@@ -9,8 +10,8 @@ import java.util.LinkedHashSet;
 
 public class SpecificationJsonSchemaBuilder {
 
-    public static SpecificationJsonSchemaBuilder createBuilder(JsonSchema jsonSchema) {
-        return new SpecificationJsonSchemaBuilder(jsonSchema, null, null, null);
+    public static SpecificationJsonSchemaBuilder createBuilder(TypeDefinitionRegistry typeDefinitionRegistry, JsonSchema jsonSchema) {
+        return new SpecificationJsonSchemaBuilder(typeDefinitionRegistry, jsonSchema, null, null, null);
     }
 
     private static LinkedHashSet<String> objectOnlyJsonTypes = new LinkedHashSet<>();
@@ -19,16 +20,19 @@ public class SpecificationJsonSchemaBuilder {
         objectOnlyJsonTypes.add("object");
     }
 
+    final TypeDefinitionRegistry typeDefinitionRegistry;
     final JsonSchema jsonSchema;
     final SpecificationElementType parentSpecificationElementType;
     final JsonSchemaDefinitionElement element;
     final SpecificationElement specificationElement;
 
     SpecificationJsonSchemaBuilder(
+            TypeDefinitionRegistry typeDefinitionRegistry,
             JsonSchema jsonSchema,
             SpecificationElementType parentSpecificationElementType,
             JsonSchemaDefinitionElement element,
             SpecificationElement specificationElement) {
+        this.typeDefinitionRegistry = typeDefinitionRegistry;
         this.jsonSchema = jsonSchema;
         this.parentSpecificationElementType = parentSpecificationElementType;
         this.element = element;
@@ -43,7 +47,7 @@ public class SpecificationJsonSchemaBuilder {
                 .jsonTypes(objectOnlyJsonTypes)
                 .jsonSchema(jsonSchema)
                 .build();
-        return new JsonSchemaBasedSpecification(jsonSchema, root);
+        return new JsonSchemaBasedSpecification(jsonSchema, root, typeDefinitionRegistry);
     }
 
 }

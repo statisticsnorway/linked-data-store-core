@@ -25,12 +25,11 @@ public class DomainDirective extends GraphQLDirective {
             NAME,
             DESCRIPTION,
             EnumSet.of(DirectiveLocation.OBJECT),
-            List.of(SEARCHABLE_ARGUMENT),
-            true, true, true
+            List.of(SEARCHABLE_ARGUMENT)
     );
 
-    private DomainDirective(String name, String description, EnumSet<DirectiveLocation> locations, List<GraphQLArgument> arguments, boolean onOperation, boolean onFragment, boolean onField) {
-        super(name, description, locations, arguments, onOperation, onFragment, onField);
+    private DomainDirective(String name, String description, EnumSet<DirectiveLocation> locations, List<GraphQLArgument> arguments) {
+        super(name, description, locations, arguments);
     }
 
     public static DomainDirective newDomainDirective(Boolean searchable) {
@@ -38,8 +37,7 @@ public class DomainDirective extends GraphQLDirective {
                 NAME,
                 DESCRIPTION,
                 EnumSet.of(DirectiveLocation.OBJECT),
-                List.of(SEARCHABLE_ARGUMENT.transform(builder -> builder.value(searchable))),
-                true, true, true
+                List.of(SEARCHABLE_ARGUMENT.transform(builder -> builder.value(searchable)))
         );
     }
 

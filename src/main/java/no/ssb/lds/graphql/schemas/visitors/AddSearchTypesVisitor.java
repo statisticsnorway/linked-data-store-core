@@ -4,8 +4,9 @@ import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLDirective;
 import graphql.schema.GraphQLEnumType;
 import graphql.schema.GraphQLFieldDefinition;
+import graphql.schema.GraphQLNamedType;
 import graphql.schema.GraphQLObjectType;
-import graphql.schema.GraphQLType;
+import graphql.schema.GraphQLSchemaElement;
 import graphql.schema.GraphQLTypeUtil;
 import graphql.schema.GraphQLTypeVisitorStub;
 import graphql.schema.GraphQLUnionType;
@@ -29,11 +30,11 @@ public class AddSearchTypesVisitor extends GraphQLTypeVisitorStub {
     private static final Logger log = LoggerFactory.getLogger(AddConnectionVisitor.class);
 
     private final GraphQLObjectType.Builder query;
-    private final Map<String, GraphQLType> typeMap;
+    private final Map<String, GraphQLNamedType> typeMap;
     private final GraphQLEnumType.Builder typeFilterEnum;
     private final GraphQLUnionType.Builder searchResultType;
 
-    public AddSearchTypesVisitor(Map<String, GraphQLType> typeMap, GraphQLObjectType.Builder query) {
+    public AddSearchTypesVisitor(Map<String, GraphQLNamedType> typeMap, GraphQLObjectType.Builder query) {
         this.typeMap = typeMap;
         this.query = query;
         // Create a union type for the search results and a Type filter for the query.
@@ -46,11 +47,11 @@ public class AddSearchTypesVisitor extends GraphQLTypeVisitorStub {
                 .description("Union type for possible search results");
     }
 
-    public AddSearchTypesVisitor(Map<String, GraphQLType> typeMap) {
+    public AddSearchTypesVisitor(Map<String, GraphQLNamedType> typeMap) {
         this(typeMap, GraphQLObjectType.newObject().name("Query"));
     }
 
-    public AddSearchTypesVisitor(Map<String, GraphQLType> typeMap, GraphQLObjectType query) {
+    public AddSearchTypesVisitor(Map<String, GraphQLNamedType> typeMap, GraphQLObjectType query) {
         this(typeMap, GraphQLObjectType.newObject(query));
     }
 
@@ -66,7 +67,7 @@ public class AddSearchTypesVisitor extends GraphQLTypeVisitorStub {
     }
 
     @Override
-    public TraversalControl visitGraphQLObjectType(GraphQLObjectType node, TraverserContext<GraphQLType> context) {
+    public TraversalControl visitGraphQLObjectType(GraphQLObjectType node, TraverserContext<GraphQLSchemaElement> context) {
         if (hasDomainDirective(node)) {
             typeFilterEnum.value(node.getName());
             searchResultType.possibleType(node);
@@ -74,7 +75,7 @@ public class AddSearchTypesVisitor extends GraphQLTypeVisitorStub {
         return TraversalControl.CONTINUE;
     }
 
-    public GraphQLType getQuery() {
+    public GraphQLNamedType getQuery() {
 
         if (typeMap.containsKey("TypeFilters")) {
             throw new IllegalArgumentException("type map already contains TypeFilters");

@@ -34,8 +34,7 @@ public class ReverseLinkDirective extends GraphQLDirective {
             NAME,
             DESCRIPTION,
             EnumSet.of(DirectiveLocation.FIELD_DEFINITION),
-            List.of(PAGINATION_ARGUMENT, MAPPED_BY_ARGUMENT),
-            false, false, false
+            List.of(PAGINATION_ARGUMENT, MAPPED_BY_ARGUMENT)
     );
 
     public static final GraphQLDirective REVERSE_LINK_DIRECTIVE = GraphQLDirective.newDirective()
@@ -45,8 +44,8 @@ public class ReverseLinkDirective extends GraphQLDirective {
             .validLocation(DirectiveLocation.FIELD_DEFINITION)
             .build();
 
-    private ReverseLinkDirective(String name, String description, EnumSet<DirectiveLocation> locations, List<GraphQLArgument> arguments, boolean onOperation, boolean onFragment, boolean onField) {
-        super(name, description, locations, arguments, onOperation, onFragment, onField);
+    private ReverseLinkDirective(String name, String description, EnumSet<DirectiveLocation> locations, List<GraphQLArgument> arguments) {
+        super(name, description, locations, arguments);
     }
 
     public static ReverseLinkDirective newReverseLinkDirective(Boolean pagination, String mappedBy) {
@@ -58,8 +57,7 @@ public class ReverseLinkDirective extends GraphQLDirective {
                 EnumSet.of(DirectiveLocation.FIELD_DEFINITION),
                 List.of(
                         MAPPED_BY_ARGUMENT.transform(builder -> builder.value(mappedBy)),
-                        PAGINATION_ARGUMENT.transform(builder -> builder.value(pagination))),
-                false, false, false
+                        PAGINATION_ARGUMENT.transform(builder -> builder.value(pagination)))
         );
     }
 
@@ -68,8 +66,7 @@ public class ReverseLinkDirective extends GraphQLDirective {
                 NAME,
                 DESCRIPTION,
                 EnumSet.of(DirectiveLocation.FIELD_DEFINITION),
-                List.of(MAPPED_BY_ARGUMENT.transform(builder -> builder.value(mappedBy))),
-                false, false, false
+                List.of(MAPPED_BY_ARGUMENT.transform(builder -> builder.value(mappedBy)))
         );
     }
 

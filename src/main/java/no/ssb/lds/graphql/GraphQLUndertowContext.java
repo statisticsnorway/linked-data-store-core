@@ -26,7 +26,7 @@ public class GraphQLUndertowContext implements GraphQLContext {
     private final ZonedDateTime snapshot;
     private final ExecutionInput executionInput;
 
-    GraphQLUndertowContext(HttpServerExchange exchange, ExecutionInput executionInput) {
+    public GraphQLUndertowContext(HttpServerExchange exchange, ExecutionInput executionInput) {
         this.exchange = Objects.requireNonNull(exchange);
         this.executionInput = executionInput;
         // Init snapshot.

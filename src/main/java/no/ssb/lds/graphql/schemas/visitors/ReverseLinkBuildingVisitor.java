@@ -2,10 +2,16 @@ package no.ssb.lds.graphql.schemas.visitors;
 
 import graphql.schema.GraphQLDirective;
 import graphql.schema.GraphQLFieldDefinition;
+import graphql.schema.GraphQLInterfaceType;
 import graphql.schema.GraphQLList;
+import graphql.schema.GraphQLNamedOutputType;
+import graphql.schema.GraphQLNamedSchemaElement;
+import graphql.schema.GraphQLNamedType;
 import graphql.schema.GraphQLNonNull;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLOutputType;
+import graphql.schema.GraphQLSchema;
+import graphql.schema.GraphQLSchemaElement;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeReference;
 import graphql.schema.GraphQLTypeUtil;
@@ -40,14 +46,16 @@ import static no.ssb.lds.graphql.directives.LinkDirective.newLinkDirective;
 public class ReverseLinkBuildingVisitor extends GraphQLTypeVisitorStub {
 
     private static final Logger log = LoggerFactory.getLogger(ReverseLinkBuildingVisitor.class);
-    private final Map<String, GraphQLType> typeMap;
+    private final Map<String, GraphQLNamedType> typeMap;
+    private final GraphQLSchema schema;
 
-    public ReverseLinkBuildingVisitor(Map<String, GraphQLType> typeMap) {
+    public ReverseLinkBuildingVisitor(Map<String, GraphQLNamedType> typeMap, GraphQLSchema schema) {
         this.typeMap = Objects.requireNonNull(typeMap);
+        this.schema = schema;
     }
 
     @Override
-    public TraversalControl visitGraphQLFieldDefinition(GraphQLFieldDefinition node, TraverserContext<GraphQLType> context) {
+    public TraversalControl visitGraphQLFieldDefinition(GraphQLFieldDefinition node, TraverserContext<GraphQLSchemaElement> context) {
         Optional<LinkDirective> linkDirective = getLinkDirective(node);
         if (linkDirective.isPresent()) {
             log.debug("Found @link annotation on {}", node.getName());
@@ -56,43 +64,43 @@ public class ReverseLinkBuildingVisitor extends GraphQLTypeVisitorStub {
                 addReverseField(node, context, reverseName.get());
             }
         } else if (log.isDebugEnabled()) {
-            log.trace("Ignoring field {} of {}", node.getName(), context.getParentContext().thisNode().getName());
+            log.trace("Ignoring field {} of {}", node.getName(), ((GraphQLNamedSchemaElement) context.getParentContext().thisNode()).getName());
         }
 
         return super.visitGraphQLFieldDefinition(node, context);
     }
 
-    private GraphQLOutputType getObjectType(String name) {
+    private GraphQLNamedOutputType getObjectType(String name) {
         GraphQLType graphQLType = typeMap.get(name);
         if (graphQLType == null) {
             throw new IllegalArgumentException(String.format("Could not find the type %s", name));
         }
         try {
-            return (GraphQLOutputType) graphQLType;
+            return (GraphQLNamedOutputType) graphQLType;
         } catch (ClassCastException cce) {
-            log.error("The type {} was not a GraphQLObjectType", name, cce);
+            log.error("The type {} was not a GraphQLNamedOutputType", name, cce);
             throw cce;
         }
     }
 
-    public static Collection<String> computePath(GraphQLFieldDefinition node, TraverserContext<GraphQLType> context) {
-        List<GraphQLType> types = new ArrayList<>();
+    public static Collection<String> computePath(GraphQLFieldDefinition node, TraverserContext<GraphQLSchemaElement> context) {
+        List<GraphQLSchemaElement> types = new ArrayList<>();
         types.add(node.getType());
         types.add(node);
         types.addAll(context.getParentNodes());
         Deque<String> parts = new ArrayDeque<>();
-        for (GraphQLType type : types) {
+        for (GraphQLSchemaElement type : types) {
             if (type instanceof GraphQLNonNull) {
                 type = ((GraphQLNonNull) type).getWrappedType();
             }
             // TODO: We need to use annotations to mark relation types.
             if (type instanceof GraphQLList
-                    || type.getName().endsWith("Connection")) {
+                    || (type instanceof GraphQLNamedSchemaElement && ((GraphQLNamedSchemaElement) type).getName().endsWith("Connection"))) {
                 parts.addFirst("[]");
                 continue;
             }
             if (type instanceof GraphQLFieldDefinition) {
-                parts.addFirst(type.getName());
+                parts.addFirst(((GraphQLFieldDefinition) type).getName());
             }
             if (type instanceof GraphQLObjectType) {
                 if (!parts.isEmpty() && hasDomainDirective((GraphQLObjectType) type)) {
@@ -118,18 +126,25 @@ public class ReverseLinkBuildingVisitor extends GraphQLTypeVisitorStub {
         return Optional.empty();
     }
 
-    private boolean addReverseField(GraphQLFieldDefinition node, TraverserContext<GraphQLType> context, String reverseName) {
+    private boolean addReverseField(GraphQLFieldDefinition node, TraverserContext<GraphQLSchemaElement> context, String reverseName) {
 
-        String sourceName = GraphQLTypeUtil.unwrapAll(context.getParentNode()).getName();
-        String targetName = GraphQLTypeUtil.unwrapType(node.getType()).peek().getName();
+        GraphQLSchemaElement parentNode = context.getParentNode();
+        String sourceName = GraphQLTypeUtil.unwrapAll((GraphQLType) parentNode).getName();
+        String targetName = ((GraphQLNamedType) GraphQLTypeUtil.unwrapType(node.getType()).peek()).getName();
 
-        GraphQLOutputType source = getObjectType(sourceName);
-        GraphQLOutputType target = getObjectType(targetName);
+        GraphQLNamedOutputType source = getObjectType(sourceName);
+        GraphQLNamedOutputType target = getObjectType(targetName);
 
         if (target instanceof GraphQLUnionType) {
             boolean replaced = false;
-            for (GraphQLOutputType concreteType : ((GraphQLUnionType) target).getTypes()) {
+            for (GraphQLNamedOutputType concreteType : ((GraphQLUnionType) target).getTypes()) {
                 replaced = addReverseField(node, context, reverseName, source, getObjectType(concreteType.getName()));
+            }
+            return replaced;
+        } else if (target instanceof GraphQLInterfaceType) {
+            boolean replaced = false;
+            for (GraphQLObjectType objectType : schema.getImplementations((GraphQLInterfaceType) target)) {
+                replaced = addReverseField(node, context, reverseName, source, objectType);
             }
             return replaced;
         } else {
@@ -137,7 +152,7 @@ public class ReverseLinkBuildingVisitor extends GraphQLTypeVisitorStub {
         }
     }
 
-    private boolean addReverseField(GraphQLFieldDefinition node, TraverserContext<GraphQLType> context, String reverseName, GraphQLOutputType source, GraphQLOutputType target) {
+    private boolean addReverseField(GraphQLFieldDefinition node, TraverserContext<GraphQLSchemaElement> context, String reverseName, GraphQLNamedOutputType source, GraphQLNamedOutputType target) {
         // Copy the definition
         GraphQLObjectType.Builder nodeCopy = GraphQLObjectType.newObject((GraphQLObjectType) target);
 

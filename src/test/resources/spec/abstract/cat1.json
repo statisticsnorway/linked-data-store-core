@@ -1,3 +1,5 @@
 {
-  "name": "cat1"
+  "name": "Cat One",
+  "alive": true,
+  "age": 1
 }
