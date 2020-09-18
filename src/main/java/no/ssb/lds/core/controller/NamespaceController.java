@@ -5,6 +5,8 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
+import no.ssb.lds.core.restore.RestoreContextBySource;
+import no.ssb.lds.core.restore.RestoreHandler;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
 import no.ssb.lds.core.saga.SagaRepository;
 import no.ssb.lds.core.schema.SchemaRepository;
@@ -24,6 +26,7 @@ public class NamespaceController implements HttpHandler {
     private final SagaExecutionCoordinator sec;
     private final SagaRepository sagaRepository;
     private final TxlogRawdataPool txLogPool;
+    private final RestoreContextBySource restoreContextBySource;
 
     public NamespaceController(String namespaceDefault, Specification specification, SchemaRepository schemaRepository,
                                RxJsonPersistence persistence, SagaExecutionCoordinator sec,
@@ -38,6 +41,7 @@ public class NamespaceController implements HttpHandler {
         }
         this.defaultNamespace = namespaceDefault;
         this.sec = sec;
+        this.restoreContextBySource = new RestoreContextBySource();
     }
 
     @Override
@@ -71,6 +75,11 @@ public class NamespaceController implements HttpHandler {
 
         if (requestPath.startsWith("/source/")) {
             new SourceHandler(txLogPool).handleRequest(exchange);
+            return;
+        }
+
+        if (requestPath.startsWith("/restore/")) {
+            new RestoreHandler(restoreContextBySource, txLogPool, sec).handleRequest(exchange);
             return;
         }
 
