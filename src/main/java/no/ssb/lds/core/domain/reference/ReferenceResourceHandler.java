@@ -109,7 +109,13 @@ public class ReferenceResourceHandler implements HttpHandler {
 
                         boolean sync = exchange.getQueryParameters().getOrDefault("sync", new LinkedList<>()).stream().anyMatch(s -> "true".equalsIgnoreCase(s));
 
-                        Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
+                        boolean noTxLogging = ofNullable(exchange.getQueryParameters().get("notxlog"))
+                                .map(Deque::peekFirst)
+                                .map(Boolean::valueOf)
+                                .orElse(Boolean.FALSE);
+                        Saga saga = sagaRepository.get(noTxLogging ?
+                                SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE_NO_TX_LOG :
+                                SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
                         String source = ofNullable(exchange.getQueryParameters().get("source")).map(Deque::peekFirst).orElse(null);
                         String sourceId = ofNullable(exchange.getQueryParameters().get("sourceId")).map(Deque::peekFirst).orElse(null);
@@ -167,7 +173,13 @@ public class ReferenceResourceHandler implements HttpHandler {
 
         boolean sync = exchange.getQueryParameters().getOrDefault("sync", new LinkedList()).stream().anyMatch(s -> "true".equalsIgnoreCase((String) s));
 
-        Saga saga = sagaRepository.get(SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
+        boolean noTxLogging = ofNullable(exchange.getQueryParameters().get("notxlog"))
+                .map(Deque::peekFirst)
+                .map(Boolean::valueOf)
+                .orElse(Boolean.FALSE);
+        Saga saga = sagaRepository.get(noTxLogging ?
+                SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE_NO_TX_LOG :
+                SagaRepository.SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE);
 
         String source = ofNullable(exchange.getQueryParameters().get("source")).map(Deque::peekFirst).orElse(null);
         String sourceId = ofNullable(exchange.getQueryParameters().get("sourceId")).map(Deque::peekFirst).orElse(null);

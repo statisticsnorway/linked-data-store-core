@@ -90,6 +90,10 @@ public class SagaExecutionCoordinator {
         threadPoolWatchDog = new ThreadPoolWatchDog();
     }
 
+    public SagaRepository getSagaRepository() {
+        return sagaRepository;
+    }
+
     public void startThreadpoolWatchdog() {
         threadPoolWatchDog.start();
     }
