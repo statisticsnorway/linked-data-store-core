@@ -32,7 +32,7 @@ public class SourceHandler implements HttpHandler {
 
         exchange.setStatusCode(400);
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
-        exchange.getResponseSender().send("Unsupported managed resource method: " + exchange.getRequestMethod());
+        exchange.getResponseSender().send("Unsupported source method: " + exchange.getRequestMethod());
     }
 
     private class GetHandler implements HttpHandler {
