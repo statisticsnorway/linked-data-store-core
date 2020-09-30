@@ -148,17 +148,24 @@ public class JsonSchemaGenerator extends GraphQLTypeVisitorStub {
         JSONObject propertyElements = new JSONObject();
         definitionProperties.put(node.getName(), propertyElements);
 
+        // put non-blank description in json-schema
+        if (node.getDescription() != null && !node.getDescription().isBlank()) {
+            propertyElements.put("description", node.getDescription());
+        }
+
         // add non-null type to the required list
         GraphQLType type = node.getType();
         if (GraphQLTypeUtil.isNonNull(type)) {
             JSONArray defRequiredProperties = (JSONArray) objectContext.object.get("required");
             defRequiredProperties.put(node.getName());
             type = GraphQLTypeUtil.unwrapNonNull(type);
-        }
-
-        // put non-blank description in json-schema
-        if (node.getDescription() != null && !node.getDescription().isBlank()) {
-            propertyElements.put("description", node.getDescription());
+        } else {
+            JSONArray anyOf = new JSONArray();
+            JSONObject nonNullType = new JSONObject();
+            anyOf.put(nonNullType);
+            anyOf.put(new JSONObject().put("type", "null"));
+            propertyElements.put("anyOf", anyOf);
+            propertyElements = nonNullType;
         }
 
         // wrap json-schema type in items
@@ -168,11 +175,18 @@ public class JsonSchemaGenerator extends GraphQLTypeVisitorStub {
             propertyElements.put("items", listType);
             propertyElements = listType;
             type = GraphQLTypeUtil.unwrapOne(type);
-        }
 
-        // ignore double wrapped non-null
-        if (GraphQLTypeUtil.isNonNull(type)) {
-            type = GraphQLTypeUtil.unwrapNonNull(type);
+            // non-null items type
+            if (GraphQLTypeUtil.isNonNull(type)) {
+                type = GraphQLTypeUtil.unwrapNonNull(type);
+            } else {
+                JSONArray anyOf = new JSONArray();
+                JSONObject nonNullType = new JSONObject();
+                anyOf.put(nonNullType);
+                anyOf.put(new JSONObject().put("type", "null"));
+                propertyElements.put("anyOf", anyOf);
+                propertyElements = nonNullType;
+            }
         }
 
         // add link node

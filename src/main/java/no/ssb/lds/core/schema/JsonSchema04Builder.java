@@ -47,23 +47,21 @@ public class JsonSchema04Builder {
     }
 
     private JsonSchemaDefinitionElement buildElement(JSONObject definitions, JSONObject jsonElement) {
-        if (jsonElement.has("$ref")) {
-            String refValue = jsonElement.getString("$ref");
-            Matcher m = Pattern.compile("#/definitions/(.*)").matcher(refValue);
-            if (!m.matches()) {
-                throw new IllegalStateException("$ref present but unable to resolve: " + refValue);
-            }
-            String definitionRef = m.group(1);
-            if (!jsonSchema.getDefinitions().containsKey(definitionRef)) {
-                JSONObject definition = definitions.getJSONObject(definitionRef);
-                if (definition == null) {
-                    throw new IllegalStateException("Referenced definition does not exist: " + refValue);
+        {
+            // look for $ref
+            JSONArray anyOfArray = jsonElement.optJSONArray("anyOf");
+            if (anyOfArray != null) {
+                for (int i = 0; i < anyOfArray.length(); i++) {
+                    String refValue = anyOfArray.getJSONObject(i).optString("$ref", null);
+                    if (refValue != null) {
+                        return buildRefValue(definitions, refValue);
+                    }
                 }
-                JsonSchemaDefinitionElement jsde = buildElement(definitions, definition);
-                jsonSchema.addDefinition(definitionRef, jsde);
             }
-            JsonSchemaDefinitionElement refElement = jsonSchema.getDefinitions().get(definitionRef);
-            return refElement;
+            if (jsonElement.has("$ref")) {
+                String refValue = jsonElement.getString("$ref");
+                return buildRefValue(definitions, refValue);
+            }
         }
         String[] types = new String[]{"object"};
         String type = jsonElement.optString("type", null);
@@ -119,5 +117,23 @@ public class JsonSchema04Builder {
                 items,
                 required
         );
+    }
+
+    private JsonSchemaDefinitionElement buildRefValue(JSONObject definitions, String refValue) {
+        Matcher m = Pattern.compile("#/definitions/(.*)").matcher(refValue);
+        if (!m.matches()) {
+            throw new IllegalStateException("$ref present but unable to resolve: " + refValue);
+        }
+        String definitionRef = m.group(1);
+        if (!jsonSchema.getDefinitions().containsKey(definitionRef)) {
+            JSONObject definition = definitions.getJSONObject(definitionRef);
+            if (definition == null) {
+                throw new IllegalStateException("Referenced definition does not exist: " + refValue);
+            }
+            JsonSchemaDefinitionElement jsde = buildElement(definitions, definition);
+            jsonSchema.addDefinition(definitionRef, jsde);
+        }
+        JsonSchemaDefinitionElement refElement = jsonSchema.getDefinitions().get(definitionRef);
+        return refElement;
     }
 }

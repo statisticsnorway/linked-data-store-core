@@ -16,6 +16,21 @@ import java.util.Optional;
 public class GraphQLToJsonConverterTest {
 
     @Test
+    public void test() {
+        File graphQLFile = new File("src/test/resources/gqlschema/schema.graphql");
+
+        TypeDefinitionRegistry definitionRegistry = parseSchemaFile(graphQLFile);
+
+        GraphQLSchema schema = GraphQLSchemaBuilder.parseSchema(definitionRegistry);
+        GraphQLToJsonConverter graphQLToJsonConverter = new GraphQLToJsonConverter(definitionRegistry, schema);
+        LinkedHashMap<String, JSONObject> jsonMap = graphQLToJsonConverter.createSpecification(schema);
+
+        jsonMap.forEach((name, json) -> {
+            System.out.printf("%s :: %s%n", name, json);
+        });
+    }
+
+    @Test
     public void thatConversionWorks() {
         File graphQLFile = new File("src/test/resources/spec/abstract/graphqlschemas/schema.graphql");
 
@@ -41,6 +56,7 @@ public class GraphQLToJsonConverterTest {
 
         Assert.assertTrue(jsonMap.get("Cat").getJSONObject("definitions").getJSONObject("Cat")
                 .getJSONObject("properties").getJSONObject("alive")
+                .getJSONArray("anyOf").getJSONObject(0)
                 .getString("type").equals("boolean"));
 
         Assert.assertTrue(jsonMap.get("Cat").getJSONObject("definitions").getJSONObject("Cat")
