@@ -46,7 +46,8 @@ public class JsonSchema04Builder {
         return jsonSchema;
     }
 
-    private JsonSchemaDefinitionElement buildElement(JSONObject definitions, JSONObject jsonElement) {
+    private JsonSchemaDefinitionElement buildElement(JSONObject definitions, JSONObject _jsonElement) {
+        JSONObject jsonElement = _jsonElement;
         {
             // look for $ref
             JSONArray anyOfArray = jsonElement.optJSONArray("anyOf");
@@ -76,6 +77,9 @@ public class JsonSchema04Builder {
                     String anyOfType = anyOfArray.getJSONObject(i).optString("type", null);
                     if (anyOfType != null) {
                         set.add(anyOfType);
+                        if ("array".equals(anyOfType)) {
+                            jsonElement = anyOfArray.getJSONObject(i);
+                        }
                     }
                 }
                 types = set.toArray(new String[set.size()]);
