@@ -65,6 +65,9 @@ public class LinkedDocumentValidator {
                 return;
             }
             if (te.getJsonTypes().contains("array")) {
+                if (context.isNull(te.getName())) {
+                    return; // null instead of an array, no links to validate
+                }
                 JSONArray linkArray = context.getJSONArray(te.getName());
                 for (int i = 0; i < linkArray.length(); i++) {
                     String link = linkArray.getString(i);
