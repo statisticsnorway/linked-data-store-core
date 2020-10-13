@@ -3,6 +3,7 @@ package no.ssb.lds.core.saga;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.search.SearchIndex;
 import no.ssb.lds.api.specification.Specification;
+import no.ssb.lds.core.persistence.BatchSagaAdapter;
 import no.ssb.lds.core.persistence.PersistenceCreateOrOverwriteSagaAdapter;
 import no.ssb.lds.core.persistence.PersistenceDeleteSagaAdapter;
 import no.ssb.lds.core.search.DeleteIndexSagaAdapter;
@@ -18,6 +19,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class SagaRepository {
 
+    public static final String SAGA_BATCH = "Batch";
+    public static final String SAGA_BATCH_NO_TX_LOG = "Batch without writing to transaction log";
     public static final String SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE = "Create or update managed resource";
     public static final String SAGA_CREATE_OR_UPDATE_MANAGED_RESOURCE_NO_TX_LOG = "Create or update managed resource without writing to transaction log";
     public static final String SAGA_DELETE_MANAGED_RESOURCE = "Delete managed resource";
@@ -37,11 +40,29 @@ public class SagaRepository {
             adapterLoader.register(new UpdateIndexSagaAdapter(indexer, specification));
             adapterLoader.register(new DeleteIndexSagaAdapter(indexer, specification));
         }
+        adapterLoader.register(new BatchSagaAdapter(persistence, specification));
 
         register(buildCreateOrUpdateSaga(indexer));
         register(buildCreateOrUpdateSagaWithoutTransactionLog(indexer));
         register(buildDeleteSaga(indexer));
         register(buildDeleteSagaWithoutTransactionLog(indexer));
+        register(buildBatchSaga());
+        register(buildBatchSagaNoTxLog());
+    }
+
+    private Saga buildBatchSaga() {
+        Saga.SagaBuilder builder = Saga.start(SAGA_BATCH)
+                .linkTo("txlog");
+        builder.id("txlog").adapter(AppendTxLogAdapter.NAME).linkTo("persistence");
+        builder.id("persistence").adapter(BatchSagaAdapter.NAME).linkToEnd();
+        return builder.end();
+    }
+
+    private Saga buildBatchSagaNoTxLog() {
+        Saga.SagaBuilder builder = Saga.start(SAGA_BATCH_NO_TX_LOG)
+                .linkTo("persistence");
+        builder.id("persistence").adapter(BatchSagaAdapter.NAME).linkToEnd();
+        return builder.end();
     }
 
     private Saga buildCreateOrUpdateSaga(SearchIndex indexer) {

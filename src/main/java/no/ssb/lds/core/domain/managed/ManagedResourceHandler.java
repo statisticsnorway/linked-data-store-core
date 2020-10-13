@@ -51,7 +51,6 @@ public class ManagedResourceHandler implements HttpHandler {
     private final ResourceContext resourceContext;
     private final SagaExecutionCoordinator sec;
     private final SagaRepository sagaRepository;
-    private final BodyParser bodyParser = new BodyParser();
 
     public ManagedResourceHandler(RxJsonPersistence persistence, Specification specification, SchemaRepository schemaRepository, ResourceContext resourceContext, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
         this.persistence = persistence;
@@ -158,7 +157,7 @@ public class ManagedResourceHandler implements HttpHandler {
 
                     String contentType = ofNullable(exchange.getRequestHeaders().get(Headers.CONTENT_TYPE))
                             .map(HeaderValues::getFirst).orElse("application/json");
-                    JsonNode requestData = bodyParser.deserializeBody(contentType, requestBody);
+                    JsonNode requestData = BodyParser.deserializeBody(contentType, requestBody);
 
                     if (LOG.isTraceEnabled()) {
                         LOG.trace("{} {}\n{}", exchange.getRequestMethod(), exchange.getRequestPath(), requestBody);
@@ -246,7 +245,5 @@ public class ManagedResourceHandler implements HttpHandler {
             responseHeaders.put(Headers.CONTENT_TYPE, "application/json");
             exchange.getResponseSender().send("{\"saga-execution-id\":\"" + handoffResult.getExecutionId() + "\"}");
         }
-
-
     }
 }

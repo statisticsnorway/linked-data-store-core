@@ -40,6 +40,22 @@ public class SagaInput {
         this.node = node;
     }
 
+    public SagaInput(ULID.Value txId, String method, String schema, String namespace, String source, String sourceId, JsonNode batch) {
+        ObjectNode node = JsonTools.mapper.createObjectNode();
+        node.put("txid", txId.toString());
+        node.put("method", method);
+        node.put("schema", schema);
+        node.put("namespace", namespace);
+        node.set("batch", batch);
+        if (source != null) {
+            node.put("source", source);
+        }
+        if (sourceId != null) {
+            node.put("sourceId", sourceId);
+        }
+        this.node = node;
+    }
+
     JsonNode asJsonNode() {
         return node;
     }
@@ -90,8 +106,23 @@ public class SagaInput {
         return node.get("data");
     }
 
+    public JsonNode batch() {
+        return node.get("batch");
+    }
+
     @Override
     public String toString() {
+        if (node.has("batch")) {
+            return "SagaInput{" +
+                    "txId='" + txId() + '\'' +
+                    ", method='" + method() + '\'' +
+                    ", schema='" + schema() + '\'' +
+                    ", namespace='" + namespace() + '\'' +
+                    ", source='" + source() + '\'' +
+                    ", sourceId='" + sourceId() + '\'' +
+                    ", batch=" + batch() +
+                    '}';
+        }
         return "SagaInput{" +
                 "txId='" + txId() + '\'' +
                 ", method='" + method() + '\'' +

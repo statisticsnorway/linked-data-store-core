@@ -1,0 +1,25 @@
+{
+  "operation": "delete",
+  "type": "Cat",
+  "timestamp": "2020-10-09T11:00:00.000Z",
+  "match": {
+    "or": [
+      {
+        "id": "the-cat-id"
+      },
+      {
+        "and": [
+          {
+            "id-starts-with": "ac"
+          },
+          {
+            "id-not-in": [
+              "acone",
+              "actwo"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

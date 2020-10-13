@@ -44,7 +44,6 @@ public class EmbeddedResourceHandler implements HttpHandler {
     private final SagaExecutionCoordinator sec;
     private final RxJsonPersistence persistence;
     private final SagaRepository sagaRepository;
-    private final BodyParser bodyParser = new BodyParser();
 
     public EmbeddedResourceHandler(RxJsonPersistence persistence, Specification specification, SchemaRepository schemaRepository, ResourceContext resourceContext, SagaExecutionCoordinator sec, SagaRepository sagaRepository) {
         this.persistence = persistence;
@@ -123,7 +122,7 @@ public class EmbeddedResourceHandler implements HttpHandler {
 
                     String contentType = ofNullable(exchange.getRequestHeaders().get(Headers.CONTENT_TYPE))
                             .map(HeaderValues::getFirst).orElse("application/json");
-                    JsonNode embeddedJson = bodyParser.deserializeBody(contentType, message);
+                    JsonNode embeddedJson = BodyParser.deserializeBody(contentType, message);
 
                     if (LOG.isTraceEnabled()) {
                         LOG.trace("{} {}\n{}", exchange.getRequestMethod(), exchange.getRequestPath(), message);

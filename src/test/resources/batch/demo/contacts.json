@@ -1,0 +1,21 @@
+{
+  "operation": "put",
+  "type": "contact",
+  "entries": [
+    {
+      "id": "4b2ef",
+      "data": {
+        "name": "Onkel Skrue",
+        "email": "skrue@bingen.no"
+      }
+    },
+    {
+      "id": "821aa",
+      "timestamp": "2020-10-08T11:28:51.263Z",
+      "data": {
+        "name": "Donald Duck",
+        "email": "donald@duck.no"
+      }
+    }
+  ]
+}

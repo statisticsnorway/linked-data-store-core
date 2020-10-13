@@ -9,10 +9,10 @@ import java.io.IOException;
 
 public class BodyParser {
 
-    final ObjectMapper jsonMapper = new ObjectMapper();
-    final ObjectMapper msgPackMapper = new ObjectMapper(new MessagePackFactory());
+    static final ObjectMapper jsonMapper = new ObjectMapper();
+    static final ObjectMapper msgPackMapper = new ObjectMapper(new MessagePackFactory());
 
-    public JsonNode deserializeBody(String contentType, String requestBody) {
+    public static JsonNode deserializeBody(String contentType, String requestBody) {
         try {
             // deserialize request data
             MediaType type = MediaType.parse(contentType);

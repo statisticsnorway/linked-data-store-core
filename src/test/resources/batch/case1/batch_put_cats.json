@@ -1,0 +1,24 @@
+{
+  "operation": "put",
+  "type": "Cat",
+  "entries": [
+    {
+      "id": "ocone",
+      "timestamp": "2020-10-08T11:28:51.263Z",
+      "data": {
+        "name": "Cat One",
+        "alive": true,
+        "age": 2
+      }
+    },
+    {
+      "id": "octwo",
+      "timestamp": "2020-10-08T11:28:51.263Z",
+      "data": {
+        "name": "Cat Two",
+        "alive": true,
+        "age": 3
+      }
+    }
+  ]
+}

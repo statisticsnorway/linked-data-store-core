@@ -5,6 +5,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.specification.Specification;
+import no.ssb.lds.core.domain.batch.BatchOperationHandler;
 import no.ssb.lds.core.restore.RestoreContextBySource;
 import no.ssb.lds.core.restore.RestoreHandler;
 import no.ssb.lds.core.saga.SagaExecutionCoordinator;
@@ -70,6 +71,11 @@ public class NamespaceController implements HttpHandler {
 
         if (requestPath.startsWith(defaultNamespace)) {
             new DataController(specification, schemaRepository, persistence, sec, sagaRepository).handleRequest(exchange);
+            return;
+        }
+
+        if (requestPath.startsWith("/batch" + defaultNamespace)) {
+            new BatchOperationHandler(specification, schemaRepository, persistence, sec, sagaRepository).handleRequest(exchange);
             return;
         }
 

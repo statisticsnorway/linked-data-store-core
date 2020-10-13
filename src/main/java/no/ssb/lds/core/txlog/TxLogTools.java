@@ -25,28 +25,47 @@ public class TxLogTools {
         meta.put("method", sagaInput.method());
         meta.put("schema", sagaInput.schema());
         meta.put("namespace", sagaInput.namespace());
-        meta.put("entity", sagaInput.entity());
-        meta.put("id", sagaInput.resourceId());
-        meta.put("version", sagaInput.versionAsString());
+        if (sagaInput.batch() == null) {
+            meta.put("entity", sagaInput.entity());
+            meta.put("id", sagaInput.resourceId());
+            meta.put("version", sagaInput.versionAsString());
+        }
         if (sagaInput.source() != null) {
             meta.put("source", sagaInput.source());
         }
         if (sagaInput.sourceId() != null) {
             meta.put("sourceId", sagaInput.sourceId());
         }
-
-        String uri = String.format("%s/%s/%s", sagaInput.entity(), sagaInput.resourceId(), Date.from(sagaInput.version().toInstant()).getTime());
-
-        builder.ulid(ULID.parseULID(sagaInput.txId()))
-                .position(uri);
-        if (sagaInput.data() != null) {
-            builder.put("data", toBytes(sagaInput.data()));
+        builder.ulid(ULID.parseULID(sagaInput.txId()));
+        if (sagaInput.batch() == null) {
+            String uri = String.format("%s/%s/%s", sagaInput.entity(), sagaInput.resourceId(), Date.from(sagaInput.version().toInstant()).getTime());
+            builder.position(uri);
+            if (sagaInput.data() != null) {
+                builder.put("data", toBytes(sagaInput.data()));
+            }
+        } else {
+            if (sagaInput.source() != null && sagaInput.sourceId() != null) {
+                builder.position(sagaInput.source() + "::" + sagaInput.sourceId());
+            } else {
+                builder.position(sagaInput.txId());
+            }
+            builder.put("batch", toBytes(sagaInput.batch()));
         }
         return builder.put("meta", toBytes(meta));
     }
 
     public static SagaInput txEntryToSagaInput(RawdataMessage message) {
         JsonNode meta = toJson(message.get("meta"));
+        if (message.keys().contains("batch")) {
+            JsonNode batch = toJson(message.get("batch"));
+            return new SagaInput(message.ulid(),
+                    meta.get("method").textValue(),
+                    meta.get("schema").textValue(),
+                    meta.get("namespace").textValue(),
+                    ofNullable(meta.get("source")).map(JsonNode::textValue).orElse(null),
+                    ofNullable(meta.get("sourceId")).map(JsonNode::textValue).orElse(null),
+                    batch);
+        }
         JsonNode data = message.keys().contains("data") ? toJson(message.get("data")) : null;
         return new SagaInput(message.ulid(),
                 meta.get("method").textValue(),

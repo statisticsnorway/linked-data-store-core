@@ -9,6 +9,7 @@ import no.ssb.lds.api.persistence.PersistenceDeletePolicy;
 import no.ssb.lds.api.persistence.PersistenceException;
 import no.ssb.lds.api.persistence.Transaction;
 import no.ssb.lds.api.persistence.TransactionStatistics;
+import no.ssb.lds.api.persistence.batch.Batch;
 import no.ssb.lds.api.persistence.json.JsonDocument;
 import no.ssb.lds.api.persistence.reactivex.Range;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
@@ -50,6 +51,16 @@ class EmptyPersistence implements RxJsonPersistence {
 
     @Override
     public Completable createOrOverwrite(Transaction tx, Flowable<JsonDocument> documentFlowable, Specification specification) {
+        return Completable.complete();
+    }
+
+    @Override
+    public Completable putBatchGroup(Transaction tx, Batch.PutGroup group, String namespace, Specification specification) {
+        return Completable.complete();
+    }
+
+    @Override
+    public Completable deleteBatchGroup(Transaction tx, Batch.DeleteGroup group, String namespace, Specification specification) {
         return Completable.complete();
     }
 

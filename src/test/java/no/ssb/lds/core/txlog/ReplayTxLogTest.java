@@ -89,6 +89,60 @@ public class ReplayTxLogTest {
         }
     }
 
+    @Test
+    @ConfigurationOverride({
+            "txlog.rawdata.provider", "memory",
+            "specification.schema", "spec/demo/contact.json,spec/demo/provisionagreement.json"
+    })
+    public void replayBatchInTxLogAndVerify() throws Exception {
+
+        /*
+         * Produce 6 entries in tx-log through http api
+         */
+        client.put("/data/provisionagreement/2a41c?sync=true&source=test&sourceId=abc123", readFileOrClasspathResource("demo/1-sirius.json")).expect201Created();
+        client.put("/data/provisionagreement/2a41c/address?sync=true", readFileOrClasspathResource("demo/2-sirius-address.json")).expect200Ok();
+        client.put("/batch/data?sync=true", readFileOrClasspathResource("batch/demo/contacts.json")).expect200Ok();
+        client.put("/data/provisionagreement/2a41c/contacts/contact/4b2ef?sync=true").expect200Ok();
+        client.put("/data/provisionagreement/2a41c/contacts/contact/821aa?sync=true").expect200Ok();
+        client.delete("/data/provisionagreement/2a41c/contacts/contact/4b2ef?sync=true").expect200Ok();
+
+        dumpCurrentTxLog(); // for debugging purposes
+
+        /*
+         * Read and check that the tx-log contains exactly the 7 elements in the correct order
+         */
+        TxlogRawdataPool txlogRawdataPool = server.getApplication().getTxlogRawdataPool();
+        RawdataClient rawdataClient = txlogRawdataPool.getClient();
+        String txLogTopic = txlogRawdataPool.topicOf(null);
+
+        try (RawdataConsumer consumer = rawdataClient.consumer(txLogTopic)) {
+
+            RawdataMessage m1 = consumer.receive(0, TimeUnit.MILLISECONDS);
+            assertEquals(entityAndId(m1), "provisionagreement/2a41c");
+            assertEquals(TxLogTools.txEntryToSagaInput(m1).method(), "PUT");
+
+            RawdataMessage m2 = consumer.receive(0, TimeUnit.MILLISECONDS);
+            assertEquals(entityAndId(m2), "provisionagreement/2a41c");
+            assertEquals(TxLogTools.txEntryToSagaInput(m2).method(), "PUT");
+
+            RawdataMessage m3 = consumer.receive(0, TimeUnit.MILLISECONDS);
+            // assertEquals(entityAndId(m3), ""); // TODO assert batch
+            assertEquals(TxLogTools.txEntryToSagaInput(m3).method(), "PUT");
+
+            RawdataMessage m4 = consumer.receive(0, TimeUnit.MILLISECONDS);
+            assertEquals(entityAndId(m4), "provisionagreement/2a41c");
+            assertEquals(TxLogTools.txEntryToSagaInput(m4).method(), "PUT");
+
+            RawdataMessage m5 = consumer.receive(0, TimeUnit.MILLISECONDS);
+            assertEquals(entityAndId(m5), "provisionagreement/2a41c");
+            assertEquals(TxLogTools.txEntryToSagaInput(m5).method(), "PUT");
+
+            RawdataMessage m6 = consumer.receive(0, TimeUnit.MILLISECONDS);
+            assertEquals(entityAndId(m6), "provisionagreement/2a41c");
+            assertEquals(TxLogTools.txEntryToSagaInput(m6).method(), "PUT");
+        }
+    }
+
     private String entityAndId(RawdataMessage m1) {
         String position = m1.position();
         return position.substring(0, position.length() - 14); // remove the last 14 characters in order to strip away the version/timestamp component

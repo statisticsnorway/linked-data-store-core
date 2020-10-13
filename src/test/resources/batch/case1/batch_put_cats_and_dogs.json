@@ -1,0 +1,68 @@
+[
+  {
+    "operation": "put",
+    "type": "Dog",
+    "entries": [
+      {
+        "id": "adone",
+        "timestamp": "2020-10-08T11:28:51.263Z",
+        "data": {
+          "name": "Dog One",
+          "friendly": true,
+          "age": 9
+        }
+      },
+      {
+        "id": "adtwo",
+        "timestamp": "2020-10-08T11:28:51.263Z",
+        "data": {
+          "name": "Dog Two",
+          "friendly": false,
+          "age": 12
+        }
+      }
+    ]
+  },
+  {
+    "operation": "put",
+    "type": "Cat",
+    "entries": [
+      {
+        "id": "acone",
+        "timestamp": "2020-10-08T11:28:51.263Z",
+        "data": {
+          "name": "Cat One",
+          "alive": true,
+          "age": 3
+        }
+      },
+      {
+        "id": "actwo",
+        "timestamp": "2020-10-08T11:28:51.263Z",
+        "data": {
+          "name": "Cat Two",
+          "alive": true,
+          "age": 5
+        }
+      },
+      {
+        "id": "acthree",
+        "timestamp": "2020-10-08T11:28:51.263Z",
+        "data": {
+          "name": "Cat Three",
+          "alive": false,
+          "age": 8
+        }
+      },
+      {
+        "id": "the-cat-id",
+        "timestamp": "2020-10-08T11:28:51.263Z",
+        "data": {
+          "name": "The Cat",
+          "alive": true,
+          "age": 11
+        }
+      }
+    ]
+  }
+]
