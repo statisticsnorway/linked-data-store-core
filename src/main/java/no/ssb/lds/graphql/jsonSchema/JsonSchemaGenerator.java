@@ -143,6 +143,10 @@ public class JsonSchemaGenerator extends GraphQLTypeVisitorStub {
             throw new IllegalStateException("Missing JsonDefinitionContext");
         }
 
+        if (node.getDirective("virtual") != null) {
+            return TraversalControl.ABORT;
+        }
+
         JSONObject definitionProperties = (JSONObject) objectContext.object.get("properties");
 
         JSONObject propertyElements = new JSONObject();
