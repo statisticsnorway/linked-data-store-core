@@ -27,6 +27,9 @@ public class BatchSagaAdapter extends Adapter<JsonNode> {
     public JsonNode executeAction(SagaNode sagaNode, Object sagaInput, Map<SagaNode, Object> dependeesOutput) {
         JsonNode input = (JsonNode) sagaInput;
         Batch batch = new Batch(input.get("batch"));
+        if (batch.groups().isEmpty()) {
+            return null; // avoid creating transaction
+        }
         try (Transaction tx = persistence.createTransaction(false)) {
             for (Batch.Group group : batch.groups()) {
                 if (Batch.GroupType.DELETE == group.groupType()) {

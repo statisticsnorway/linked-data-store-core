@@ -88,7 +88,7 @@ public class BatchOperationHandler implements HttpHandler {
                     JsonNode requestData = BodyParser.deserializeBody(contentType, requestBody);
 
                     if (LOG.isTraceEnabled()) {
-                        LOG.trace("{} {}\n{}", exchange.getRequestMethod(), exchange.getRequestPath(), requestBody);
+                        LOG.trace("{} {}{}\n{}", exchange.getRequestMethod(), exchange.getRequestPath(), exchange.getQueryString().isBlank() ? "" : "?" + exchange.getQueryString(), requestBody);
                     }
 
                     String namespace = exchange.getRequestPath().substring("/batch/".length());
@@ -97,6 +97,11 @@ public class BatchOperationHandler implements HttpHandler {
                     }
 
                     Batch batch = resolveBatch(requestData);
+
+                    if (batch.groups().isEmpty()) {
+                        exchange.setStatusCode(StatusCodes.OK);
+                        exchange.endExchange();
+                    }
 
                     // True if defined and no false values.
                     Map<String, Deque<String>> parameters = exchange.getQueryParameters();
@@ -183,7 +188,10 @@ public class BatchOperationHandler implements HttpHandler {
         for (int i = 0; i < batch.getBatchNode().size(); i++) {
             JsonNode transformedGroupNode = transformedNodesByGroupIndex.get(i);
             if (transformedGroupNode != null) {
-                batchNode.add(transformedGroupNode); // use transformed group
+                ArrayNode entries = (ArrayNode) transformedGroupNode.get("entries");
+                if (entries.size() > 0) {
+                    batchNode.add(transformedGroupNode); // use transformed group
+                } // else (size == 0): use neither transformed nor original group
             } else {
                 batchNode.add(batch.getBatchNode().get(i)); // use original group
             }
