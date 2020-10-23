@@ -9,6 +9,7 @@ import graphql.language.Argument;
 import graphql.language.ArrayValue;
 import graphql.language.BooleanValue;
 import graphql.language.Document;
+import graphql.language.EnumValue;
 import graphql.language.Field;
 import graphql.language.FloatValue;
 import graphql.language.IntValue;
@@ -149,6 +150,8 @@ public class GraphQLQueryTransformer {
                 serializeValue(sb, v);
             }
             sb.append("]");
+        } else if (value instanceof EnumValue) {
+            sb.append(((EnumValue) value).getName());
         } else {
             throw new IllegalArgumentException("Unsupported Value class: " + value.getClass().getName());
         }
