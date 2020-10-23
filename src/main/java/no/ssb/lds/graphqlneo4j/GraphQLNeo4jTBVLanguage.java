@@ -121,7 +121,6 @@ public class GraphQLNeo4jTBVLanguage {
                 }
                 FieldDefinition field = (FieldDefinition) child;
                 boolean isLink = field.getDirective("link") != null;
-                boolean isCypher = field.getDirective("cypher") != null;
                 if (isLink) {
                     String relationName = field.getName();
                     String tbvResolutionCypher = String.format("MATCH (this)-[:%s]->(:RESOURCE)<-[v:VERSION_OF]-(n) WHERE v.from <= ver AND coalesce(ver < v.to, true) RETURN n", relationName);
@@ -162,14 +161,6 @@ public class GraphQLNeo4jTBVLanguage {
                                     .build()))
                     );
                     transformedFields.put(field.getName(), transformedField);
-                } else if (isCypher) {
-                    FieldDefinition transformedField = field.transform(builder -> builder
-                            .inputValueDefinitions(List.of(InputValueDefinition.newInputValueDefinition()
-                                    .name("ver")
-                                    .type(new TypeName("_Neo4jDateTimeInput"))
-                                    .build()))
-                    );
-                    transformedFields.put(field.getName(), transformedField);
                 } else {
                     TypeDefinition typeDefinition = typeDefinitionRegistry.getType(field.getType()).orElse(null);
                     if (typeDefinition == null) {
@@ -179,17 +170,28 @@ public class GraphQLNeo4jTBVLanguage {
                     } else if (typeDefinition instanceof EnumTypeDefinition) {
                     } else if (typeDefinition instanceof ObjectTypeDefinition
                             || typeDefinition instanceof InterfaceTypeDefinition) {
-                        FieldDefinition transformedField = field.transform(builder -> builder.directive(Directive.newDirective()
-                                .name("relation")
-                                .arguments(List.of(Argument.newArgument()
-                                        .name("name")
-                                        .value(StringValue.newStringValue()
-                                                .value(field.getName())
-                                                .build())
-                                        .build()))
-                                .build()
-                        ));
-                        transformedFields.put(field.getName(), transformedField);
+                        boolean isCypher = field.getDirective("cypher") != null;
+                        if (isCypher) {
+                            FieldDefinition transformedField = field.transform(builder -> builder
+                                    .inputValueDefinitions(List.of(InputValueDefinition.newInputValueDefinition()
+                                            .name("ver")
+                                            .type(new TypeName("_Neo4jDateTimeInput"))
+                                            .build()))
+                            );
+                            transformedFields.put(field.getName(), transformedField);
+                        } else {
+                            FieldDefinition transformedField = field.transform(builder -> builder.directive(Directive.newDirective()
+                                    .name("relation")
+                                    .arguments(List.of(Argument.newArgument()
+                                            .name("name")
+                                            .value(StringValue.newStringValue()
+                                                    .value(field.getName())
+                                                    .build())
+                                            .build()))
+                                    .build()
+                            ));
+                            transformedFields.put(field.getName(), transformedField);
+                        }
                     } else if (typeDefinition instanceof UnionTypeDefinition) {
                     } else if (typeDefinition instanceof InputObjectTypeDefinition) {
                     } else {
