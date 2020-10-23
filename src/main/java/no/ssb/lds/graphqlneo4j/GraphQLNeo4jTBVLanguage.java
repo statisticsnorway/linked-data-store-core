@@ -121,6 +121,7 @@ public class GraphQLNeo4jTBVLanguage {
                 }
                 FieldDefinition field = (FieldDefinition) child;
                 boolean isLink = field.getDirective("link") != null;
+                boolean isCypher = field.getDirective("cypher") != null;
                 if (isLink) {
                     String relationName = field.getName();
                     String tbvResolutionCypher = String.format("MATCH (this)-[:%s]->(:RESOURCE)<-[v:VERSION_OF]-(n) WHERE v.from <= ver AND coalesce(ver < v.to, true) RETURN n", relationName);
@@ -155,6 +156,14 @@ public class GraphQLNeo4jTBVLanguage {
                                                     .build()))
                                             .build()
                             ))
+                            .inputValueDefinitions(List.of(InputValueDefinition.newInputValueDefinition()
+                                    .name("ver")
+                                    .type(new TypeName("_Neo4jDateTimeInput"))
+                                    .build()))
+                    );
+                    transformedFields.put(field.getName(), transformedField);
+                } else if (isCypher) {
+                    FieldDefinition transformedField = field.transform(builder -> builder
                             .inputValueDefinitions(List.of(InputValueDefinition.newInputValueDefinition()
                                     .name("ver")
                                     .type(new TypeName("_Neo4jDateTimeInput"))
