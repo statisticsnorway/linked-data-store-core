@@ -226,6 +226,8 @@ public class GraphQLNeo4jHttpHandler implements HttpHandler {
 
                 // split query
                 CypherQueryProjectionSplitter splitter = new CypherQueryProjectionSplitter(domains);
+
+                //splitter.transform(cypher.component1().replaceAll("\\{ *\\.\\*, *}", "{ .* }")); // TODO Check that cypher is valid, have seen ordering clause causing this pattern, but not able to reproduce
                 splitter.transform(cypher.component1());
 
                 // run selection query
