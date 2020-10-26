@@ -3,6 +3,8 @@ package no.ssb.lds.graphqlneo4j;
 import graphql.GraphQLError;
 import graphql.language.Argument;
 import graphql.language.Directive;
+import graphql.language.DirectiveDefinition;
+import graphql.language.DirectiveLocation;
 import graphql.language.EnumTypeDefinition;
 import graphql.language.EnumValue;
 import graphql.language.FieldDefinition;
@@ -12,6 +14,7 @@ import graphql.language.InterfaceTypeDefinition;
 import graphql.language.ListType;
 import graphql.language.NonNullType;
 import graphql.language.ObjectTypeDefinition;
+import graphql.language.SDLDefinition;
 import graphql.language.ScalarTypeDefinition;
 import graphql.language.StringValue;
 import graphql.language.Type;
@@ -46,6 +49,8 @@ public class GraphQLNeo4jTBVLanguage {
     public static TypeDefinitionRegistry transformRegistry(TypeDefinitionRegistry sourceRegistry, boolean computeReverseLinks) {
         final TypeDefinitionRegistry typeDefinitionRegistry = new TypeDefinitionRegistry().merge(sourceRegistry);
 
+        addLDSSpecificDirectives(typeDefinitionRegistry);
+
         addTimeBasedVersioningIntrospection(typeDefinitionRegistry);
 
         typeDefinitionRegistry.scalars().forEach((key, type) -> {
@@ -65,6 +70,44 @@ public class GraphQLNeo4jTBVLanguage {
         }
 
         return typeDefinitionRegistry;
+    }
+
+    private static void addLDSSpecificDirectives(TypeDefinitionRegistry typeDefinitionRegistry) {
+
+        /*
+         * Remove existing LDS directives, in case they are not defined as needed by LDS
+         */
+        List<SDLDefinition> toBeRemoved = new LinkedList<>();
+        typeDefinitionRegistry.getDirectiveDefinitions().forEach((key, directiveDef) -> {
+            if (Set.of("domain", "link", "virtual").contains(directiveDef.getName())) {
+                toBeRemoved.add(directiveDef);
+            }
+        });
+        for (SDLDefinition def : toBeRemoved) {
+            typeDefinitionRegistry.remove(def);
+        }
+
+        /*
+         * Add all LDS directives
+         */
+        typeDefinitionRegistry.add(DirectiveDefinition.newDirectiveDefinition()
+                .name("domain")
+                .directiveLocation(DirectiveLocation.newDirectiveLocation()
+                        .name("OBJECT")
+                        .build())
+                .build());
+        typeDefinitionRegistry.add(DirectiveDefinition.newDirectiveDefinition()
+                .name("link")
+                .directiveLocation(DirectiveLocation.newDirectiveLocation()
+                        .name("FIELD_DEFINITION")
+                        .build())
+                .build());
+        typeDefinitionRegistry.add(DirectiveDefinition.newDirectiveDefinition()
+                .name("virtual")
+                .directiveLocation(DirectiveLocation.newDirectiveLocation()
+                        .name("FIELD_DEFINITION")
+                        .build())
+                .build());
     }
 
     private static void addTimeBasedVersioningIntrospection(TypeDefinitionRegistry typeDefinitionRegistry) {
