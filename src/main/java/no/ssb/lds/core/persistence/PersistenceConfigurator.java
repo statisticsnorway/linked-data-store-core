@@ -71,7 +71,7 @@ public class PersistenceConfigurator {
         for (int i = 1; ; i++) {
             try {
                 LOG.info("Persistence provider initialization attempt # {}", i);
-                RxJsonPersistence persistence = initializer.initialize(configuration.evaluateToString("namespace.default"), configurationByKey, specification.getManagedDomains());
+                RxJsonPersistence persistence = initializer.initialize(configuration.evaluateToString("namespace.default"), configurationByKey, specification.getManagedDomains(), specification);
                 LOG.info("Persistence service-provider configured");
                 return persistence;
             } catch (RuntimeException e) {
