@@ -69,7 +69,8 @@ public class PersistenceLinksConnectionFetcherTest {
         RxJsonPersistence persistence = new MemoryInitializer().initialize("ns",
                 Map.of("persistence.mem.wait.min", "0",
                         "persistence.mem.wait.max", "0"),
-                Set.of("Source", "Target"));
+                Set.of("Source", "Target"),
+                null);
         connectionFetcher = new PersistenceLinksConnectionFetcher(persistence, "ns", "Source", JsonNavigationPath.from("$.targetIds"), "Target");
         snapshot = ZonedDateTime.now();
 

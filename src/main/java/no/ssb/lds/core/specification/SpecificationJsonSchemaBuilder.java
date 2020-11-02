@@ -1,5 +1,6 @@
 package no.ssb.lds.core.specification;
 
+import graphql.schema.GraphQLSchema;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import no.ssb.lds.api.specification.SpecificationElement;
 import no.ssb.lds.api.specification.SpecificationElementType;
@@ -10,8 +11,8 @@ import java.util.LinkedHashSet;
 
 public class SpecificationJsonSchemaBuilder {
 
-    public static SpecificationJsonSchemaBuilder createBuilder(TypeDefinitionRegistry typeDefinitionRegistry, JsonSchema jsonSchema) {
-        return new SpecificationJsonSchemaBuilder(typeDefinitionRegistry, jsonSchema, null, null, null);
+    public static SpecificationJsonSchemaBuilder createBuilder(TypeDefinitionRegistry typeDefinitionRegistry, GraphQLSchema graphQlSchema, JsonSchema jsonSchema) {
+        return new SpecificationJsonSchemaBuilder(typeDefinitionRegistry, graphQlSchema, jsonSchema, null, null, null);
     }
 
     private static LinkedHashSet<String> objectOnlyJsonTypes = new LinkedHashSet<>();
@@ -21,6 +22,7 @@ public class SpecificationJsonSchemaBuilder {
     }
 
     final TypeDefinitionRegistry typeDefinitionRegistry;
+    final GraphQLSchema graphQlSchema;
     final JsonSchema jsonSchema;
     final SpecificationElementType parentSpecificationElementType;
     final JsonSchemaDefinitionElement element;
@@ -28,11 +30,13 @@ public class SpecificationJsonSchemaBuilder {
 
     SpecificationJsonSchemaBuilder(
             TypeDefinitionRegistry typeDefinitionRegistry,
+            GraphQLSchema graphQLSchema,
             JsonSchema jsonSchema,
             SpecificationElementType parentSpecificationElementType,
             JsonSchemaDefinitionElement element,
             SpecificationElement specificationElement) {
         this.typeDefinitionRegistry = typeDefinitionRegistry;
+        this.graphQlSchema = graphQLSchema;
         this.jsonSchema = jsonSchema;
         this.parentSpecificationElementType = parentSpecificationElementType;
         this.element = element;
@@ -47,7 +51,7 @@ public class SpecificationJsonSchemaBuilder {
                 .jsonTypes(objectOnlyJsonTypes)
                 .jsonSchema(jsonSchema)
                 .build();
-        return new JsonSchemaBasedSpecification(jsonSchema, root, typeDefinitionRegistry);
+        return new JsonSchemaBasedSpecification(jsonSchema, root, typeDefinitionRegistry, graphQlSchema);
     }
 
 }

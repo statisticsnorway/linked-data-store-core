@@ -24,7 +24,7 @@ public class SpecificationJsonSchemaBuilderTest {
                 null, "contact", contactJson).build();
         new JsonSchema04Builder(
                 jsonSchema, "contact", paJson).build();
-        Specification specification = SpecificationJsonSchemaBuilder.createBuilder(null, jsonSchema).build();
+        Specification specification = SpecificationJsonSchemaBuilder.createBuilder(null, null, jsonSchema).build();
         print(specification);
     }
 

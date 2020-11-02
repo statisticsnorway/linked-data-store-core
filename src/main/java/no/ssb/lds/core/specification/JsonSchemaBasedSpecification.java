@@ -1,5 +1,6 @@
 package no.ssb.lds.core.specification;
 
+import graphql.schema.GraphQLSchema;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import no.ssb.lds.api.specification.Specification;
 import no.ssb.lds.api.specification.SpecificationElement;
@@ -25,10 +26,10 @@ public class JsonSchemaBasedSpecification implements Specification, SchemaReposi
     private static final Logger LOG = LoggerFactory.getLogger(JsonSchemaBasedSpecification.class);
 
     public static JsonSchemaBasedSpecification create(String... specificationSchema) {
-        return create(null, specificationSchema);
+        return create(null, null, specificationSchema);
     }
 
-    public static JsonSchemaBasedSpecification create(TypeDefinitionRegistry typeDefinitionRegistry, String... specificationSchema) {
+    public static JsonSchemaBasedSpecification create(TypeDefinitionRegistry typeDefinitionRegistry, GraphQLSchema graphQlSchema, String... specificationSchema) {
         JsonSchema jsonSchema = null;
         StringBuilder sb = new StringBuilder();
         for (String schemaPathStr : specificationSchema) {
@@ -51,8 +52,8 @@ public class JsonSchemaBasedSpecification implements Specification, SchemaReposi
                 jsonSchema = schemaFromFile(jsonSchema, sb, schemaPath);
             }
         }
-        LOG.info("{}", (sb.length() == 0 ? "No schemas configured!" : "Managed domains: " + sb.toString().substring(1)));
-        return SpecificationJsonSchemaBuilder.createBuilder(typeDefinitionRegistry, jsonSchema).build();
+        LOG.info("{}", (sb.length() == 0 ? "No schemas configured!" : "Managed domains: " + sb.substring(1)));
+        return SpecificationJsonSchemaBuilder.createBuilder(typeDefinitionRegistry, graphQlSchema, jsonSchema).build();
     }
 
     private static JsonSchema schemaFromFile(JsonSchema jsonSchema, StringBuilder sb, Path path) {
@@ -74,21 +75,30 @@ public class JsonSchemaBasedSpecification implements Specification, SchemaReposi
 
     private final TypeDefinitionRegistry typeDefinitionRegistry;
 
+    private final GraphQLSchema graphQlSchema;
+
     public JsonSchemaBasedSpecification() {
         this.jsonSchema = null;
         this.root = null;
         this.typeDefinitionRegistry = null;
+        this.graphQlSchema = null;
     }
 
-    public JsonSchemaBasedSpecification(JsonSchema jsonSchema, SpecificationElement root, TypeDefinitionRegistry typeDefinitionRegistry) {
+    public JsonSchemaBasedSpecification(JsonSchema jsonSchema, SpecificationElement root, TypeDefinitionRegistry typeDefinitionRegistry, GraphQLSchema graphQlSchema) {
         this.jsonSchema = jsonSchema;
         this.root = root;
         this.typeDefinitionRegistry = typeDefinitionRegistry;
+        this.graphQlSchema = graphQlSchema;
     }
 
     @Override
     public TypeDefinitionRegistry typeDefinitionRegistry() {
         return typeDefinitionRegistry;
+    }
+
+    @Override
+    public GraphQLSchema schema() {
+        return graphQlSchema;
     }
 
     @Override

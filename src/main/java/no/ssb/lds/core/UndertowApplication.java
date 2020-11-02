@@ -267,13 +267,13 @@ public class UndertowApplication {
                 jsonMap.entrySet().forEach(entry -> LOG.trace("JSON SCHEMA for type '{}': {}", entry.getKey(), entry.getValue().toString()));
             }
 
-            specification = createJsonSpecification(definitionRegistry, jsonMap);
+            specification = createJsonSpecification(definitionRegistry, schema, jsonMap);
 
         } else {
             String schemaConfigStr = configuration.evaluateToString("specification.schema");
             String[] specificationSchema = ("".equals(schemaConfigStr) ? new String[0] : schemaConfigStr.split(","));
             LOG.info("Creating specification using json-schema: {}", schemaConfigStr);
-            specification = JsonSchemaBasedSpecification.create(null, specificationSchema);
+            specification = JsonSchemaBasedSpecification.create(null, null, specificationSchema);
         }
 
         LOG.info("Initializing primary persistence ...");
@@ -380,7 +380,7 @@ public class UndertowApplication {
                 searchIndex, configuration, txlogRawdataPool);
     }
 
-    private static JsonSchemaBasedSpecification createJsonSpecification(TypeDefinitionRegistry typeDefinitionRegistry, LinkedHashMap<String, JSONObject> jsonMap) {
+    private static JsonSchemaBasedSpecification createJsonSpecification(TypeDefinitionRegistry typeDefinitionRegistry, GraphQLSchema graphQlSchema, LinkedHashMap<String, JSONObject> jsonMap) {
         JsonSchemaBasedSpecification jsonSchemaBasedSpecification = null;
         Set<Map.Entry<String, JSONObject>> entries = jsonMap.entrySet();
         Iterator<Map.Entry<String, JSONObject>> iterator = entries.iterator();
@@ -389,7 +389,7 @@ public class UndertowApplication {
         while (iterator.hasNext()) {
             Map.Entry item = iterator.next();
             jsonSchema = new JsonSchema04Builder(jsonSchema, item.getKey().toString(), item.getValue().toString()).build();
-            jsonSchemaBasedSpecification = SpecificationJsonSchemaBuilder.createBuilder(typeDefinitionRegistry, jsonSchema).build();
+            jsonSchemaBasedSpecification = SpecificationJsonSchemaBuilder.createBuilder(typeDefinitionRegistry, graphQlSchema, jsonSchema).build();
         }
 
         return jsonSchemaBasedSpecification;
