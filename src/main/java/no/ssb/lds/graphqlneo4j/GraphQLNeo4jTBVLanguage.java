@@ -83,7 +83,7 @@ public class GraphQLNeo4jTBVLanguage {
          */
         List<SDLDefinition> toBeRemoved = new LinkedList<>();
         typeDefinitionRegistry.getDirectiveDefinitions().forEach((key, directiveDef) -> {
-            if (Set.of("domain", "link", "virtual").contains(directiveDef.getName())) {
+            if (Set.of("domain", "link", "virtual", "index").contains(directiveDef.getName())) {
                 toBeRemoved.add(directiveDef);
             }
         });
@@ -108,6 +108,12 @@ public class GraphQLNeo4jTBVLanguage {
                 .build());
         typeDefinitionRegistry.add(DirectiveDefinition.newDirectiveDefinition()
                 .name("virtual")
+                .directiveLocation(DirectiveLocation.newDirectiveLocation()
+                        .name("FIELD_DEFINITION")
+                        .build())
+                .build());
+        typeDefinitionRegistry.add(DirectiveDefinition.newDirectiveDefinition()
+                .name("index")
                 .directiveLocation(DirectiveLocation.newDirectiveLocation()
                         .name("FIELD_DEFINITION")
                         .build())
