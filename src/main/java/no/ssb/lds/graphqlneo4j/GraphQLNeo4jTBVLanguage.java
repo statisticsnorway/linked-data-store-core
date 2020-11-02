@@ -22,6 +22,8 @@ import graphql.language.TypeDefinition;
 import graphql.language.TypeName;
 import graphql.language.UnionTypeDefinition;
 import graphql.schema.idl.TypeDefinitionRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Deque;
 import java.util.LinkedHashMap;
@@ -36,6 +38,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class GraphQLNeo4jTBVLanguage {
+
+    private static final Logger LOG = LoggerFactory.getLogger(GraphQLNeo4jTBVLanguage.class);
 
     /**
      * Returns a transformed copy of the source-registry. The transformations occur on types that have link directive
@@ -663,7 +667,7 @@ public class GraphQLNeo4jTBVLanguage {
                                 sb.append(":").append(last.objectName).append(")");
                                 sb.append("-[v:VERSION_OF]->(:RESOURCE) WHERE v.from <= ver AND coalesce(ver < v.to, true) RETURN n");
                                 String tbvReverseResolutionCypher = sb.toString();
-                                System.out.printf("REVERSE LINK CYPHER to Object %s: %s%n", targetObjectType.getName(), tbvReverseResolutionCypher);
+                                LOG.trace("REVERSE LINK CYPHER to Object {}: {}", targetObjectType.getName(), tbvReverseResolutionCypher);
                                 codedNameOfRelationship += "_" + last.fieldName + "_" + last.objectName;
                                 builder.fieldDefinition(FieldDefinition.newFieldDefinition()
                                         .name(nameOfPath)
