@@ -33,6 +33,7 @@ public class ReplayTxLogTest {
     @Test
     @ConfigurationOverride({
             "txlog.rawdata.provider", "memory",
+            "force.new.clean.tx.log", "magic-79gjlovj92gnj",
             "specification.schema", "spec/demo/contact.json,spec/demo/provisionagreement.json"
     })
     public void replayTxLogAndVerify() throws Exception {
@@ -92,6 +93,7 @@ public class ReplayTxLogTest {
     @Test
     @ConfigurationOverride({
             "txlog.rawdata.provider", "memory",
+            "force.new.clean.tx.log", "magic-481nlrgk09g",
             "specification.schema", "spec/demo/contact.json,spec/demo/provisionagreement.json"
     })
     public void replayBatchInTxLogAndVerify() throws Exception {
