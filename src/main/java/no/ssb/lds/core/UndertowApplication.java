@@ -10,6 +10,7 @@ import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.server.handlers.accesslog.AccessLogHandler;
 import io.undertow.server.handlers.resource.ClassPathResourceManager;
 import io.undertow.util.StatusCodes;
 import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
@@ -17,6 +18,7 @@ import no.ssb.config.DynamicConfiguration;
 import no.ssb.lds.api.persistence.reactivex.RxJsonPersistence;
 import no.ssb.lds.api.search.SearchIndex;
 import no.ssb.lds.api.specification.Specification;
+import no.ssb.lds.core.accesslog.Slf4jAccessLogReceiver;
 import no.ssb.lds.core.controller.CORSHandler;
 import no.ssb.lds.core.controller.HealthCheckHandler;
 import no.ssb.lds.core.controller.NamespaceController;
@@ -115,6 +117,8 @@ public class UndertowApplication {
 
         String namespace = configuration.evaluateToString("namespace.default");
         boolean enableRequestDump = configuration.evaluateToBoolean("http.request.dump");
+        boolean enableAccessLog = configuration.evaluateToBoolean("http.access-log.enabled");
+        String accessLogFormat = configuration.evaluateToString("http.access-log.format");
         boolean graphqlEnabled = configuration.evaluateToBoolean("graphql.enabled");
         String pathPrefix = configuration.evaluateToString("http.prefix");
 
@@ -166,12 +170,15 @@ public class UndertowApplication {
         pathHandler.addExactPath(HealthCheckHandler.PING_PATH, aliveHandler);
         pathHandler.addPrefixPath("/", namespaceController);
 
-        HttpHandler httpHandler;
+        HttpHandler httpHandler = pathHandler;
+
+        if (enableAccessLog) {
+            httpHandler = new AccessLogHandler(httpHandler, new Slf4jAccessLogReceiver(LoggerFactory.getLogger("no.ssb.lds.http.accesslog")), accessLogFormat, Undertow.class.getClassLoader());
+        }
+
         if (enableRequestDump) {
             LOG.info("Initializing request-dump ...");
-            httpHandler = Handlers.requestDump(pathHandler);
-        } else {
-            httpHandler = pathHandler;
+            httpHandler = Handlers.requestDump(httpHandler);
         }
 
         if (pathPrefix != null && !pathPrefix.isEmpty()) {
