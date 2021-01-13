@@ -222,28 +222,10 @@ public class GraphQLNeo4jHttpHandler implements HttpHandler {
             params.putIfAbsent("_version", snapshot);
             List<Map<String, Object>> resultAsMap;
             try (Session session = driver.session()) {
-                // TODO: When https://github.com/neo4j/neo4j/issues/12583 is resolved, run query without splitting
-
-                // split query
-                CypherQueryProjectionSplitter splitter = new CypherQueryProjectionSplitter(domains);
-
-                //splitter.transform(cypher.component1().replaceAll("\\{ *\\.\\*, *}", "{ .* }")); // TODO Check that cypher is valid, have seen ordering clause causing this pattern, but not able to reproduce
-                splitter.transform(cypher.component1());
-
-                // run selection query
-                String selection = splitter.getSelection();
-                Result selectionResult = session.run(selection, params, TransactionConfig.builder()
+                Result result = session.run(cypher.component1(), params, TransactionConfig.builder()
                         .withTimeout(Duration.ofSeconds(10)).build());
-                List<Long> idsFromSelection = selectionResult.list(r -> r.get("id").asLong());
-                ResultSummary selectionResultSummary = selectionResult.consume();
-
-                // run projection query
-                params.put("ids", idsFromSelection);
-                String projection = splitter.getProjection();
-                Result projectionResult = session.run(projection, params, TransactionConfig.builder()
-                        .withTimeout(Duration.ofSeconds(10)).build());
-                resultAsMap = projectionResult.list(Record::asMap);
-                ResultSummary projectionResultSummary = projectionResult.consume();
+                resultAsMap = result.list(Record::asMap);
+                ResultSummary resultSummary = result.consume();
             }
             JsonNode jsonNode = JsonTools.toJsonNode(resultAsMap);
             if (jsonNode.isArray()) {
